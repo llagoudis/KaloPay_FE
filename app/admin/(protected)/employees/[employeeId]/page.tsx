@@ -1,0 +1,1332 @@
+"use client";
+
+import Link from "next/link";
+import { use, useState, useEffect, useCallback } from "react";
+import { ROUTES } from "@/lib/constants/routes";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { getEmployee, updateEmployee } from "@/lib/api/admin/employees";
+import {
+  getDocuments,
+  uploadDocument,
+  deleteDocument,
+  approveDocument,
+  type Document as ApiDocument,
+} from "@/lib/api/admin/documents";
+type TabId = "details" | "documents" | "accounts";
+
+const SECTION_HEADER_STYLE = "border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-t-[16px]";
+
+const DOCUMENTS_TABLE_HEADER_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+  fontWeight: 400,
+  fontSize: "14px",
+  lineHeight: "16px",
+  letterSpacing: "0%",
+  color: "#6B7280",
+  verticalAlign: "middle",
+};
+
+const ACCOUNTS_DETAILS_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+  fontWeight: 400,
+  fontSize: "14px",
+  lineHeight: "20px",
+  letterSpacing: "0%",
+  color: "#1F2937",
+  verticalAlign: "middle",
+};
+
+const MOCK_DETAIL: {
+  personal: { employeeNo: string; nationality: string; personalEmail: string; dateOfBirth: string; socialInsuranceNo: string; emergencyContactNo: string; fullName: string; workEmail: string; identificationNo: string };
+  address: { streetName: string; flatApartmentNo: string; postalCode: string; city: string; streetNo: string; floor: string; province: string; country: string };
+  employment: { legalEntity: string; jobTitle: string; scopeOfWork: string; departmentRole: string; contractStart: string; employmentType: string; employeeStatus: string; group: string; seniority: string; department: string; directManagerEmail: string; contractEnd: string; partTimePercentage: string };
+  compensation: { paymentMethod: string; stableCoinCode: string; compensationType: string; varComp1EffectiveDate: string; varComp1Type: string; paymentCurrencyCode: string; grossAnnualSalary: string; varComp1Title: string; varComp1Frequency: string; varComp1CompensationAmount: string };
+  bank: { bankName: string; swiftBic: string; usdtErcWalletAddress: string; usdcPolyWalletAddress: string; bankAddress: string; iban: string; usdcErcWalletAddress: string; btcWalletAddress: string };
+} = {
+  personal: { employeeNo: "EMP-121", nationality: "American", personalEmail: "email@example.com", dateOfBirth: "Oct 1st 2025", socialInsuranceNo: "123 456 789", emergencyContactNo: "+32 123 456 7890", fullName: "John Doe", workEmail: "email@example.com", identificationNo: "MKB 123 456" },
+  address: { streetName: "Paxton street", flatApartmentNo: "141", postalCode: "12345", city: "Las Vegas", streetNo: "181", floor: "4th", province: "California", country: "USA" },
+  employment: { legalEntity: "Aperture Science, LLC", jobTitle: "Senior Frontend Developer", scopeOfWork: "Develop mobile applications", departmentRole: "Module Lead - Payments", contractStart: "01/04/2024", employmentType: "Full-Time Permanent", employeeStatus: "Active", group: "Product Engineering", seniority: "L5 (Senior)", department: "Technology & Innovation", directManagerEmail: "jane.doe@example.com", contractEnd: "31/03/2027", partTimePercentage: "60%" },
+  compensation: { paymentMethod: "Bank Transfer", stableCoinCode: "USDC", compensationType: "Salary + Bonus", varComp1EffectiveDate: "01/01/2025", varComp1Type: "Percentage of Salary", paymentCurrencyCode: "USD", grossAnnualSalary: "95,000", varComp1Title: "Performance Bonus", varComp1Frequency: "Annually", varComp1CompensationAmount: "10%" },
+  bank: { bankName: "Global Commerce Bank", swiftBic: "GBCBUS33", usdtErcWalletAddress: "0x4B08bFfE939A7Ff59E813eD0c4c47F5C5B9A6E9D", usdcPolyWalletAddress: "0x2d3C1D076722dC7a39d89A12e4F7c5f8A7E0B3fA", bankAddress: "123 Financial Ave, London, SW1A 0AA", iban: "GB82GBCB12345698765432", usdcErcWalletAddress: "0x8a92f026D7D31969B672323a78C4e55e0A3F17bE", btcWalletAddress: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kvrg2u7p8y" },
+};
+
+const TABS: { id: TabId; label: string }[] = [
+  { id: "details", label: "Details" },
+  { id: "documents", label: "Documents" },
+  { id: "accounts", label: "Accounts" },
+];
+
+const BOTTOM_CARDS: { icon: "document" | "person" | "clock" | "payslip"; title: string; description: string }[] = [
+  { icon: "document", title: "Payments, expenses & work submissions", description: "Review their submitted invoices and manage any payments" },
+  { icon: "person", title: "Personal information", description: "Check their contact info and other personal details" },
+  { icon: "clock", title: "Time off", description: "Review and manage time off information" },
+  { icon: "payslip", title: "Payslips", description: "Open and review payslips history" },
+];
+
+function BottomCardIcon({ type }: { type: "document" | "person" | "clock" | "payslip" }) {
+  const base = "flex h-10 w-10 flex-shrink-0 items-center justify-center text-gray-500";
+  if (type === "document") return <span className={base} aria-hidden><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></span>;
+  if (type === "person") return <span className={base} aria-hidden><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></span>;
+  if (type === "clock") return <span className={base} aria-hidden><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>;
+  return <span className={base} aria-hidden><svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg></span>;
+}
+
+/* Har detail: label upper (upar), value niche (neeche) — upper niche layout */
+function DetailRow({
+  label,
+  value,
+  valueClassName = "",
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="mb-4 min-w-0 flex flex-col gap-0.5">
+      <span className="text-sm text-gray-500">{label}</span>
+      <span className={`min-w-0 text-sm font-medium text-gray-900 break-words [overflow-wrap:anywhere] ${valueClassName}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+const EDIT_MODAL_LABEL_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+  fontWeight: 500,
+  fontSize: "16px",
+  lineHeight: "20px",
+  letterSpacing: "0%",
+  color: "#1F2937",
+  verticalAlign: "middle",
+};
+
+const SECTION_TITLE_LINE_CLAMP: React.CSSProperties = {
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+  overflow: "hidden",
+};
+
+function SectionCard({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit?: () => void }) {
+  return (
+    <div className="view-individual-section-card overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className={`${SECTION_HEADER_STYLE} view-individual-section-header gap-3`}>
+        <span
+          className="view-individual-section-title responsive-card-heading min-w-0 flex-1 text-[13px] leading-[17px] text-gray-900 sm:text-[15px] sm:leading-[19px]"
+          style={{
+            fontFamily: "var(--font-poppins), Poppins, sans-serif",
+            fontWeight: 400,
+            letterSpacing: "0%",
+            verticalAlign: "middle",
+            ...SECTION_TITLE_LINE_CLAMP,
+          }}
+        >
+          {title}
+        </span>
+        <button type="button" onClick={onEdit} className="shrink-0 text-sm font-medium text-blue-600 hover:underline">
+          Edit
+        </button>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+export default function AdminEmployeeDetailPage({
+  params,
+}: {
+  params: Promise<{ employeeId: string }>;
+}) {
+  const { employeeId } = use(params);
+  const token = useAdminAuthStore((s) => s.token);
+  const [employeeData, setEmployeeData] = useState<Record<string, unknown> | null>(null);
+  const [documents, setDocuments] = useState<ApiDocument[]>([]);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docSubmitting, setDocSubmitting] = useState(false);
+  const [documentsSearch, setDocumentsSearch] = useState("");
+
+  const fetchEmployee = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await getEmployee(token, employeeId);
+      setEmployeeData(res.employee as unknown as Record<string, unknown>);
+    } catch (err) {
+      console.error("Failed to fetch employee:", err);
+    }
+  }, [token, employeeId]);
+
+  const fetchDocuments = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await getDocuments(token, { entityType: "employee", entityId: employeeId });
+      setDocuments(res.data ?? []);
+    } catch (err) {
+      console.error("Failed to fetch documents:", err);
+    }
+  }, [token, employeeId]);
+
+  useEffect(() => { fetchEmployee(); fetchDocuments(); }, [fetchEmployee, fetchDocuments]);
+
+  const handleDeleteDocument = async (id: number) => {
+    if (!token) return;
+    if (!confirm("Delete this document?")) return;
+    try {
+      await deleteDocument(token, String(id));
+      await fetchDocuments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete document");
+    }
+  };
+
+  const handleApproveDocument = async (id: number, status: "approved" | "rejected") => {
+    if (!token) return;
+    try {
+      await approveDocument(token, String(id), status);
+      await fetchDocuments();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update document");
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<TabId>("details");
+  const [editPersonalDetailsOpen, setEditPersonalDetailsOpen] = useState(false);
+  const [editAddressOpen, setEditAddressOpen] = useState(false);
+  const [editEmploymentOpen, setEditEmploymentOpen] = useState(false);
+  const [editCompensationOpen, setEditCompensationOpen] = useState(false);
+  const [editBankOpen, setEditBankOpen] = useState(false);
+  const [editNotesOpen, setEditNotesOpen] = useState(false);
+  const [addDocumentOpen, setAddDocumentOpen] = useState(false);
+  const d = {
+    ...MOCK_DETAIL,
+    personal: {
+      ...MOCK_DETAIL.personal,
+      ...(employeeData
+        ? {
+            fullName:
+              `${(employeeData.first_name as string) ?? ""} ${(employeeData.last_name as string) ?? ""}`.trim() ||
+              MOCK_DETAIL.personal.fullName,
+            personalEmail: (employeeData.email as string) ?? MOCK_DETAIL.personal.personalEmail,
+            workEmail: (employeeData.work_email as string) ?? MOCK_DETAIL.personal.workEmail,
+          }
+        : {}),
+    },
+    employment: {
+      ...MOCK_DETAIL.employment,
+      ...(employeeData
+        ? {
+            jobTitle: (employeeData.job_title as string) ?? MOCK_DETAIL.employment.jobTitle,
+            department: (employeeData.department as string) ?? MOCK_DETAIL.employment.department,
+            employeeStatus: (employeeData.status as string) ?? MOCK_DETAIL.employment.employeeStatus,
+            employmentType:
+              (employeeData.employment_type as string) ?? MOCK_DETAIL.employment.employmentType,
+          }
+        : {}),
+    },
+  };
+
+  return (
+    <div className="w-full space-y-6">
+      {/* 1. Title card - "View individual" */}
+      <div className="border border-gray-200 bg-white px-6 py-5 shadow-sm" style={{ borderRadius: "16px" }}>
+        <h1
+          className="admin-page-heading font-semibold"
+          style={{
+            fontFamily: "var(--font-poppins), Poppins, sans-serif",
+            fontSize: "22px",
+            lineHeight: "28px",
+            color: "#0E1620",
+          }}
+        >
+          View Individual
+        </h1>
+      </div>
+
+      {/* 2. Tabs card - Details, Documents, Accounts */}
+      <div
+        className="admin-tab-strip grid grid-cols-3 items-center gap-1 shadow-sm"
+        style={{ backgroundColor: "#F8F9FB", borderRadius: "16px", padding: "8px" }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`min-w-0 whitespace-nowrap rounded-[12px] px-2 py-2 text-center text-[13px] font-medium transition-colors sm:px-4 sm:py-2.5 sm:text-sm ${
+              activeTab === tab.id
+                ? "admin-tab-btn--active text-white"
+                : "admin-tab-btn--inactive text-[#6C757D]"
+            }`}
+            style={
+              activeTab === tab.id
+                ? { backgroundColor: "#0F50DB" }
+                : undefined
+            }
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "details" && (
+        <div
+          className="view-individual-details-parent view-individual-details-surface flex min-h-[200px] flex-col gap-6 rounded-2xl p-4"
+          role="region"
+          aria-label="View individual details"
+        >
+            {/* Parent Div (blue mat karna — sirf structure ke liye). Iske andar har section ka alag div: Personal Details, Address, Employment & Role Details, Compensation & Payment, Bank & Wallet Details, Notes, + 4 collapsible divs. */}
+            {/* Div 1: Personal Details */}
+            <SectionCard title="Personal Details" onEdit={() => setEditPersonalDetailsOpen(true)}>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <DetailRow label="Employee no" value={d.personal.employeeNo} />
+                  <DetailRow label="Nationality" value={d.personal.nationality} />
+                  <DetailRow label="Personal email" value={d.personal.personalEmail} />
+                  <DetailRow label="Date of birth" value={d.personal.dateOfBirth} />
+                  <DetailRow label="Social Insurance no" value={d.personal.socialInsuranceNo} />
+                </div>
+                <div>
+                  <DetailRow label="Full name" value={d.personal.fullName} />
+                  <DetailRow label="Emergency contact no" value={d.personal.emergencyContactNo} />
+                  <DetailRow label="Work email" value={d.personal.workEmail} />
+                  <DetailRow label="Identification no (Passport)" value={d.personal.identificationNo} />
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Div 2: Address */}
+            <SectionCard title="Address" onEdit={() => setEditAddressOpen(true)}>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <DetailRow label="Street name" value={d.address.streetName} />
+                  <DetailRow label="Flat/Apartment number" value={d.address.flatApartmentNo} />
+                  <DetailRow label="Postal code" value={d.address.postalCode} />
+                  <DetailRow label="City" value={d.address.city} />
+                </div>
+                <div>
+                  <DetailRow label="Street number" value={d.address.streetNo} />
+                  <DetailRow label="Floor" value={d.address.floor} />
+                  <DetailRow label="Province/region/state" value={d.address.province} />
+                  <DetailRow label="Country" value={d.address.country} />
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Div 3: Employment & Role Details */}
+            <SectionCard title="Employment & Role Details" onEdit={() => setEditEmploymentOpen(true)}>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <DetailRow label="Legal entity" value={d.employment.legalEntity} />
+                  <DetailRow label="Job title" value={d.employment.jobTitle} />
+                  <DetailRow label="Scope of work" value={d.employment.scopeOfWork} />
+                  <DetailRow label="Department role" value={d.employment.departmentRole} />
+                  <DetailRow label="Contract start date" value={d.employment.contractStart} />
+                  <DetailRow label="Employment type" value={d.employment.employmentType} />
+                  <DetailRow label="Employee Status" value={d.employment.employeeStatus} />
+                </div>
+                <div>
+                  <DetailRow label="Group (optional)" value={d.employment.group} />
+                  <DetailRow label="Seniority level" value={d.employment.seniority} />
+                  <DetailRow label="Department" value={d.employment.department} />
+                  <DetailRow label="Direct manager email" value={d.employment.directManagerEmail} />
+                  <DetailRow label="Contract end date" value={d.employment.contractEnd} />
+                  <DetailRow label="Part time percentage" value={d.employment.partTimePercentage} />
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Div 4: Compensation & Payment */}
+            <SectionCard title="Compensation & Payment" onEdit={() => setEditCompensationOpen(true)}>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <DetailRow label="Payment method" value={d.compensation.paymentMethod} />
+                  <DetailRow label="Stable coin code" value={d.compensation.stableCoinCode} />
+                  <DetailRow label="Compensation type" value={d.compensation.compensationType} />
+                  <DetailRow label="Variable compensation 1: effective Date" value={d.compensation.varComp1EffectiveDate} />
+                  <DetailRow label="Variable compensation 1: type" value={d.compensation.varComp1Type} />
+                </div>
+                <div>
+                  <DetailRow label="Payment currency code" value={d.compensation.paymentCurrencyCode} />
+                  <DetailRow label="Gross annual salary" value={d.compensation.grossAnnualSalary} />
+                  <DetailRow label="Variable compensation 1: title" value={d.compensation.varComp1Title} />
+                  <DetailRow label="Variable compensation 1: frequency" value={d.compensation.varComp1Frequency} />
+                  <DetailRow label="Variable compensation 1: compensation amount" value={d.compensation.varComp1CompensationAmount} />
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Div 5: Bank & Wallet Details */}
+            <SectionCard title="Bank & Wallet Details" onEdit={() => setEditBankOpen(true)}>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <DetailRow label="Bank name" value={d.bank.bankName} />
+                  <DetailRow label="SWIFT/BIC" value={d.bank.swiftBic} />
+                  <DetailRow label="USDT_ERC Wallet Address" value={d.bank.usdtErcWalletAddress} valueClassName="break-all" />
+                  <DetailRow label="USDC_Poly Wallet Address" value={d.bank.usdcPolyWalletAddress} valueClassName="break-all" />
+                </div>
+                <div>
+                  <DetailRow label="Bank address" value={d.bank.bankAddress} />
+                  <DetailRow label="IBAN" value={d.bank.iban} />
+                  <DetailRow label="USDC_ERC Wallet Address" value={d.bank.usdcErcWalletAddress} valueClassName="break-all" />
+                  <DetailRow label="BTC Wallet Address" value={d.bank.btcWalletAddress} valueClassName="break-all" />
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Div 6: Notes — info icon + message, Edit in header */}
+            <SectionCard title="Notes" onEdit={() => setEditNotesOpen(true)}>
+              <div className="flex items-start gap-3 p-1">
+                <span className="flex flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold" style={{ width: 16, height: 16, color: "#9CA3AF" }} aria-hidden>
+                  !
+                </span>
+                <p className="text-sm text-gray-500">
+                  This space is for internal notes. It&apos;s visible to your organization&apos;s managers only.
+                </p>
+              </div>
+            </SectionCard>
+
+            {/* Ek div — usme ye charon items; div ka bg #EAEAEA40, har input ka bhi */}
+            <div className="view-individual-bottom-wrap flex flex-col gap-4 rounded-lg p-4">
+              {BOTTOM_CARDS.map((item) => (
+                <div
+                  key={item.title}
+                  className="view-individual-bottom-card flex items-start gap-4 rounded-lg border border-gray-200 bg-white/60 px-4 py-4"
+                >
+                  <BottomCardIcon type={item.icon} />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className="view-individual-bottom-card-title min-w-0 text-base font-normal text-gray-900"
+                      style={{
+                        fontFamily: "var(--font-poppins), Poppins, sans-serif",
+                        lineHeight: "20px",
+                        letterSpacing: "0%",
+                        verticalAlign: "middle",
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                    <div className="mt-0.5 text-sm text-gray-500">{item.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+        </div>
+      )}
+
+      {activeTab === "documents" && (
+        <div className="view-individual-tab-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 sm:gap-3">
+            <div className="relative min-w-0 flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </span>
+              <input
+                type="search"
+                placeholder="Search"
+                value={documentsSearch}
+                onChange={(e) => setDocumentsSearch(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <button type="button" onClick={() => setAddDocumentOpen(true)} className="shrink-0 whitespace-nowrap bg-[#0F50DB] px-3 py-2 text-sm font-medium text-white hover:bg-[#0D46C3] sm:px-4" style={{ borderRadius: "8px" }}>
+              + Add new
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Document Type</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Status</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>File</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>ID</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Country</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Issue Date</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents
+                  .filter((d) =>
+                    (d.document_type ?? "").toLowerCase().includes(documentsSearch.toLowerCase()) ||
+                    (d.country ?? "").toLowerCase().includes(documentsSearch.toLowerCase()) ||
+                    String(d.id).includes(documentsSearch)
+                  )
+                  .map((d) => {
+                    const statusClass =
+                      d.document_status === "approved"
+                        ? "bg-green-100 text-green-800"
+                        : d.document_status === "rejected"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-amber-100 text-amber-800";
+                    return (
+                      <tr key={d.id} className="border-b border-gray-100">
+                        <td className="px-4 py-3 text-gray-900">{d.document_type ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass}`}>
+                            {d.document_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <a
+                            href={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api", "")}/${d.file_path}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {d.file_name}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">{d.id}</td>
+                        <td className="px-4 py-3 text-gray-900">{d.country ?? "—"}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {d.created_at ? new Date(d.created_at).toLocaleDateString("en-GB") : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            {d.document_status !== "approved" && (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveDocument(d.id, "approved")}
+                                className="rounded px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {d.document_status !== "rejected" && (
+                              <button
+                                type="button"
+                                onClick={() => handleApproveDocument(d.id, "rejected")}
+                                className="rounded px-2 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50"
+                              >
+                                Reject
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteDocument(d.id)}
+                              className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {documents.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                      No documents found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "accounts" && (
+        <div className="view-individual-tab-panel rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2 sm:gap-3">
+            <div className="relative min-w-0 flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </span>
+              <input type="search" placeholder="Search" className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            </div>
+            <Link href={ROUTES.admin.employeeAdd} className="inline-block shrink-0 whitespace-nowrap rounded-lg bg-[#0F50DB] px-3 py-2 text-sm font-medium text-white hover:bg-[#0D46C3] sm:px-4" style={{ borderRadius: "8px" }}>
+              + Add new
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="accounts-detail-table w-full min-w-[900px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Number</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Provider Number</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Type</th>
+                  <th className="whitespace-nowrap px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Provider Currency</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Bank Details</th>
+                  <th className="whitespace-nowrap px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Current Balance</th>
+                  <th className="px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Status</th>
+                  <th className="whitespace-nowrap px-4 py-3 align-middle" style={DOCUMENTS_TABLE_HEADER_STYLE}>Client Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { number: "HE123129", providerNo: "ASdawoqqwe123121412", type: "Standard", currency: "Euro", balance: "0.00", status: "Approved", clientType: "Firebooks" },
+                  { number: "HE123129", providerNo: "ASdawoqqwe123121412", type: "Standard", currency: "Euro", balance: "0.00", status: "Approved", clientType: "Firebooks" },
+                  { number: "HE123129", providerNo: "ASdawoqqwe123121412", type: "Standard", currency: "Euro", balance: "0.00", status: "Approved", clientType: "Firebooks" },
+                  { number: "HE123129", providerNo: "ASdawoqqwe123121412", type: "Standard", currency: "Euro", balance: "0.00", status: "Approved", clientType: "Firebooks" },
+                  { number: "HE123129", providerNo: "ASdawoqqwe123121412", type: "Standard", currency: "Euro", balance: "0.00", status: "Approved", clientType: "Firebooks" },
+                ].map((row, i) => (
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      <a href="#" className="text-blue-600 hover:underline">
+                        {row.number}
+                      </a>
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      {row.providerNo}
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      {row.type}
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      {row.currency}
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      <div className="accounts-table-cell whitespace-pre-line" style={ACCOUNTS_DETAILS_STYLE}>
+                        Bank Details: General Payments Gate LTD
+                        IBAN: GB50TRWI23148510000949
+                        SWIFT/BIC: TRWIGB2LXXX
+                        Bank Name: My EU Pay Ltd.
+                      </div>
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      {row.balance}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="accounts-table-cell px-4 py-3 align-middle" style={ACCOUNTS_DETAILS_STYLE}>
+                      {row.clientType}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Document modal — Figma 473-3084 */}
+      {addDocumentOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setAddDocumentOpen(false)} role="dialog" aria-modal="true" aria-labelledby="add-document-title">
+          <div
+            className="admin-employee-edit-modal bg-white shadow-xl"
+            style={{
+              width: "800px",
+              maxWidth: "100%",
+              maxHeight: "calc(100vh - 2rem)",
+              borderRadius: "8px",
+              padding: "24px",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4">
+              <h2
+                id="add-document-title"
+                className="dialog-title-one-line align-middle"
+                style={{
+                  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "24px",
+                  lineHeight: "32px",
+                  letterSpacing: "0%",
+                  color: "#1F2937",
+                }}
+              >
+                Add New Document
+              </h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setAddDocumentOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form
+              className="space-y-6"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!token || docSubmitting) return;
+                if (!docFile) {
+                  alert("Please choose a file");
+                  return;
+                }
+                setDocSubmitting(true);
+                try {
+                  const docTypeEl = (e.currentTarget.elements.namedItem("doc_type") as HTMLSelectElement | null)?.value;
+                  const docCountryEl = (e.currentTarget.elements.namedItem("doc_country") as HTMLSelectElement | null)?.value;
+                  await uploadDocument(token, "employee", employeeId, docFile, {
+                    documentType: docTypeEl || undefined,
+                    country: docCountryEl || undefined,
+                  });
+                  await fetchDocuments();
+                  setDocFile(null);
+                  setAddDocumentOpen(false);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Upload failed");
+                } finally {
+                  setDocSubmitting(false);
+                }
+              }}
+            >
+              <div className="dialog-form-grid grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Document Type <span className="text-red-500">*</span></label>
+                  <select name="doc_type" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE}>
+                    <option value="">Select</option>
+                    <option value="ID Card">ID card</option>
+                    <option value="Passport">Passport</option>
+                    <option value="Driver License">Driver License</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Country <span className="text-red-500">*</span></label>
+                  <select name="doc_country" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE}>
+                    <option value="">Select</option>
+                    <option value="Cyprus">Cyprus</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="USA">USA</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Document Number</label>
+                  <input type="text" placeholder="Enter document no" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE} />
+                </div>
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Document Status</label>
+                  <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE}>
+                    <option value="">Select</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Issue Date</label>
+                  <div className="relative">
+                    <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Valid Uptil</label>
+                  <div className="relative">
+                    <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400" style={DOCUMENTS_TABLE_HEADER_STYLE} />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 font-semibold text-gray-900" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontSize: "16px" }}>Upload Files</h3>
+                <div
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white py-10 px-4"
+                  style={{ minHeight: "160px" }}
+                >
+                  <span
+                    className="mb-6 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-gray-300 text-gray-400"
+                    style={{ borderColor: "#D1D5DB" }}
+                    aria-hidden
+                  >
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                  </span>
+                  <p
+                    className="mb-2"
+                    style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontWeight: 500, fontSize: "18px", lineHeight: "24px", letterSpacing: "0%", color: "#374151" }}
+                  >
+                    {docFile ? docFile.name : "Choose a file or drag & drop it here"}
+                  </p>
+                  <p className="mb-7" style={DOCUMENTS_TABLE_HEADER_STYLE}>Max 5MB</p>
+                  <label
+                    className="cursor-pointer border bg-white px-5 py-2.5 font-normal hover:bg-gray-50"
+                    style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontSize: "14px", color: "#374151", borderColor: "#D1D5DB", borderRadius: "8px" }}
+                  >
+                    Browse Files
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setAddDocumentOpen(false)}
+                  disabled={docSubmitting}
+                  className="px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                  style={{ backgroundColor: "#FFFFFF", color: "#6C757D", border: "1px solid #D1D5DB", borderRadius: "8px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={docSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
+                >
+                  {docSubmitting ? "Uploading..." : "Add"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Personal Details popup — Figma 473-7762: Personal Details Edit pe click par yehi popup */}
+      {editPersonalDetailsOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditPersonalDetailsOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-personal-details-title">
+          <div
+            className="admin-employee-edit-modal bg-white shadow-xl"
+            style={{
+              width: "800px",
+              maxWidth: "100%",
+              maxHeight: "calc(100vh - 2rem)",
+              height: "auto",
+              borderRadius: "8px",
+              padding: "24px",
+              opacity: 1,
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4">
+              <h2
+                id="edit-personal-details-title"
+                className="dialog-title-one-line align-middle"
+                style={{
+                  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "24px",
+                  lineHeight: "32px",
+                  letterSpacing: "0%",
+                  color: "#1F2937",
+                }}
+              >
+                Edit Personal Details
+              </h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditPersonalDetailsOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form
+              className="dialog-form-grid grid grid-cols-1 gap-x-6 pt-4 sm:grid-cols-2"
+              style={{ gap: "24px" }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!token) return;
+                const fd = new FormData(e.currentTarget);
+                try {
+                  await updateEmployee(token, employeeId, {
+                    first_name: fd.get("first_name") || undefined,
+                    last_name: fd.get("last_name") || undefined,
+                    email: fd.get("personal_email") || undefined,
+                    work_email: fd.get("work_email") || undefined,
+                  });
+                  await fetchEmployee();
+                  setEditPersonalDetailsOpen(false);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Failed to update");
+                }
+              }}
+            >
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Legal first name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  name="first_name"
+                  defaultValue={(employeeData?.first_name as string) ?? ""}
+                  placeholder="Enter first name"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Legal last name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  name="last_name"
+                  defaultValue={(employeeData?.last_name as string) ?? ""}
+                  placeholder="Enter last name"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Personal email <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    name="personal_email"
+                    defaultValue={(employeeData?.email as string) ?? ""}
+                    placeholder="Enter your personal email"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Work email</label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    name="work_email"
+                    defaultValue={(employeeData?.work_email as string) ?? ""}
+                    placeholder="Enter your work email"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Nationality</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select nationality</option>
+                  <option value="American">American</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Date of birth <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Identification Type</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900">
+                  <option value="passport">Passport</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Enter passport no <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter passport no" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>National insurance no <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter national insurance no" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Emergency contact no <span className="text-red-500">*</span></label>
+                <div className="flex gap-2">
+                  <select className="w-24 flex-shrink-0 rounded-lg border border-gray-300 px-2 py-2 text-gray-900">
+                    <option value="+977">+977</option>
+                    <option value="+32">+32</option>
+                  </select>
+                  <input type="tel" placeholder="980-00-000-00" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+                </div>
+              </div>
+              <div className="sm:col-span-2 flex justify-end gap-3 border-t border-gray-200 pt-3">
+                <button type="button" onClick={() => setEditPersonalDetailsOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Address modal — Figma 473-8276: Address section Edit pe click par */}
+      {editAddressOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditAddressOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-address-title">
+          <div
+            className="admin-employee-edit-modal bg-white shadow-xl"
+            style={{
+              width: "800px",
+              maxWidth: "100%",
+              maxHeight: "calc(100vh - 2rem)",
+              height: "auto",
+              borderRadius: "8px",
+              padding: "24px",
+              opacity: 1,
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4">
+              <h2
+                id="edit-address-title"
+                className="dialog-title-one-line align-middle"
+                style={{
+                  fontFamily: "var(--font-poppins), Poppins, sans-serif",
+                  fontWeight: 600,
+                  fontSize: "24px",
+                  lineHeight: "32px",
+                  letterSpacing: "0%",
+                  color: "#1F2937",
+                }}
+              >
+                Edit Address
+              </h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditAddressOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form className="dialog-form-grid grid grid-cols-1 gap-x-6 pt-4 sm:grid-cols-2" style={{ gap: "24px" }} onSubmit={(e) => { e.preventDefault(); setEditAddressOpen(false); }}>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Street name <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter street name" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Street number <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter street number" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Flat/Appartment number (if applicable)</label>
+                <input type="text" placeholder="Enter flat/appartment number" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Floor <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter floor" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Postal code <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter postal code" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Select Province/region/state</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select province/region/state</option>
+                  <option value="California">California</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Select city <span className="text-red-500">*</span></label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select city</option>
+                  <option value="Las Vegas">Las Vegas</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Select country</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select country</option>
+                  <option value="USA">USA</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2 flex justify-end gap-3 border-t border-gray-200 pt-3">
+                <button type="button" onClick={() => setEditAddressOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>
+                  Cancel
+                </button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Employment & Role Details modal — Figma 473-8845 */}
+      {editEmploymentOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditEmploymentOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-employment-title">
+          <div
+            className="admin-employee-edit-modal bg-white shadow-xl"
+            style={{
+              width: "800px",
+              maxWidth: "100%",
+              maxHeight: "calc(100vh - 2rem)",
+              height: "auto",
+              borderRadius: "8px",
+              padding: "24px",
+              opacity: 1,
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4">
+              <h2 id="edit-employment-title" className="dialog-title-one-line align-middle" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontWeight: 600, fontSize: "24px", lineHeight: "32px", letterSpacing: "0%", color: "#1F2937" }}>
+                Edit Employment & Role Details
+              </h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditEmploymentOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form
+              className="dialog-form-grid grid grid-cols-1 gap-x-6 pt-4 sm:grid-cols-2"
+              style={{ gap: "24px" }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!token) return;
+                const fd = new FormData(e.currentTarget);
+                try {
+                  await updateEmployee(token, employeeId, {
+                    job_title: fd.get("job_title") || undefined,
+                    department: fd.get("department") || undefined,
+                    employment_type: fd.get("employment_type") || undefined,
+                    status: fd.get("employee_status") || undefined,
+                  });
+                  await fetchEmployee();
+                  setEditEmploymentOpen(false);
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Failed to update");
+                }
+              }}
+            >
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Legal entity <span className="text-red-500">*</span></label>
+                <input type="text" name="legal_entity" placeholder="Enter legal entity" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Group (optional)</label>
+                <input type="text" placeholder="Enter group" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Job title</label>
+                <input
+                  type="text"
+                  name="job_title"
+                  defaultValue={(employeeData?.job_title as string) ?? ""}
+                  placeholder="Enter job title"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Seniority level</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="L5">L5 (Senior)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Scope of work</label>
+                <input type="text" placeholder="Enter scope of work" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Department</label>
+                <select
+                  name="department"
+                  defaultValue={(employeeData?.department as string) ?? ""}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                >
+                  <option value="">Select</option>
+                  <option value="Technology & Innovation">Technology & Innovation</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Product">Product</option>
+                  <option value="Design">Design</option>
+                  <option value="Finance">Finance</option>
+                  <option value="HR">HR</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Sales">Sales</option>
+                  <option value="Operations">Operations</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Department role</label>
+                <input type="text" placeholder="Enter department role" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Direct manager email</label>
+                <input type="email" placeholder="Enter direct manager email" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Contract start date <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Contract end date</label>
+                <div className="relative">
+                  <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Employment type <span className="text-red-500">*</span></label>
+                <select
+                  name="employment_type"
+                  defaultValue={(employeeData?.employment_type as string) ?? ""}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                >
+                  <option value="">Select</option>
+                  <option value="full-time">Full-Time Permanent</option>
+                  <option value="part-time">Part-Time</option>
+                  <option value="contractor">Contractor</option>
+                  <option value="intern">Intern</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Part time percentage</label>
+                <input type="text" placeholder="Enter part time percentage" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Employee Status</label>
+                <select
+                  name="employee_status"
+                  defaultValue={(employeeData?.status as string) ?? ""}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+                >
+                  <option value="">Select</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="terminated">Terminated</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2 flex justify-end gap-3 border-t border-gray-200 pt-3">
+                <button type="button" onClick={() => setEditEmploymentOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>Cancel</button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Compensation & Payment modal — Figma 473-9420 */}
+      {editCompensationOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditCompensationOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-compensation-title">
+          <div className="admin-employee-edit-modal bg-white shadow-xl" style={{ width: "800px", maxWidth: "100%", maxHeight: "calc(100vh - 2rem)", height: "auto", borderRadius: "8px", padding: "24px", opacity: 1, overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-4">
+              <h2 id="edit-compensation-title" className="dialog-title-one-line align-middle" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontWeight: 600, fontSize: "24px", lineHeight: "32px", letterSpacing: "0%", color: "#1F2937" }}>Edit Compensation & Payment</h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditCompensationOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form className="dialog-form-grid grid grid-cols-1 gap-x-6 pt-4 sm:grid-cols-2" style={{ gap: "24px" }} onSubmit={(e) => { e.preventDefault(); setEditCompensationOpen(false); }}>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Payment method</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="bank">Bank Transfer</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Payment currency code <span className="text-red-500">*</span></label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Stable coin code <span className="text-red-500">*</span></label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="USDC">USDC</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Gross annual salary <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter gross annual salary" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Compensation type <span className="text-red-500">*</span></label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="salary-bonus">Salary + Bonus</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Variable compensation 1: title</label>
+                <input type="text" placeholder="Enter" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Variable compensation 1: effective Date</label>
+                <div className="relative">
+                  <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-300" />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg></span>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Variable compensation 1: frequency</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="annually">Annually</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Variable compensation 1: type</label>
+                <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400">
+                  <option value="">Select</option>
+                  <option value="percentage">Percentage of Salary</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Variable compensation 1: compensation amount</label>
+                <input type="text" placeholder="Enter" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div />
+              <div className="sm:col-span-2 flex justify-end gap-3 border-t border-gray-200 pt-3">
+                <button type="button" onClick={() => setEditCompensationOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>Cancel</button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Bank & Wallet Details modal — Figma 473-10443 */}
+      {editBankOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditBankOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-bank-title">
+          <div className="admin-employee-edit-modal bg-white shadow-xl" style={{ width: "800px", maxWidth: "100%", maxHeight: "calc(100vh - 2rem)", height: "auto", borderRadius: "8px", padding: "24px", opacity: 1, overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-4">
+              <h2 id="edit-bank-title" className="dialog-title-one-line align-middle" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontWeight: 600, fontSize: "24px", lineHeight: "32px", letterSpacing: "0%", color: "#1F2937" }}>Edit Bank & Wallet Details</h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditBankOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form className="dialog-form-grid grid grid-cols-1 gap-x-6 pt-4 sm:grid-cols-2" style={{ gap: "24px" }} onSubmit={(e) => { e.preventDefault(); setEditBankOpen(false); }}>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Bank name <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter bank name" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Bank address <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter bank address" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>SWIFT/BIC <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter SWIFT/BIC" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>IBAN <span className="text-red-500">*</span></label>
+                <input type="text" placeholder="Enter IBAN" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>USDT_ERC Wallet Address</label>
+                <input type="text" placeholder="Enter USDT_ERC Wallet Address" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>USDC_ERC Wallet Address</label>
+                <input type="text" placeholder="Enter USDC_ERC Wallet Address" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>USDC_Poly Wallet Address</label>
+                <input type="text" placeholder="Enter USDC_Poly Wallet Address" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div>
+                <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>BTC Wallet Address</label>
+                <input type="text" placeholder="Enter BTC Wallet Address" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300" />
+              </div>
+              <div className="sm:col-span-2 flex justify-end gap-3 border-t border-gray-200 pt-3">
+                <button type="button" onClick={() => setEditBankOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>Cancel</button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Notes modal — Figma 473-10580 */}
+      {editNotesOpen && (
+        <div className="admin-employee-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditNotesOpen(false)} role="dialog" aria-modal="true" aria-labelledby="edit-notes-title">
+          <div className="admin-employee-edit-modal bg-white shadow-xl" style={{ width: "800px", maxWidth: "100%", maxHeight: "calc(100vh - 2rem)", height: "auto", borderRadius: "8px", padding: "24px", opacity: 1, overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-4">
+              <h2 id="edit-notes-title" className="dialog-title-one-line align-middle" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif", fontWeight: 600, fontSize: "24px", lineHeight: "32px", letterSpacing: "0%", color: "#1F2937" }}>Edit Notes</h2>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600" onClick={() => setEditNotesOpen(false)} aria-label="Close">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <form className="pt-4" onSubmit={(e) => { e.preventDefault(); setEditNotesOpen(false); }}>
+              <label className="mb-1 block" style={EDIT_MODAL_LABEL_STYLE}>Notes</label>
+              <textarea placeholder="Lorem ipsum" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-300 min-h-[120px] resize-y" rows={4} />
+              <div className="flex justify-end gap-3 border-t border-gray-200 pt-3 mt-4">
+                <button type="button" onClick={() => setEditNotesOpen(false)} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50" style={{ color: "#6B7280" }}>Cancel</button>
+                <button type="submit" className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3]">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

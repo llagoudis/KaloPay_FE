@@ -1,0 +1,1835 @@
+@import "tailwindcss";
+
+/* Hide browser default calendar icon on date inputs */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+/* Remove focus outline from all inputs, selects, textareas in admin panel */
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   Global brand color palette
+   Use these when building screens – analyze
+   design and map to these variables.
+   ============================================ */
+:root {
+  --background: #F5F6FA;
+  --foreground: #171717;
+
+  /* Brand palette (global – use across screens) */
+  --color-brand-navy: #001539;
+  --color-brand-surface: #1b2a3c;
+  --color-olive-dark: #5e5e23;
+  --color-mustard: #827a1b;
+  --color-muted: #9ea6b3;
+  --color-gold: #aa9912;
+  --color-gold-light: #e3c705;
+
+  /* Derived – always use these for dashboard (same as theme) */
+  --color-text-primary: #ffffff;
+  --color-border-subtle: rgba(158, 166, 179, 0.2);
+  --color-nav-bg: #04102A;
+
+  /* Dashboard design (image match): page = dark blue like header, cards, accent, secondary text, icon bg */
+  /* Figma 337-4624: primary accent – update --color-figma-337-4624 to match design */
+  --color-figma-337-4624: #4A90E2;
+  --color-dash-bg: #04102A;
+  --color-dash-card: #161B22;
+  --color-dash-accent: var(--color-figma-337-4624);
+  --color-dash-text-secondary: #A0AEC0;
+  --color-dash-icon-bg: #2D3748;
+  --color-dash-text-primary: #ffffff;
+
+  /* Modal veil — same as Companies → Documents → Add New (Modal.tsx); #879cb0 @ 60% = light wash */
+  --modal-backdrop-overlay: rgb(135 156 176 / 60%);
+
+  /* Admin tables / activity log — visible on #1e293b cards (#2c394b was too close = invisible lines) */
+  --admin-row-divider-dark: rgba(255, 255, 255, 0.14);
+}
+
+/* Admin employee detail — dialog backdrop (Personal Details, Address, …) */
+.admin-employee-modal-backdrop {
+  background-color: var(--modal-backdrop-overlay);
+}
+
+/* Admin dark: one “lifted” surface for page cards + heading strips (matches Companies list) */
+[data-theme="dark"] {
+  --color-admin-card-surface: #1e293b;
+}
+
+/* Light mode – Figma 337-3123 */
+[data-dashboard-theme][data-theme="light"] {
+  --color-dash-bg: #f0f4f8;
+  --color-dash-card: #ffffff;
+  --color-dash-text-primary: #171717;
+  --color-dash-text-secondary: #64748b;
+  --color-dash-icon-bg: #e2e8f0;
+}
+
+/* Light mode: table row hover */
+[data-dashboard-theme][data-theme="light"] tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Payroll details summary table – light theme (image) */
+[data-dashboard-theme][data-theme="light"] .payroll-details-summary-header {
+  background-color: #EBF4FB !important;
+}
+[data-dashboard-theme][data-theme="light"] .payroll-details-summary-row {
+  background-color: #F5F9FC !important;
+}
+
+/* Status pills – dark theme (default) */
+[data-dashboard-theme] .status-pill-completed {
+  background-color: #14532d !important;
+  color: #4ade80 !important;
+}
+[data-dashboard-theme] .status-pill-processing {
+  background-color: #451a03 !important;
+  color: #f59e0b !important;
+}
+
+/* Status pills – light theme (pastel) */
+[data-dashboard-theme][data-theme="light"] .status-pill-completed {
+  background-color: #E6FAE6 !important;
+  color: #388E3C !important;
+}
+[data-dashboard-theme][data-theme="light"] .status-pill-processing {
+  background-color: #FFFACD !important;
+  color: #D79E1B !important;
+}
+
+/* Edit Personal Details modal – input labels: Poppins Medium 16px */
+.edit-personal-details-modal .edit-personal-label {
+  font-family: var(--font-poppins) !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  color: #1f2937 !important;
+}
+.edit-personal-details-modal .edit-personal-asterisk {
+  font-family: var(--font-poppins) !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  color: #c62828;
+}
+
+/* Edit modals – heading (form title): Poppins SemiBold 24px, #1F2937 */
+.edit-personal-details-modal h2 {
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 600 !important;
+  font-style: normal !important;
+  font-size: 24px !important;
+  line-height: 32px !important;
+  letter-spacing: 0% !important;
+  vertical-align: middle !important;
+  color: #1f2937 !important;
+}
+
+/* Save Changes button – primary blue, always visible */
+.edit-personal-details-modal .edit-personal-save-btn {
+  background: #0f4fdb !important;
+  color: #ffffff !important;
+  font-family: var(--font-poppins) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+}
+
+/* All inputs & selects: border, size, padding */
+.edit-personal-details-modal input,
+.edit-personal-details-modal select {
+  border: 1px solid #dfdfdf !important;
+  border-radius: 8px !important;
+  height: 42px !important;
+  padding: 9px 16px !important;
+  opacity: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 364px;
+}
+
+.edit-personal-details-modal .edit-personal-dropdown-border {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+  background-image: none;
+}
+/* Prevent any extra native box on selects (e.g. country code) */
+.edit-personal-details-modal select.edit-personal-dropdown-border {
+  background-color: #fff;
+}
+.edit-personal-details-modal select::-ms-expand {
+  display: none;
+}
+
+/* Contact country code select – hide native arrow (custom chevron inside box) */
+/* Contact country select – part of one combined input, no separate border */
+.edit-personal-details-modal .edit-personal-contact-country-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+  border: none !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  min-height: unset !important;
+}
+/* Combined contact: only outer div has border, inner input has no border */
+.edit-personal-details-modal .edit-personal-contact-combo input {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.edit-personal-details-modal .edit-personal-select-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 364px;
+}
+.edit-personal-details-modal .edit-personal-details-modal-status-input {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.edit-personal-details-modal .edit-personal-details-modal-status-input > div {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+.edit-personal-details-modal .edit-personal-details-modal-status-input .edit-personal-select-wrap {
+  max-width: none !important;
+  width: 100% !important;
+  height: 42px;
+}
+.edit-personal-details-modal .edit-personal-details-modal-status-input .edit-personal-select-wrap select {
+  height: 42px;
+  min-height: 42px;
+  width: 100% !important;
+  box-sizing: border-box;
+}
+.edit-personal-details-modal .edit-personal-details-modal-status-input select.edit-personal-details-modal-status-select {
+  display: block !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+.edit-personal-details-modal .edit-personal-dropdown-chevron {
+  pointer-events: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px !important;
+  height: 6px !important;
+  opacity: 1;
+  flex-shrink: 0;
+}
+.edit-personal-details-modal .edit-personal-dropdown-chevron svg {
+  width: 12px !important;
+  height: 6px !important;
+  min-width: 12px;
+  min-height: 6px;
+  stroke: #878787dd;
+  stroke-width: 2px;
+  opacity: 1;
+}
+
+/* Hide browser default calendar icon on date inputs – only show custom icon */
+.edit-personal-details-modal input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Hide number spinner / "1" box on tel inputs (Primary & Emergency contact) */
+.edit-personal-details-modal input[type="tel"]::-webkit-outer-spin-button,
+.edit-personal-details-modal input[type="tel"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: none !important;
+  margin: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.edit-personal-details-modal input[type="tel"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Notes section paragraph – Figma spec: Poppins 400, 14px, line-height 20px, #000 */
+.notes-section-text {
+  color: #000000;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0%;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-navy: var(--color-brand-navy);
+  --color-brand-surface: var(--color-brand-surface);
+  --color-olive-dark: var(--color-olive-dark);
+  --color-mustard: var(--color-mustard);
+  --color-muted: var(--color-muted);
+  --color-gold: var(--color-gold);
+  --color-gold-light: var(--color-gold-light);
+  --color-text-primary: var(--color-text-primary);
+  --color-border-subtle: var(--color-border-subtle);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #F5F6FA;
+    --foreground: #171717;
+  }
+}
+
+html,
+body {
+  min-height: 100vh;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Scrollbar: blue thumb #0F4FDB, light grey/white track */
+* {
+  scrollbar-color: #0F4FDB #F3F4F6;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+}
+
+*::-webkit-scrollbar-track {
+  background: #F3F4F6;
+  border-radius: 46px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #0F4FDB;
+  border-radius: 46px;
+  max-width: 120px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #0d43c2;
+}
+
+[data-dashboard-theme] .bg-brand-navy { background-color: var(--color-brand-navy) !important; }
+[data-dashboard-theme] .bg-brand-surface { background-color: var(--color-brand-surface) !important; }
+[data-dashboard-theme] .bg-gold-light { background-color: var(--color-gold-light) !important; }
+[data-dashboard-theme] .bg-gold { background-color: var(--color-gold) !important; }
+[data-dashboard-theme] .bg-mustard { background-color: var(--color-mustard) !important; }
+[data-dashboard-theme] .bg-olive-dark { background-color: var(--color-olive-dark) !important; }
+[data-dashboard-theme] .text-brand-navy { color: var(--color-brand-navy) !important; }
+[data-dashboard-theme] .text-muted { color: var(--color-muted) !important; }
+[data-dashboard-theme] .text-gold-light { color: var(--color-gold-light) !important; }
+[data-dashboard-theme] .text-white { color: var(--color-text-primary) !important; }
+[data-dashboard-theme] .bg-gold-light\/20 { background-color: rgba(227, 199, 5, 0.2) !important; }
+[data-dashboard-theme] .bg-mustard\/30 { background-color: rgba(130, 122, 27, 0.3) !important; }
+
+.border-theme-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+/* Nav bar background (dashboard header nav) */
+.bg-nav-bar {
+  background-color: var(--color-nav-bg);
+}
+
+/* Dashboard design tokens (image-accurate) */
+.bg-dash-page { background-color: var(--color-dash-bg); }
+.bg-dash-card { background-color: var(--color-dash-card); }
+.bg-dash-icon { background-color: var(--color-dash-icon-bg); }
+.text-dash-secondary { color: var(--color-dash-text-secondary); }
+.text-dash-primary { color: var(--color-dash-text-primary); }
+[data-dashboard-theme] .bg-dash-page { background-color: var(--color-dash-bg) !important; }
+[data-dashboard-theme] .bg-dash-card { background-color: var(--color-dash-card) !important; }
+[data-dashboard-theme] .bg-dash-icon { background-color: var(--color-dash-icon-bg) !important; }
+[data-dashboard-theme] .text-dash-secondary { color: var(--color-dash-text-secondary) !important; }
+[data-dashboard-theme] .text-dash-primary { color: var(--color-dash-text-primary) !important; }
+[data-dashboard-theme] .text-dash-secondary:hover { color: var(--color-dash-text-primary) !important; }
+
+/* Dashboard accent from Figma 337-4624 – use for buttons, links, active states */
+.bg-dash-accent { background-color: var(--color-dash-accent); }
+.text-dash-accent { color: var(--color-dash-accent); }
+.border-dash-accent { border-color: var(--color-dash-accent); }
+.hover\:border-dash-accent\/50:hover { border-color: color-mix(in srgb, var(--color-dash-accent) 50%, transparent); }
+
+/* Sidebar – payroll theme (used by user dashboard UserSidebar) */
+[data-sidebar-theme="payroll"] {
+  background-color: var(--color-nav-bg) !important;
+  border-color: var(--color-border-subtle) !important;
+}
+[data-sidebar-theme="payroll"] .sidebar-link {
+  color: var(--color-muted);
+}
+[data-sidebar-theme="payroll"] .sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary);
+}
+[data-sidebar-theme="payroll"] .sidebar-link-active {
+  background-color: #2563eb;
+  color: #fff;
+}
+[data-sidebar-theme="payroll"] .sidebar-link-active:hover {
+  background-color: #2563eb;
+  color: #fff;
+}
+
+/* Inputs and buttons inside dashboard-theme (dark mode only – light mode uses default white inputs) */
+[data-dashboard-theme][data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]) {
+  background-color: var(--color-brand-surface) !important;
+  border-color: var(--color-border-subtle) !important;
+  color: var(--color-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] input::placeholder {
+  color: var(--color-muted) !important;
+}
+[data-dashboard-theme][data-theme="dark"] input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-gold-light);
+}
+
+/* Add Employee form – light theme: white inputs + light border */
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select {
+  background-color: #ffffff !important;
+  border: 1px solid #DFDFDF !important;
+  color: #111827 !important;
+  border-radius: 8px !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input::placeholder {
+  color: #9ca3af !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input:focus,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select:focus {
+  border-color: #E5E7EB !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Add Employee — form grid: label↔input gap + row spacing + control height */
+[data-page="add-employee"] .employee-step-form input:not([type="checkbox"]):not([type="radio"]),
+[data-page="add-employee"] .employee-step-form select {
+  padding-top: 0.625rem !important;
+  padding-bottom: 0.625rem !important;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+/* ========== Add Employee page – dark mode ========== */
+/* Cards + stepper: #1e293b rgb(30,41,59) — same as admin card token */
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-header-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card a,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card h1,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-header-card a,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-header-card h1 {
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-card,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-card {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+/* Step 1–5 circles on #1e293b surface */
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--pending,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--pending {
+  background-color: #1e293b !important;
+  border: 2px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--active,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--active {
+  background-color: #1e293b !important;
+  border: 2px solid #2962ff !important;
+  color: #93c5fd !important;
+  box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.5) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--completed,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--completed {
+  box-shadow: 0 0 0 2px rgba(41, 98, 255, 0.45) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-label,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-label {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="in-progress"],
+[data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="in-progress"] {
+  background-color: rgba(74, 144, 226, 0.2) !important;
+  color: #93c5fd !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="completed"],
+[data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="completed"] {
+  background-color: rgba(53, 202, 195, 0.18) !important;
+  color: #5eead4 !important;
+  border-color: rgba(53, 202, 195, 0.4) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="pending"],
+[data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="pending"] {
+  background-color: rgba(255,255,255,0.05) !important;
+  border-color: var(--color-dash-text-secondary) !important;
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-pending,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-step-pending {
+  border-color: var(--color-dash-icon-bg) !important;
+  background-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-form-section,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-form-section {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  border-radius: 12px;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-form-section h2,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-form-section h2 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] label.add-employee-label,
+[data-theme="dark"] [data-page="add-employee"] label.add-employee-label {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select,
+[data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] [data-page="add-employee"] select {
+  background-color: var(--color-dash-icon-bg) !important;
+  border: 1px solid var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+  border-radius: 8px !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input::placeholder,
+[data-theme="dark"] [data-page="add-employee"] input::placeholder {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input:focus,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select:focus,
+[data-theme="dark"] [data-page="add-employee"] input:focus,
+[data-theme="dark"] [data-page="add-employee"] select:focus {
+  border-color: inherit !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select,
+[data-theme="dark"] [data-page="add-employee"] select {
+  color-scheme: dark;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select option,
+[data-theme="dark"] [data-page="add-employee"] select option {
+  background: #1e293b;
+  color: var(--color-dash-text-primary);
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-icon-muted,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-icon-muted {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-back-btn,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-back-btn {
+  background-color: var(--color-dash-icon-bg) !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-back-btn:hover,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-back-btn:hover {
+  background-color: rgba(255,255,255,0.1) !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+}
+
+/* People List search – light theme only: white bg, light grey border */
+[data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  border: 1px solid #e5e7eb !important;
+  color: #374151 !important;
+}
+[data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input::placeholder {
+  color: #9ca3af !important;
+}
+[data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input:focus {
+  border-color: #4A90E2 !important;
+  box-shadow: 0 0 0 1px #4A90E2 !important;
+}
+
+/* ========== People page – dark mode ========== */
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-header-card,
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-card {
+  background-color: var(--color-dash-card) !important;
+  border: 1px solid var(--color-dash-icon-bg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-title,
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-title {
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-export-btn {
+  background-color: transparent !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-export-btn:hover {
+  background-color: var(--color-dash-icon-bg) !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-info-banner {
+  background-color: rgba(74, 144, 226, 0.15) !important;
+  border-color: rgba(74, 144, 226, 0.4) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-title {
+  color: #93c5fd !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-desc {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-header,
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-filters {
+  border-color: var(--color-dash-icon-bg) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input {
+  background-color: var(--color-dash-icon-bg) !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input::placeholder {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-search-icon {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-select {
+  background-color: var(--color-dash-icon-bg) !important;
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+  color-scheme: dark;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-select option {
+  background: var(--color-dash-card);
+  color: var(--color-dash-text-primary);
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-head {
+  border-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-secondary) !important;
+}
+/* Light: row divider */
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-body tr.people-table-row {
+  border-top: 1px solid #f3f4f6;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-body tr.people-table-row:first-child {
+  border-top-width: 0;
+  border-top-style: none;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body {
+  border-color: transparent !important;
+}
+/* Dark: row divider */
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row:first-child {
+  border-top-width: 0 !important;
+  border-top-style: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body .people-table-row:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-row-name,
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-row-cell {
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-row-role {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-empty {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-row-actions {
+  color: var(--color-dash-text-secondary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-row-actions:hover {
+  background-color: var(--color-dash-icon-bg) !important;
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme] .btn-theme-primary {
+  background-color: var(--color-gold-light) !important;
+  color: var(--color-brand-navy) !important;
+}
+[data-dashboard-theme] .btn-theme-outline {
+  border-color: var(--color-border-subtle) !important;
+  color: var(--color-text-primary) !important;
+  background: transparent !important;
+}
+[data-dashboard-theme] .btn-theme-outline:hover {
+  background-color: var(--color-border-subtle) !important;
+}
+[data-dashboard-theme] .text-theme-muted {
+  color: var(--color-muted) !important;
+}
+
+/* Checkboxes inside dashboard-theme */
+[data-dashboard-theme] input[type="checkbox"] {
+  accent-color: var(--color-gold-light);
+}
+
+/* ========== Sidebar – dark theme ========== */
+[data-theme="dark"] aside {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+[data-theme="dark"] aside .text-xl.font-bold.text-blue-600 {
+  color: #60a5fa !important;
+}
+/* Section headers */
+[data-theme="dark"] aside button.hover\:bg-gray-100:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+}
+[data-theme="dark"] aside a.text-\[\#4B5563\] {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] aside a.text-\[\#4B5563\]:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #e2e8f0 !important;
+}
+/* Active nav item */
+[data-theme="dark"] aside a.bg-\[\#DEEEFF\] {
+  background-color: rgba(15, 79, 219, 0.2) !important;
+  color: #60a5fa !important;
+}
+/* Non-admin simple nav */
+[data-theme="dark"] aside a.text-gray-600 {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] aside a.text-gray-600:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] aside a.bg-blue-50 {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+  color: #60a5fa !important;
+}
+/* Logout button */
+[data-theme="dark"] aside button.text-gray-700 {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] aside button.text-gray-700:hover {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #e2e8f0 !important;
+}
+/* Chevron icon */
+[data-theme="dark"] aside svg.text-gray-500 {
+  color: #64748b !important;
+}
+
+/* Admin sidebar: collapsible section titles (Management, Administration) — not Tailwind text-* so dark mode wins */
+aside .sidebar-nav-section-label {
+  color: #0e1620 !important;
+}
+/* Soft slate (not pure white) — readable on navy sidebar without harsh contrast */
+[data-dashboard-theme][data-theme="dark"] aside .sidebar-nav-section-label,
+[data-theme="dark"] aside .sidebar-nav-section-label {
+  color: #c8d3e3 !important;
+}
+
+/* View Individual — cards only (section cards, details surface, bottom row, tab panels) */
+.view-individual-details-surface {
+  background-color: #f5f6fa;
+}
+[data-theme="dark"] .view-individual-details-surface {
+  background-color: #04102a !important;
+}
+
+.view-individual-section-header {
+  background-color: #deeeff;
+}
+[data-theme="dark"] .view-individual-section-header {
+  background-color: var(--color-admin-card-surface) !important;
+  border-bottom-color: #334155 !important;
+}
+[data-theme="dark"] .view-individual-section-header .view-individual-section-title {
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] .view-individual-section-card {
+  border-color: #334155 !important;
+}
+
+.view-individual-tab-panel {
+  background-color: #ffffff !important;
+}
+[data-theme="dark"] .view-individual-tab-panel {
+  background-color: var(--color-admin-card-surface) !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .view-individual-tab-panel thead tr,
+[data-theme="dark"] .view-individual-tab-panel .bg-gray-50 {
+  background-color: var(--color-admin-card-surface) !important;
+}
+
+.view-individual-bottom-wrap {
+  background-color: transparent;
+}
+.view-individual-bottom-card {
+  border-color: #e5e7eb;
+  background-color: rgba(255, 255, 255, 0.72);
+}
+[data-theme="dark"] .view-individual-bottom-card {
+  border-color: #334155 !important;
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-theme="dark"] .view-individual-bottom-card .view-individual-bottom-card-title {
+  color: #e2e8f0 !important;
+}
+
+/* View Account — light: white shell; dark: transparent shell (page bg shows — no white slab) */
+.view-account-detail-shell {
+  background-color: #ffffff;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-shell,
+[data-theme="dark"] .view-account-detail-shell {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .bg-white,
+[data-theme="dark"] .view-account-detail-page .bg-white,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .bg-white,
+[data-theme="dark"] .view-company-detail-page .bg-white {
+  background-color: #ffffff !important;
+}
+/* Section cards (light-blue header + dark body): outer wrapper must match body — avoids white leaking at bottom corners */
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
+[data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-details-section.bg-white,
+[data-theme="dark"] .view-company-detail-page .view-company-details-section.bg-white {
+  background-color: var(--color-admin-card-surface) !important;
+}
+
+/* View Company — Documents / Employees toolbar search (do not use Tailwind border-gray-200 on input: tab panel strips .border-gray-200) */
+.view-company-detail-page .view-company-tab-panel input.view-company-tab-search {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* View Company — Documents / Accounts / Employees tab panels (dark: match ref — slate card, dark search, table) */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search {
+  background-color: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  color: #f1f5f9 !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search:focus,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search:focus {
+  border-color: rgba(59, 130, 246, 0.55) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+  --tw-ring-width: 0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search::placeholder,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel input.view-company-tab-search::placeholder {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel label .text-gray-400,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel label .text-gray-400 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .view-company-tab-toolbar button,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .view-company-tab-toolbar button {
+  border-radius: 8px !important;
+  border: none !important;
+  background-color: #1d5dec !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .view-company-tab-toolbar button:hover,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .view-company-tab-toolbar button:hover {
+  background-color: #1a52d4 !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-900,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-700,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-500,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-500 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-400,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-gray-400 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .overflow-x-auto,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .overflow-x-auto {
+  border: none !important;
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel table,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel table {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel thead th,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel thead th {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody tr,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody tr {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody tr:hover,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+/* Skip <tr>: table header uses border-b border-gray-200 for rowDividers */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .border-gray-200:not(tr),
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .border-gray-200:not(tr) {
+  border: none !important;
+}
+/* Documents / Accounts / Employees: explicit divider color inside tab panel */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .admin-list-table thead tr.border-b,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .admin-list-table thead tr.border-b {
+  border-bottom: 1px solid var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .admin-list-table tbody.admin-table-row-dividers > tr + tr td,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .admin-list-table tbody.admin-table-row-dividers > tr + tr td {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-blue-600,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-blue-600 {
+  color: #60a5fa !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel span.bg-green-100,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel span.bg-green-100 {
+  background-color: rgba(22, 163, 74, 0.22) !important;
+  color: #86efac !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-green-700,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel .text-green-700 {
+  color: #86efac !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel button.text-gray-400,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel button.text-gray-400 {
+  color: #94a3b8 !important;
+}
+/* Table row actions only — toolbar primary button uses .view-company-tab-toolbar rules above */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody button:hover,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-panel tbody button:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Add New Document modal — label text (light vs dark panel via Modal `data-modal-theme`) */
+.add-document-modal label.add-document-modal-label {
+  color: #1f2937;
+}
+[data-modal-theme="dark"] .add-document-modal label.add-document-modal-label {
+  color: #ffffff !important;
+}
+
+/* Add New Document modal — selects match text inputs (dark panel, not white) */
+[data-modal-theme="light"] .add-document-modal select.add-document-modal-select {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+[data-modal-theme="dark"] .add-document-modal select.add-document-modal-select {
+  background-color: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #f1f5f9 !important;
+}
+[data-modal-theme="dark"] .add-document-modal select.add-document-modal-select.text-gray-500 {
+  color: #94a3b8 !important;
+}
+[data-modal-theme="dark"] .add-document-modal select.add-document-modal-select.text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-modal-theme="dark"] .add-document-modal select.add-document-modal-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+  border-color: rgba(59, 130, 246, 0.55) !important;
+}
+[data-modal-theme="dark"] .add-document-modal .add-document-modal-select-wrap svg {
+  color: #94a3b8 !important;
+}
+
+/* Add New Document modal — divider above footer (no border-gray-100: global dark rules force near-white on that class) */
+.add-document-modal .add-document-modal-footer {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: #f3f4f6;
+}
+[data-modal-theme="dark"] .add-document-modal .add-document-modal-footer {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .text-gray-900,
+[data-theme="dark"] .view-account-detail-page .text-gray-900,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .text-gray-900,
+[data-theme="dark"] .view-company-detail-page .text-gray-900 {
+  color: #111827 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .text-gray-700,
+[data-theme="dark"] .view-account-detail-page .text-gray-700,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .text-gray-700,
+[data-theme="dark"] .view-company-detail-page .text-gray-700 {
+  color: #374151 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .text-gray-600,
+[data-theme="dark"] .view-account-detail-page .text-gray-600,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .text-gray-600,
+[data-theme="dark"] .view-company-detail-page .text-gray-600 {
+  color: #4b5563 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .text-gray-500,
+[data-theme="dark"] .view-account-detail-page .text-gray-500,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .text-gray-500,
+[data-theme="dark"] .view-company-detail-page .text-gray-500 {
+  color: #6b7280 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .text-gray-400,
+[data-theme="dark"] .view-account-detail-page .text-gray-400,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .text-gray-400,
+[data-theme="dark"] .view-company-detail-page .text-gray-400 {
+  color: #9ca3af !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .border-gray-200,
+[data-theme="dark"] .view-account-detail-page .border-gray-200,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .border-gray-200,
+[data-theme="dark"] .view-company-detail-page .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .border-gray-100,
+[data-theme="dark"] .view-account-detail-page .border-gray-100,
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .border-gray-100,
+[data-theme="dark"] .view-company-detail-page .border-gray-100 {
+  border-color: #f3f4f6 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .admin-page-heading,
+[data-theme="dark"] .view-account-detail-page .admin-page-heading {
+  color: #0e1620 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-page-title-card,
+[data-theme="dark"] .view-account-detail-page .view-account-page-title-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border-radius: 1rem;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-page-title-card .admin-page-heading,
+[data-theme="dark"] .view-account-detail-page .view-account-page-title-card .admin-page-heading {
+  color: #ffffff !important;
+}
+
+/* View Accounts — Transactions block (account detail page only): light/dark heading + label; card + Table borders off in dark */
+.view-account-detail-page .view-account-transactions-title {
+  color: #111827;
+}
+.view-account-detail-page .view-account-transactions-checkbox-label {
+  color: #374151;
+}
+.view-account-detail-page .view-account-transactions-table-wrap {
+  border: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-transactions-title,
+[data-theme="dark"] .view-account-detail-page .view-account-transactions-title {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-transactions-checkbox-label,
+[data-theme="dark"] .view-account-detail-page .view-account-transactions-checkbox-label {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-transactions-table-wrap,
+[data-theme="dark"] .view-account-detail-page .view-account-transactions-table-wrap {
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Admin — Transaction detail (/admin/transactions/[id]): dark mode — no light gray shell, match View Accounts */
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-shell,
+[data-theme="dark"] .view-transaction-detail-shell {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-page-title-card,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-page-title-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 1rem;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-page-title-card .admin-page-heading,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-page-title-card .admin-page-heading {
+  color: #ffffff !important;
+}
+/* Section cards: flat slate (#1e293b via token), no outer border/shadow — matches View Accounts “Details” ref */
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-header,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.45) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-card,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-900,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-500,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-500 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-700,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-green-600,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .text-green-600 {
+  color: #86efac !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .border-gray-100,
+[data-theme="dark"] .view-transaction-detail-page .view-transaction-section-body .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+/* View Account — section bodies: light white; dark slate (under light-blue headers) */
+.view-account-detail-page .view-account-section-body {
+  background-color: #ffffff;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-details-section,
+[data-theme="dark"] .view-account-detail-page .view-account-details-section {
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-900,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-500,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-500 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-400,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-gray-400 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-blue-600,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-blue-600 {
+  color: #60a5fa !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-green-600,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-green-600 {
+  color: #86efac !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .border-gray-200,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .border-gray-200 {
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body table,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body table {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body thead th,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body thead th {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body tbody tr,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body tbody tr {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body tbody tr:hover,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body span.bg-green-100,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body span.bg-green-100 {
+  background-color: rgba(22, 163, 74, 0.22) !important;
+  color: #86efac !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-section-body .text-green-700,
+[data-theme="dark"] .view-account-detail-page .view-account-section-body .text-green-700 {
+  color: #86efac !important;
+}
+
+/* View Company — dark mode: title + tab bar = admin card surface; blue active pill */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-page-title-card,
+[data-theme="dark"] .view-company-detail-page .view-company-page-title-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border-radius: 1rem;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-page-title-card .admin-page-heading,
+[data-theme="dark"] .view-company-detail-page .view-company-page-title-card .admin-page-heading {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-tab-card,
+[data-theme="dark"] .view-company-detail-page .view-company-tab-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .admin-tab-strip,
+[data-theme="dark"] .view-company-detail-page .admin-tab-strip {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .admin-tab-strip .admin-tab-btn--inactive,
+[data-theme="dark"] .view-company-detail-page .admin-tab-strip .admin-tab-btn--inactive {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .admin-tab-strip .admin-tab-btn--active,
+[data-theme="dark"] .view-company-detail-page .admin-tab-strip .admin-tab-btn--active {
+  border-radius: 9999px !important;
+  background-color: #2563eb !important;
+}
+
+/* View Company details tab — inner body below light-blue header (dark mode only) */
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-details-parent,
+[data-theme="dark"] .view-company-detail-page .view-company-details-parent {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-details-section,
+[data-theme="dark"] .view-company-detail-page .view-company-details-section {
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-900,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-500,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-500 {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .text-blue-600,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .text-blue-600 {
+  color: #60a5fa !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .company-detail-value-text,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .company-detail-value-text {
+  color: #e2e8f0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .border-gray-100,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .border-gray-100 {
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .rounded-full.bg-gray-200,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .rounded-full.bg-gray-200 {
+  background-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-600,
+[data-theme="dark"] .view-company-detail-page .view-company-section-body .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+/* View Individual — Accounts tab: horizontal lines (Activity Log style; beats border-gray-100 ≈ card in dark) */
+.view-individual-tab-panel .accounts-detail-table {
+  border-collapse: collapse;
+}
+.view-individual-tab-panel .accounts-detail-table thead tr {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+.view-individual-tab-panel .accounts-detail-table tbody tr {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-individual-tab-panel .accounts-detail-table thead tr,
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table thead tr {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .view-individual-tab-panel .accounts-detail-table tbody tr,
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table tbody tr {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+
+/* View Individual — Accounts table: no light row hover; cell text light in dark mode (inline #1F2937 override) */
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table tbody tr,
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table tbody tr:hover {
+  background-color: transparent !important;
+}
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table .accounts-table-cell {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table .accounts-table-cell a {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .view-individual-tab-panel .accounts-detail-table tbody td span.bg-green-100 {
+  background-color: rgba(22, 163, 74, 0.22) !important;
+  color: #86efac !important;
+}
+
+/* ========== Main content cards – dark theme ========== */
+[data-theme="dark"] .bg-white {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-theme="dark"] .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+[data-theme="dark"] .text-gray-600 {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .text-gray-500 {
+  color: #64748b !important;
+}
+[data-theme="dark"] .border-gray-200 {
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .border-gray-100 {
+  border-color: #1e293b !important;
+}
+
+/* Activity log — explicit borders (avoids Tailwind divide-gray-200 fighting globals) */
+.admin-activity-log-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+.admin-activity-log-rows > * + * {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-activity-log-page .admin-activity-log-header,
+[data-theme="dark"] .admin-activity-log-page .admin-activity-log-header {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-activity-log-page .admin-activity-log-rows > * + *,
+[data-theme="dark"] .admin-activity-log-page .admin-activity-log-rows > * + * {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+
+/* <Table rowDividers /> — body row lines (no divide-gray-200; matches activity log) */
+.admin-table-row-dividers > tr + tr {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-table-row-dividers > tr + tr,
+[data-theme="dark"] .admin-table-row-dividers > tr + tr {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+
+/* Administrators page — inner card table: header rule, row lines, no hover (beats global tbody tr:hover + Tailwind) */
+[data-dashboard-theme][data-theme="dark"] .admin-administrators-page .admin-administrators-table table thead tr.border-b,
+[data-theme="dark"] .admin-administrators-page .admin-administrators-table table thead tr.border-b {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="light"] .admin-administrators-page .admin-administrators-table table tbody tr:hover,
+[data-dashboard-theme][data-theme="dark"] .admin-administrators-page .admin-administrators-table table tbody tr:hover,
+[data-theme="dark"] .admin-administrators-page .admin-administrators-table table tbody tr:hover {
+  background-color: transparent !important;
+}
+/* Dividers: td borders so lines show with border-collapse tables */
+.admin-administrators-page .admin-administrators-table tbody.admin-table-row-dividers > tr + tr {
+  border-top: none !important;
+}
+.admin-administrators-page .admin-administrators-table tbody.admin-table-row-dividers > tr + tr td {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-administrators-page .admin-administrators-table tbody.admin-table-row-dividers > tr + tr td,
+[data-theme="dark"] .admin-administrators-page .admin-administrators-table tbody.admin-table-row-dividers > tr + tr td {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+
+/* Admin list <Table rowDividers /> — lines like Activity Log (td borders = reliable with border-collapse) */
+.admin-list-table tbody.admin-table-row-dividers > tr + tr {
+  border-top: none !important;
+}
+.admin-list-table tbody.admin-table-row-dividers > tr + tr td {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-list-table tbody.admin-table-row-dividers > tr + tr td,
+[data-theme="dark"] .admin-list-table tbody.admin-table-row-dividers > tr + tr td {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+
+/* Admin list <Table> wrappers — Companies, Employees, Accounts, etc. */
+[data-dashboard-theme][data-theme="dark"] .admin-list-table table thead tr.border-b,
+[data-theme="dark"] .admin-list-table table thead tr.border-b,
+[data-dashboard-theme][data-theme="dark"] .admin-list-table table tbody tr.border-b,
+[data-theme="dark"] .admin-list-table table tbody tr.border-b {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-list-table tbody.divide-y > * + *,
+[data-theme="dark"] .admin-list-table tbody.divide-y > * + * {
+  border-top-color: var(--admin-row-divider-dark) !important;
+}
+
+/* Admin: top title row (Wallet, Companies, …) — dark surface so .admin-page-heading (white) is visible */
+[data-dashboard-theme][data-theme="dark"] .admin-page-title-strip,
+[data-theme="dark"] .admin-page-title-strip,
+[data-dashboard-theme][data-theme="dark"] .admin-administrators-title-card,
+[data-theme="dark"] .admin-administrators-title-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+/* Admin: main content card under title (search + table) — same dark surface */
+[data-dashboard-theme][data-theme="dark"] .admin-page-panel,
+[data-theme="dark"] .admin-page-panel {
+  background-color: var(--color-admin-card-surface) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Admin: main page titles (h1 uses inline #0E1620 — override in dark mode) */
+[data-dashboard-theme][data-theme="dark"] .admin-page-heading {
+  color: #ffffff !important;
+}
+
+/* Admin: section titles under tab content (e.g. Wallet h2 with inline brand color) */
+[data-dashboard-theme][data-theme="dark"] .admin-section-heading {
+  color: #ffffff !important;
+}
+
+/* Admin — Add Company: dark mode section headings (Upload Picture, Company Details, …), field labels, subtle control borders */
+.add-company-section-heading {
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 20px;
+  color: #000000;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page .add-company-section-heading,
+[data-theme="dark"] .admin-add-company-page .add-company-section-heading {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page label.mb-2.block:not(.flex),
+[data-theme="dark"] .admin-add-company-page label.mb-2.block:not(.flex) {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page label.flex span,
+[data-theme="dark"] .admin-add-company-page label.flex span {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] .admin-add-company-page input:not([type="checkbox"]):not([type="radio"]) {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page select,
+[data-theme="dark"] .admin-add-company-page select {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page .add-company-section-sep,
+[data-theme="dark"] .admin-add-company-page .add-company-section-sep {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page .add-company-form-footer,
+[data-theme="dark"] .admin-add-company-page .add-company-form-footer {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page .add-company-phone-field,
+[data-theme="dark"] .admin-add-company-page .add-company-phone-field {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-add-company-page .add-company-phone-field .border-gray-200,
+[data-theme="dark"] .admin-add-company-page .add-company-phone-field .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Admin: pill tab strips — inactive labels readable on dark card */
+[data-dashboard-theme][data-theme="dark"] .admin-tab-strip {
+  background-color: var(--color-admin-card-surface) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-tab-strip .admin-tab-btn--inactive {
+  color: #ffffff !important;
+}
+/* Active tab (blue pill): always white label — beats .text-white token + hover utilities */
+[data-dashboard-theme] .admin-tab-strip .admin-tab-btn--active {
+  color: #ffffff !important;
+}
+
+/* Admin Wallet — balance cards: same surface as other admin cards; very subtle outer edge */
+.admin-wallet-balance-card {
+  background-color: #f8fafc;
+  border: 1px solid #e8eef4;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card,
+[data-theme="dark"] .admin-wallet-balance-card {
+  background-color: var(--color-admin-card-surface) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .admin-wallet-balance-amount,
+[data-theme="dark"] .admin-wallet-balance-card .admin-wallet-balance-amount,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .text-gray-900,
+[data-theme="dark"] .admin-wallet-balance-card .text-gray-900,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .text-gray-800,
+[data-theme="dark"] .admin-wallet-balance-card .text-gray-800,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .text-gray-700,
+[data-theme="dark"] .admin-wallet-balance-card .text-gray-700,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .text-gray-400,
+[data-theme="dark"] .admin-wallet-balance-card .text-gray-400 {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card .border-gray-200,
+[data-theme="dark"] .admin-wallet-balance-card .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card button[aria-label="Open wallet"],
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card button[aria-label="Show QR code"],
+[data-theme="dark"] .admin-wallet-balance-card button[aria-label="Open wallet"],
+[data-theme="dark"] .admin-wallet-balance-card button[aria-label="Show QR code"] {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card button[aria-label="Copy wallet address"],
+[data-theme="dark"] .admin-wallet-balance-card button[aria-label="Copy wallet address"] {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card button[aria-label="Copy wallet address"]:hover,
+[data-theme="dark"] .admin-wallet-balance-card button[aria-label="Copy wallet address"]:hover {
+  color: #e2e8f0 !important;
+}
+
+/* Admin Wallet — Commission: same row lines as <Table rowDividers />; transparent rows, no hover */
+.admin-wallet-commission-table-wrap thead tr.border-b {
+  border-bottom-color: #e5e7eb !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-commission-table-wrap thead tr.border-b,
+[data-theme="dark"] .admin-wallet-commission-table-wrap thead tr.border-b {
+  border-bottom-color: var(--admin-row-divider-dark) !important;
+}
+.admin-wallet-commission-table-wrap tbody tr {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="light"] .admin-wallet-commission-table-wrap tbody tr:hover,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-commission-table-wrap tbody tr:hover,
+[data-theme="dark"] .admin-wallet-commission-table-wrap tbody tr:hover,
+[data-dashboard-theme][data-theme="light"] .admin-wallet-commission-table-wrap tbody tr:hover td,
+[data-dashboard-theme][data-theme="dark"] .admin-wallet-commission-table-wrap tbody tr:hover td,
+[data-theme="dark"] .admin-wallet-commission-table-wrap tbody tr:hover td {
+  background-color: transparent !important;
+}
+
+/* Admin employee detail — form dialogs (Add document, Edit personal/address/…): readable text in dark */
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal h2,
+[data-theme="dark"] .admin-employee-edit-modal h2 {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal label,
+[data-theme="dark"] .admin-employee-edit-modal label {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal input,
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal select,
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal textarea,
+[data-theme="dark"] .admin-employee-edit-modal input,
+[data-theme="dark"] .admin-employee-edit-modal select,
+[data-theme="dark"] .admin-employee-edit-modal textarea {
+  /* Same surface as modal card — not a darker inset (#111827) */
+  background-color: var(--color-admin-card-surface) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal input::placeholder,
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal textarea::placeholder,
+[data-theme="dark"] .admin-employee-edit-modal input::placeholder,
+[data-theme="dark"] .admin-employee-edit-modal textarea::placeholder {
+  color: #e2e8f0 !important;
+  opacity: 0.9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal select option,
+[data-theme="dark"] .admin-employee-edit-modal select option {
+  background-color: var(--color-admin-card-surface);
+  color: #ffffff;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .text-gray-400,
+[data-theme="dark"] .admin-employee-edit-modal .text-gray-400 {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .text-gray-900,
+[data-theme="dark"] .admin-employee-edit-modal .text-gray-900 {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .border-gray-200,
+[data-theme="dark"] .admin-employee-edit-modal .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .border-gray-300,
+[data-theme="dark"] .admin-employee-edit-modal .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal button[aria-label="Close"],
+[data-theme="dark"] .admin-employee-edit-modal button[aria-label="Close"] {
+  color: #e2e8f0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal button[aria-label="Close"]:hover,
+[data-theme="dark"] .admin-employee-edit-modal button[aria-label="Close"]:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border.border-gray-300.bg-white,
+[data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border.border-gray-300.bg-white {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal h3,
+[data-theme="dark"] .admin-employee-edit-modal h3 {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border-2.border-dashed.border-gray-300,
+[data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border-2.border-dashed.border-gray-300 {
+  background-color: rgba(0, 0, 0, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border-2.border-dashed p,
+[data-theme="dark"] .admin-employee-edit-modal .rounded-lg.border-2.border-dashed p {
+  color: #e2e8f0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal button.border.bg-white.px-5,
+[data-theme="dark"] .admin-employee-edit-modal button.border.bg-white.px-5 {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+[data-dashboard-theme][data-theme="dark"] .admin-employee-edit-modal button.px-4.py-2.text-sm.font-medium:not(.text-white),
+[data-theme="dark"] .admin-employee-edit-modal button.px-4.py-2.text-sm.font-medium:not(.text-white) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: none !important;
+}
+
+/* ========== Responsive typography tuning (mobile/tablet only) ========== */
+@media (max-width: 1024px) {
+  h1 {
+    font-size: clamp(1.125rem, 3.2vw, 1.5rem) !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+
+  h2 {
+    font-size: clamp(1rem, 2.8vw, 1.25rem) !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+
+  h3 {
+    font-size: clamp(0.95rem, 2.4vw, 1.125rem) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+  }
+
+  h4 {
+    font-size: clamp(0.9rem, 2.1vw, 1rem) !important;
+    line-height: 1.25 !important;
+    font-weight: 600 !important;
+  }
+
+  .responsive-card-heading {
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+    font-weight: 500 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  p,
+  label,
+  span,
+  li,
+  td,
+  th {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  /* Cover both shared modal and custom popup implementations */
+  [role="dialog"],
+  [aria-modal="true"],
+  [class*="fixed inset-0 z-50"] {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word;
+  }
+
+  h1 {
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+  }
+
+  h2 {
+    font-size: 0.98rem !important;
+    line-height: 1.2 !important;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: 0.92rem !important;
+    line-height: 1.2 !important;
+  }
+
+  [role="dialog"] h1,
+  [role="dialog"] h2,
+  [role="dialog"] h3,
+  [role="dialog"] h4,
+  [aria-modal="true"] h1,
+  [aria-modal="true"] h2,
+  [aria-modal="true"] h3,
+  [aria-modal="true"] h4,
+  [class*="fixed inset-0 z-50"] h1,
+  [class*="fixed inset-0 z-50"] h2,
+  [class*="fixed inset-0 z-50"] h3,
+  [class*="fixed inset-0 z-50"] h4 {
+    font-size: 0.96rem !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+
+  [role="dialog"] button,
+  [role="dialog"] input,
+  [role="dialog"] select,
+  [role="dialog"] textarea,
+  [aria-modal="true"] button,
+  [aria-modal="true"] input,
+  [aria-modal="true"] select,
+  [aria-modal="true"] textarea,
+  [class*="fixed inset-0 z-50"] button,
+  [class*="fixed inset-0 z-50"] input,
+  [class*="fixed inset-0 z-50"] select,
+  [class*="fixed inset-0 z-50"] textarea {
+    font-size: 0.875rem !important;
+  }
+
+  [class*="fixed inset-0 z-50"] {
+    padding: 0.75rem !important;
+  }
+
+  .responsive-card-heading {
+    font-size: 0.82rem !important;
+    line-height: 1.2 !important;
+    font-weight: 500 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden !important;
+  }
+
+  [role="dialog"] .dialog-title-one-line,
+  [aria-modal="true"] .dialog-title-one-line {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 0.95rem !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+
+  [role="dialog"] .dialog-form-grid,
+  [aria-modal="true"] .dialog-form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  [role="dialog"] input,
+  [role="dialog"] select,
+  [role="dialog"] textarea,
+  [aria-modal="true"] input,
+  [aria-modal="true"] select,
+  [aria-modal="true"] textarea {
+    min-height: 2.25rem !important;
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+  }
+
+  [role="dialog"] label,
+  [aria-modal="true"] label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 16px !important;
+    line-height: 20px !important;
+    font-weight: 500 !important;
+  }
+
+  /* Employee add steps: keep labels one-line on mobile */
+  .employee-step-form label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 14px !important;
+    line-height: 18px !important;
+    font-weight: 400 !important;
+  }
+
+}
