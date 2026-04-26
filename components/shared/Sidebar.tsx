@@ -152,7 +152,7 @@ export default function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-hidden px-3 py-4">
         {isAdmin ? (
           <ul className="space-y-5">
             {adminNavSections.map((section) => {
@@ -226,11 +226,29 @@ export default function Sidebar({ role }: SidebarProps) {
               );
             })}
           </ul>
-        ) : null}
+        ) : (
+          <ul className="space-y-1">
+            {navItems[role].map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    pathname === item.href
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </nav>
 
       {/* Logout */}
-      <div className="p-3">
+      <div className="px-3 pb-3 pt-1">
         <button
           type="button"
           onClick={handleLogout}

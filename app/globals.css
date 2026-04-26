@@ -774,7 +774,7 @@ aside .sidebar-nav-section-label {
 
 /* View Individual — cards only (section cards, details surface, bottom row, tab panels) */
 .view-individual-details-surface {
-  background-color: #f5f6fa;
+  background-color: #ffffff;
 }
 [data-theme="dark"] .view-individual-details-surface {
   background-color: #04102a !important;
@@ -836,6 +836,9 @@ aside .sidebar-nav-section-label {
   background-color: #ffffff !important;
 }
 /* Section cards (light-blue header + dark body): outer wrapper must match body — avoids white leaking at bottom corners */
+.view-company-detail-page .view-company-details-section {
+  background-color: #fcfcfc;
+}
 [data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
 [data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
 [data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-details-section.bg-white,
@@ -1501,8 +1504,8 @@ aside .sidebar-nav-section-label {
 
 /* Admin Wallet — balance cards: same surface as other admin cards; very subtle outer edge */
 .admin-wallet-balance-card {
-  background-color: #f8fafc;
-  border: 1px solid #e8eef4;
+  background-color: #fafafa;
+  border: none;
 }
 [data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card,
 [data-theme="dark"] .admin-wallet-balance-card {

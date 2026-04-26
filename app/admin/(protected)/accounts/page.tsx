@@ -1,17 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getAccounts, deleteAccount, type Account } from "@/lib/api/admin/accounts";
 
 type AccountType = "Crypto" | "Bank";
 
 type AccountRow = {
-  id: number;
   slNo: number;
   number: string;
   providerNumber: string;
@@ -20,69 +17,68 @@ type AccountRow = {
   providerCurrency: string;
   status: string;
   providerName: string;
+  // Bank-only (when type === "Bank")
   bankDetails?: string;
   iban?: string;
   swiftBic?: string;
   bankName?: string;
 };
 
-function statusVariant(s: string): "success" | "warning" | "danger" | "info" {
-  const v = (s ?? "").toLowerCase();
-  if (v === "active" || v === "approved") return "success";
-  if (v === "frozen" || v === "inactive") return "danger";
-  if (v === "pending") return "warning";
-  return "info";
-}
+const mockAccounts: AccountRow[] = [
+  {
+    slNo: 2983,
+    number: "7984505Y88",
+    providerNumber: "0xC9f2b6d607b0f78b94ab84d205FF8137a7eb487037",
+    holder: "AKSHAY_NET",
+    type: "Crypto",
+    providerCurrency: "USDT (ERC20)",
+    status: "Active",
+    providerName: "Freebooks",
+  },
+  {
+    slNo: 2984,
+    number: "7984505Y89",
+    providerNumber: "",
+    holder: "AKSHAY_NET",
+    type: "Bank",
+    providerCurrency: "EURO",
+    status: "Active",
+    providerName: "Freebooks",
+    bankDetails: "General Payments Gate LTD",
+    iban: "GB50TRWI23148510000949",
+    swiftBic: "TRWIGB2LXXX",
+    bankName: "My EU Pay Ltd.",
+  },
+  {
+    slNo: 2985,
+    number: "7984505Y90",
+    providerNumber: "0xD1e3f8c719c1e89c95b04c306FF9248b8fc598848",
+    holder: "JOHN_DOE",
+    type: "Crypto",
+    providerCurrency: "USDT (ERC20)",
+    status: "Active",
+    providerName: "Acme Corp",
+  },
+  {
+    slNo: 2986,
+    number: "7984505Y91",
+    providerNumber: "",
+    holder: "JANE_SMITH",
+    type: "Bank",
+    providerCurrency: "GBP",
+    status: "Active",
+    providerName: "Acme Corp",
+    bankDetails: "Payments Gate UK Ltd",
+    iban: "GB82WEST12345698765432",
+    swiftBic: "WESTGB2LXXX",
+    bankName: "Westminster Bank",
+  },
+];
 
 export default function AdminAccountsPage() {
-  const token = useAdminAuthStore((s) => s.token);
   const [search, setSearch] = useState("");
-  const [accounts, setAccounts] = useState<AccountRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getAccounts(token, { limit: "100" });
-      const rows: AccountRow[] = (res.data ?? []).map((a: Account, i: number) => ({
-        id: a.id,
-        slNo: a.slNo ?? i + 1,
-        number: a.number ?? "",
-        providerNumber: a.providerNumber ?? a.wallet_address ?? a.iban ?? "",
-        holder: a.holder ?? a.company_name ?? "—",
-        type: (a.type as AccountType) ?? "Bank",
-        providerCurrency: a.provider_currency ?? "",
-        status: a.status ?? "Active",
-        providerName: a.provider_name ?? "",
-        bankDetails: a.bank_details,
-        iban: a.iban,
-        swiftBic: a.swift_bic,
-        bankName: a.bank_name,
-      }));
-      setAccounts(rows);
-    } catch (err) {
-      console.error("Failed to fetch accounts:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleDelete = async (id: number) => {
-    if (!token) return;
-    if (!confirm("Delete this account?")) return;
-    try {
-      await deleteAccount(token, String(id));
-      await fetchData();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete account");
-    }
-  };
-
-  const filtered = accounts.filter(
+  const filtered = mockAccounts.filter(
     (a) =>
       a.number.toLowerCase().includes(search.toLowerCase()) ||
       a.holder.toLowerCase().includes(search.toLowerCase()) ||
@@ -124,7 +120,9 @@ export default function AdminAccountsPage() {
         if (row.type === "Bank" && (row.bankDetails || row.iban || row.swiftBic || row.bankName)) {
           return (
             <div className="text-sm text-gray-700 leading-relaxed">
-              {row.bankDetails && <div>Bank Details: {row.bankDetails}</div>}
+              {row.bankDetails && (
+                <div>Bank Details: {row.bankDetails}</div>
+              )}
               {row.iban && <div>IBAN: {row.iban}</div>}
               {row.swiftBic && <div>SWIFT/BIC: {row.swiftBic}</div>}
               {row.bankName && <div>Bank Name: {row.bankName}</div>}
@@ -150,7 +148,7 @@ export default function AdminAccountsPage() {
       key: "status" as const,
       header: "Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant={statusVariant(String(value))} />
+        <Badge label={String(value)} variant="success" />
       ),
     },
     {
@@ -163,37 +161,16 @@ export default function AdminAccountsPage() {
       key: "actions" as const,
       header: "",
       className: "w-10",
-      render: (_: unknown, row: AccountRow) => (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Actions"
-          >
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
-          {openMenuId === row.id && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-              <Link
-                href={ROUTES.admin.accountDetail(row.number)}
-                className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setOpenMenuId(null)}
-              >
-                View
-              </Link>
-              <button
-                type="button"
-                onClick={() => { setOpenMenuId(null); handleDelete(row.id); }}
-                className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-100"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
+      render: () => (
+        <button
+          type="button"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Actions"
+        >
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
+        </button>
       ),
     },
   ];
@@ -202,7 +179,7 @@ export default function AdminAccountsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="admin-page-title-strip w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
+      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
           style={{
@@ -219,7 +196,7 @@ export default function AdminAccountsPage() {
         </h1>
       </div>
 
-      <div className="admin-page-panel w-full rounded-[10px] bg-white p-6">
+      <div className="w-full rounded-xl bg-white p-6">
         <div className="flex items-center gap-3">
           <label className="relative min-w-0 flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
@@ -236,21 +213,12 @@ export default function AdminAccountsPage() {
             />
           </label>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          </div>
-        ) : (
-          <Table<AccountRow & { actions: null }>
-            columns={columns}
-            data={tableData}
-            emptyMessage="No accounts found."
-            className="admin-list-table mt-6 border-0 border-gray-100"
-            bordered={false}
-            rowDividers
-            rowHover={false}
-          />
-        )}
+        <Table<AccountRow & { actions: null }>
+          columns={columns}
+          data={tableData}
+          emptyMessage="No accounts found."
+          className="admin-list-table mt-6 border-0 border-gray-100"
+        />
       </div>
     </div>
   );

@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { createEmployee } from "@/lib/api/admin/employees";
-import { ROUTES } from "@/lib/constants/routes";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 const LABEL_STYLE: React.CSSProperties = {
   fontFamily: "var(--font-poppins), Poppins, sans-serif",
@@ -17,7 +13,7 @@ const LABEL_STYLE: React.CSSProperties = {
 
 const DROPDOWN_ARROW_COLOR = "#878787DD";
 
-const SELECT_FIELD_STYLE = { border: "1px solid #E5E7EB", backgroundColor: "#FFFFFF" };
+const SELECT_FIELD_STYLE = { border: "1px solid #E5E7EB", backgroundColor: "#FFFFFF", color: "#6B7280" };
 
 function SelectWithArrow({ children, className, ...props }: React.ComponentPropsWithoutRef<"select">) {
   return (
@@ -47,15 +43,19 @@ const STEPS = [
 ] as const;
 
 export default function AdminAddEmployeePage() {
-  const router = useRouter();
-  const token = useAdminAuthStore((s) => s.token);
-  const [submitting, setSubmitting] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [personalEmail, setPersonalEmail] = useState("");
-  const [workEmail] = useState("");
-  const [jobTitle] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+  const [nationalityOpen, setNationalityOpen] = useState(false);
+  const [selectedNationality, setSelectedNationality] = useState("");
+  const [primaryCodeOpen, setPrimaryCodeOpen] = useState(false);
+  const [selectedPrimaryCode, setSelectedPrimaryCode] = useState("+93 🇦🇫");
+  const [emergencyCodeOpen, setEmergencyCodeOpen] = useState(false);
+  const [selectedEmergencyCode, setSelectedEmergencyCode] = useState("+93 🇦🇫");
+  const [addressCountryOpen, setAddressCountryOpen] = useState(false);
+  const [selectedAddressCountry, setSelectedAddressCountry] = useState("");
+  const dobRef = useRef<HTMLInputElement>(null);
+  const contractStartRef = useRef<HTMLInputElement>(null);
+  const contractEndRef = useRef<HTMLInputElement>(null);
+  const varComp1DateRef = useRef<HTMLInputElement>(null);
   const [employmentType, setEmploymentType] = useState("");
   const [employeeStatus, setEmployeeStatus] = useState("");
   const [seniorityLevel, setSeniorityLevel] = useState("");
@@ -85,8 +85,8 @@ export default function AdminAddEmployeePage() {
     <div className="w-full space-y-6" data-page="add-employee">
       {/* Page title */}
       <div
-        className="add-employee-header-card border border-gray-200 bg-white px-6 py-5 shadow-sm"
-        style={{ borderRadius: "16px" }}
+        className="add-employee-header-card bg-white px-6 py-5"
+        style={{ borderRadius: "10px" }}
       >
         <h1
           className="admin-page-heading font-semibold"
@@ -103,28 +103,28 @@ export default function AdminAddEmployeePage() {
 
       {/* Stepper — line: completed portion blue, baaki grey */}
       <div
-        className="add-employee-stepper-card w-full overflow-x-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:overflow-visible"
-        style={{ backgroundColor: "#F8F9FB" }}
+        className="add-employee-stepper-card w-full overflow-x-auto rounded-2xl border border-gray-200 bg-white p-6 md:overflow-visible"
+        style={{ backgroundColor: "#FFFFFF" }}
       >
-        {/* gap-0: line uses left/right 84px — extra flex gap breaks center-to-center on narrow scroll */}
-        <div className="employee-stepper-row relative flex min-w-[860px] items-start justify-between gap-0 md:min-w-0">
-          {/* Lines sirf 48px icon band me — center hamesha icon ke center se match (desktop + responsive scroll) */}
+        {/* grid-cols-5: equal columns so each circle center is exactly at 10%, 30%, 50%, 70%, 90% */}
+        <div className="employee-stepper-row relative grid grid-cols-5 min-w-[860px] items-start md:min-w-0">
+          {/* Gray track: center of col-1 (10%) to center of col-5 (90%) */}
           <div
-            className="pointer-events-none absolute left-0 right-0 top-0 z-0 h-12"
+            className="employee-stepper-track add-employee-stepper-connector pointer-events-none absolute left-[10%] right-[10%] z-0 h-[6px] bg-[#E5E7EB]"
+            style={{ top: "24px" }}
             aria-hidden
-          >
+          />
+          {/* Blue progress: grows 20% per completed step */}
+          {currentStep >= 2 && (
             <div
-              className="employee-stepper-track add-employee-stepper-connector absolute left-[84px] right-[84px] top-1/2 z-0 h-[5.33px] -translate-y-1/2 bg-[#F2F2F2]"
+              className="employee-stepper-progress pointer-events-none absolute z-0 h-[6px] bg-[#2962FF]"
+              style={{
+                top: "24px",
+                left: "10%",
+                width: `${(currentStep - 1) * 20}%`,
+              }}
             />
-            {currentStep >= 2 && (
-              <div
-                className="employee-stepper-progress absolute left-[84px] top-1/2 z-0 h-[5.33px] -translate-y-1/2 bg-[#0F50DB]"
-                style={{
-                  width: `calc((100% - 168px) * ${(currentStep - 1) / 4})`,
-                }}
-              />
-            )}
-          </div>
+          )}
           {STEPS.map((step) => {
             const isActive = step.id === currentStep;
             const isPending = step.id > currentStep;
@@ -145,17 +145,17 @@ export default function AdminAddEmployeePage() {
                       height: 36,
                       top: 6,
                       left: 6,
-                      borderRadius: "40px",
+                      borderRadius: "50%",
                       opacity: 1,
-                      border: isCompleted ? "2px solid #FFFFFF" : isActive ? "2px solid #2962FF" : "5.33px solid #F2F2F2",
-                      boxShadow: isCompleted || isActive ? "0 0 0 2px #2962FF" : undefined,
-                      backgroundColor: isCompleted ? "#2962FF" : "#FFFFFF",
+                      border: isCompleted ? "none" : isActive ? "none" : "1.5px solid #D1D5DB",
+                      boxShadow: isActive ? "0 0 0 4px #FFFFFF, 0 0 0 6px #2962FF" : undefined,
+                      backgroundColor: isCompleted ? "#2962FF" : isActive ? "#2962FF" : "#FFFFFF",
                       fontFamily: "var(--font-poppins), Poppins, sans-serif",
-                      fontWeight: 500,
-                      fontSize: "24px",
+                      fontWeight: 600,
+                      fontSize: "16px",
                       lineHeight: "100%",
                       letterSpacing: "0%",
-                      color: isCompleted ? "#FFFFFF" : isActive ? "#2962FF" : "#9CA3AF",
+                      color: isCompleted ? "#FFFFFF" : isActive ? "#FFFFFF" : "#9CA3AF",
                     }}
                   >
                     {isCompleted ? (
@@ -203,7 +203,7 @@ export default function AdminAddEmployeePage() {
 
       {/* Form: Step 1 - Personal Details */}
       {currentStep === 1 && (
-        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6">
           <h2
             className="mb-6 font-semibold"
             style={{
@@ -229,9 +229,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter first name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -241,9 +239,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter last name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -254,9 +250,7 @@ export default function AdminAddEmployeePage() {
                 <input
                   type="email"
                   placeholder="Enter your personal email"
-                  value={personalEmail}
-                  onChange={(e) => setPersonalEmail(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500 placeholder-gray-400"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +267,7 @@ export default function AdminAddEmployeePage() {
                 <input
                   type="email"
                   placeholder="Enter your work email"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500 placeholder-gray-400"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,26 +276,34 @@ export default function AdminAddEmployeePage() {
                 </span>
               </div>
             </div>
-            <div>
+            <div className="relative">
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Nationality
               </label>
-              <SelectWithArrow className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white">
-                <option value="">Select nationality</option>
-                <option value="American">American</option>
-              </SelectWithArrow>
+              <button
+                type="button"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-left flex items-center justify-between bg-white"
+                style={{ color: selectedNationality ? "#6B7280" : "#9CA3AF" }}
+                onClick={() => setNationalityOpen(!nationalityOpen)}
+              >
+                <span>{selectedNationality || "Select nationality"}</span>
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {nationalityOpen && (
+                <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg" style={{ maxHeight: "50vh", overflowY: "auto" }}>
+                  {["Afghan","Albanian","Algerian","American","Andorran","Angolan","Argentine","Armenian","Australian","Austrian","Azerbaijani","Bahamian","Bahraini","Bangladeshi","Belarusian","Belgian","Belizean","Beninese","Bhutanese","Bolivian","Bosnian","Botswanan","Brazilian","British","Bruneian","Bulgarian","Burkinabe","Burundian","Cambodian","Cameroonian","Canadian","Chilean","Chinese","Colombian","Congolese","Costa Rican","Croatian","Cuban","Cypriot","Czech","Danish","Dominican","Dutch","Ecuadorian","Egyptian","Emirati","Estonian","Ethiopian","Fijian","Finnish","French","Gabonese","Gambian","Georgian","German","Ghanaian","Greek","Guatemalan","Guinean","Haitian","Honduran","Hungarian","Icelandic","Indian","Indonesian","Iranian","Iraqi","Irish","Israeli","Italian","Ivorian","Jamaican","Japanese","Jordanian","Kazakhstani","Kenyan","Korean","Kuwaiti","Kyrgyz","Laotian","Latvian","Lebanese","Liberian","Libyan","Lithuanian","Luxembourgish","Macedonian","Malagasy","Malawian","Malaysian","Maldivian","Malian","Maltese","Mauritanian","Mauritian","Mexican","Moldovan","Mongolian","Montenegrin","Moroccan","Mozambican","Namibian","Nepalese","New Zealander","Nicaraguan","Nigerian","Norwegian","Omani","Pakistani","Panamanian","Paraguayan","Peruvian","Filipino","Polish","Portuguese","Qatari","Romanian","Russian","Rwandan","Saudi","Senegalese","Serbian","Sierra Leonean","Singaporean","Slovak","Slovenian","Somali","South African","Spanish","Sri Lankan","Sudanese","Swedish","Swiss","Syrian","Taiwanese","Tajik","Tanzanian","Thai","Togolese","Trinidadian","Tunisian","Turkish","Turkmen","Ugandan","Ukrainian","Uruguayan","Uzbek","Venezuelan","Vietnamese","Yemeni","Zambian","Zimbabwean"].map((n) => (
+                    <div key={n} className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => { setSelectedNationality(n); setNationalityOpen(false); }}>{n}</div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Date of birth <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Select"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <input ref={dobRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => dobRef.current?.showPicker()}>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -312,8 +314,10 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Identification Type
               </label>
-              <SelectWithArrow className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white">
+              <SelectWithArrow className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400 bg-white">
+                <option value="">Select identification type</option>
                 <option value="passport">Passport</option>
+                <option value="national_id">National ID</option>
               </SelectWithArrow>
             </div>
             <div>
@@ -323,7 +327,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter passport no"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -331,14 +335,21 @@ export default function AdminAddEmployeePage() {
                 Primary contact no <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-1">
-                <SelectWithArrow className="w-24 rounded-lg border border-gray-300 px-2 py-2 text-gray-900 bg-white">
-                  <option value="+977">+977</option>
-                </SelectWithArrow>
-                <input
-                  type="tel"
-                  placeholder="980-00-000-00"
-                  className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
-                />
+                <div className="relative w-28">
+                  {primaryCodeOpen && <div className="fixed inset-0 z-[199]" onClick={() => setPrimaryCodeOpen(false)} />}
+                  <button type="button" onClick={() => setPrimaryCodeOpen(!primaryCodeOpen)} className="w-full rounded-lg border border-gray-300 px-2 py-2 text-left flex items-center justify-between bg-white" style={{ color: "#1F2937" }}>
+                    <span className="truncate text-sm">{selectedPrimaryCode}</span>
+                    <svg className="h-3 w-3 ml-1 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  {primaryCodeOpen && (
+                    <div className="absolute left-0 right-0 z-[200] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg" style={{ bottom: "100%", marginBottom: 4, maxHeight: "50vh" }}>
+                      {["+93 🇦🇫","+355 🇦🇱","+213 🇩🇿","+1 🇺🇸","+54 🇦🇷","+374 🇦🇲","+61 🇦🇺","+43 🇦🇹","+994 🇦🇿","+973 🇧🇭","+880 🇧🇩","+32 🇧🇪","+55 🇧🇷","+44 🇬🇧","+359 🇧🇬","+1 🇨🇦","+56 🇨🇱","+86 🇨🇳","+57 🇨🇴","+385 🇭🇷","+53 🇨🇺","+357 🇨🇾","+420 🇨🇿","+45 🇩🇰","+20 🇪🇬","+971 🇦🇪","+372 🇪🇪","+251 🇪🇹","+358 🇫🇮","+33 🇫🇷","+995 🇬🇪","+49 🇩🇪","+233 🇬🇭","+30 🇬🇷","+36 🇭🇺","+91 🇮🇳","+62 🇮🇩","+98 🇮🇷","+964 🇮🇶","+353 🇮🇪","+972 🇮🇱","+39 🇮🇹","+81 🇯🇵","+962 🇯🇴","+7 🇰🇿","+254 🇰🇪","+82 🇰🇷","+965 🇰🇼","+371 🇱🇻","+961 🇱🇧","+370 🇱🇹","+60 🇲🇾","+960 🇲🇻","+356 🇲🇹","+52 🇲🇽","+373 🇲🇩","+976 🇲🇳","+212 🇲🇦","+31 🇳🇱","+64 🇳🇿","+234 🇳🇬","+47 🇳🇴","+968 🇴🇲","+92 🇵🇰","+63 🇵🇭","+48 🇵🇱","+351 🇵🇹","+974 🇶🇦","+40 🇷🇴","+7 🇷🇺","+966 🇸🇦","+381 🇷🇸","+65 🇸🇬","+421 🇸🇰","+386 🇸🇮","+27 🇿🇦","+34 🇪🇸","+94 🇱🇰","+46 🇸🇪","+41 🇨🇭","+963 🇸🇾","+886 🇹🇼","+255 🇹🇿","+66 🇹🇭","+216 🇹🇳","+90 🇹🇷","+256 🇺🇬","+380 🇺🇦","+598 🇺🇾","+998 🇺🇿","+58 🇻🇪","+84 🇻🇳","+967 🇾🇪","+260 🇿🇲","+263 🇿🇼","+977 🇳🇵"].map(c => (
+                        <div key={c} className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap" onClick={() => { setSelectedPrimaryCode(c); setPrimaryCodeOpen(false); }}>{c}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input type="tel" placeholder="980-00-000-00" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
               </div>
             </div>
             <div>
@@ -346,14 +357,21 @@ export default function AdminAddEmployeePage() {
                 Emergency contact no <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-1">
-                <SelectWithArrow className="w-24 rounded-lg border border-gray-300 px-2 py-2 text-gray-900 bg-white">
-                  <option value="+977">+977</option>
-                </SelectWithArrow>
-                <input
-                  type="tel"
-                  placeholder="980-00-000-00"
-                  className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
-                />
+                <div className="relative w-28">
+                  {emergencyCodeOpen && <div className="fixed inset-0 z-[199]" onClick={() => setEmergencyCodeOpen(false)} />}
+                  <button type="button" onClick={() => setEmergencyCodeOpen(!emergencyCodeOpen)} className="w-full rounded-lg border border-gray-300 px-2 py-2 text-left flex items-center justify-between bg-white" style={{ color: "#1F2937" }}>
+                    <span className="truncate text-sm">{selectedEmergencyCode}</span>
+                    <svg className="h-3 w-3 ml-1 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  {emergencyCodeOpen && (
+                    <div className="absolute left-0 right-0 z-[200] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg" style={{ bottom: "100%", marginBottom: 4, maxHeight: "50vh" }}>
+                      {["+93 🇦🇫","+355 🇦🇱","+213 🇩🇿","+1 🇺🇸","+54 🇦🇷","+374 🇦🇲","+61 🇦🇺","+43 🇦🇹","+994 🇦🇿","+973 🇧🇭","+880 🇧🇩","+32 🇧🇪","+55 🇧🇷","+44 🇬🇧","+359 🇧🇬","+1 🇨🇦","+56 🇨🇱","+86 🇨🇳","+57 🇨🇴","+385 🇭🇷","+53 🇨🇺","+357 🇨🇾","+420 🇨🇿","+45 🇩🇰","+20 🇪🇬","+971 🇦🇪","+372 🇪🇪","+251 🇪🇹","+358 🇫🇮","+33 🇫🇷","+995 🇬🇪","+49 🇩🇪","+233 🇬🇭","+30 🇬🇷","+36 🇭🇺","+91 🇮🇳","+62 🇮🇩","+98 🇮🇷","+964 🇮🇶","+353 🇮🇪","+972 🇮🇱","+39 🇮🇹","+81 🇯🇵","+962 🇯🇴","+7 🇰🇿","+254 🇰🇪","+82 🇰🇷","+965 🇰🇼","+371 🇱🇻","+961 🇱🇧","+370 🇱🇹","+60 🇲🇾","+960 🇲🇻","+356 🇲🇹","+52 🇲🇽","+373 🇲🇩","+976 🇲🇳","+212 🇲🇦","+31 🇳🇱","+64 🇳🇿","+234 🇳🇬","+47 🇳🇴","+968 🇴🇲","+92 🇵🇰","+63 🇵🇭","+48 🇵🇱","+351 🇵🇹","+974 🇶🇦","+40 🇷🇴","+7 🇷🇺","+966 🇸🇦","+381 🇷🇸","+65 🇸🇬","+421 🇸🇰","+386 🇸🇮","+27 🇿🇦","+34 🇪🇸","+94 🇱🇰","+46 🇸🇪","+41 🇨🇭","+963 🇸🇾","+886 🇹🇼","+255 🇹🇿","+66 🇹🇭","+216 🇹🇳","+90 🇹🇷","+256 🇺🇬","+380 🇺🇦","+598 🇺🇾","+998 🇺🇿","+58 🇻🇪","+84 🇻🇳","+967 🇾🇪","+260 🇿🇲","+263 🇿🇼","+977 🇳🇵"].map(c => (
+                        <div key={c} className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap" onClick={() => { setSelectedEmergencyCode(c); setEmergencyCodeOpen(false); }}>{c}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input type="tel" placeholder="980-00-000-00" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
               </div>
             </div>
             <div>
@@ -363,7 +381,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter national insurance no"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -373,7 +391,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter TIC"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div className="sm:col-span-2 flex justify-end pt-6">
@@ -391,7 +409,7 @@ export default function AdminAddEmployeePage() {
 
       {/* Step 2: Address — Figma 473-5361 */}
       {currentStep === 2 && (
-        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6">
           <h2
             className="mb-6 font-semibold"
             style={{
@@ -417,7 +435,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter street name"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -427,7 +445,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter street number"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -437,7 +455,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter flat/appartment number"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -447,7 +465,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter floor"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -457,7 +475,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter postal code"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -467,7 +485,7 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter province/region/state"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -477,18 +495,25 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter city"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
-            <div>
+            <div className="relative">
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Select country
               </label>
-              <SelectWithArrow className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white">
-                <option value="">Select country</option>
-                <option value="USA">USA</option>
-                <option value="Cyprus">Cyprus</option>
-              </SelectWithArrow>
+              {addressCountryOpen && <div className="fixed inset-0 z-[199]" onClick={() => setAddressCountryOpen(false)} />}
+              <button type="button" onClick={() => setAddressCountryOpen(!addressCountryOpen)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-left flex items-center justify-between bg-white" style={{ color: selectedAddressCountry ? "#6B7280" : "#9CA3AF" }}>
+                <span>{selectedAddressCountry || "Select country"}</span>
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {addressCountryOpen && (
+                <div className="absolute left-0 right-0 z-[200] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg" style={{ bottom: "100%", marginBottom: 4, maxHeight: "50vh" }}>
+                  {["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Brazil","Bulgaria","Cambodia","Cameroon","Canada","Chile","China","Colombia","Croatia","Cuba","Cyprus","Czech Republic","Denmark","Dominican Republic","Ecuador","Egypt","Estonia","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Latvia","Lebanon","Lithuania","Luxembourg","Malaysia","Maldives","Malta","Mexico","Moldova","Mongolia","Morocco","Nepal","Netherlands","New Zealand","Nigeria","Norway","Oman","Pakistan","Panama","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","South Korea","Spain","Sri Lanka","Sweden","Switzerland","Syria","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"].map(c => (
+                    <div key={c} className="cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => { setSelectedAddressCountry(c); setAddressCountryOpen(false); }}>{c}</div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="sm:col-span-2 flex justify-between pt-6">
               <button
@@ -513,7 +538,7 @@ export default function AdminAddEmployeePage() {
 
       {/* Step 3: Employment & Role Details — Figma 473-5762 */}
       {currentStep === 3 && (
-        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6">
           <h2
             className="mb-6 font-semibold"
             style={{
@@ -536,19 +561,19 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Legal entity <span className="text-red-500">*</span>
               </label>
-              <input type="text" placeholder="Enter legal entity" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="text" placeholder="Enter legal entity" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Group (optional)
               </label>
-              <input type="text" placeholder="Enter group" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="text" placeholder="Enter group" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Job title
               </label>
-              <input type="text" placeholder="Enter job title" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="text" placeholder="Enter job title" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -566,7 +591,7 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Scope of work
               </label>
-              <input type="text" placeholder="Enter scope of work" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="text" placeholder="Enter scope of work" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -584,24 +609,22 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Department role
               </label>
-              <input type="text" placeholder="Enter department role" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="text" placeholder="Enter department role" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Direct manager email
               </label>
-              <input type="email" placeholder="Enter direct manager email" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="email" placeholder="Enter direct manager email" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Contract start date <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: DROPDOWN_ARROW_COLOR }}>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                <input ref={contractStartRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => contractStartRef.current?.showPicker()}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </span>
               </div>
             </div>
@@ -610,11 +633,9 @@ export default function AdminAddEmployeePage() {
                 Contract end date
               </label>
               <div className="relative">
-                <input type="text" placeholder="Select" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400" />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: DROPDOWN_ARROW_COLOR }}>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                <input ref={contractEndRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => contractEndRef.current?.showPicker()}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </span>
               </div>
             </div>
@@ -628,14 +649,15 @@ export default function AdminAddEmployeePage() {
                 className={`w-full rounded-lg border border-gray-300 px-3 py-2 bg-white ${employmentType === "" ? "text-gray-500" : "text-gray-900"}`}
               >
                 <option value="">Select</option>
-                <option value="full-time">Full-time</option>
+                <option value="full-time">Full Time</option>
+                <option value="part-time">Part Time</option>
               </SelectWithArrow>
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Part time percentage
               </label>
-              <input type="number" placeholder="Enter part time percentage" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
+              <input type="number" placeholder="Enter part time percentage" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -648,6 +670,8 @@ export default function AdminAddEmployeePage() {
               >
                 <option value="">Select</option>
                 <option value="Active">Active</option>
+                <option value="Probation">Probation</option>
+                <option value="Terminated">Terminated</option>
               </SelectWithArrow>
             </div>
             <div className="sm:col-span-2 flex justify-between pt-6">
@@ -673,7 +697,7 @@ export default function AdminAddEmployeePage() {
 
       {/* Step 4: Compensation & Payment — Figma 473-6148 */}
       {currentStep === 4 && (
-        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6">
           <h2
             className="mb-6 font-semibold"
             style={{
@@ -702,8 +726,8 @@ export default function AdminAddEmployeePage() {
                 className={`w-full rounded-lg border border-gray-300 px-3 py-2 bg-white ${paymentMethod === "" ? "text-gray-500" : "text-gray-900"}`}
               >
                 <option value="">Select</option>
-                <option value="bank-transfer">Bank transfer</option>
-                <option value="wallet">Wallet</option>
+                <option value="bank-transfer">Bank Transfer</option>
+                <option value="crypto">Crypto Payment</option>
               </SelectWithArrow>
             </div>
             <div>
@@ -744,10 +768,10 @@ export default function AdminAddEmployeePage() {
                 className={`w-full rounded-lg border border-gray-300 px-3 py-2 bg-white ${paymentCurrencyCode === "" ? "text-gray-500" : "text-gray-900"}`}
               >
                 <option value="">Select</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
+                <option value="EURO">EURO</option>
+                <option value="BTC">BTC</option>
+                <option value="USDC">USDC</option>
+                <option value="USDT">USDT</option>
               </SelectWithArrow>
             </div>
             <div>
@@ -759,7 +783,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter gross annual salary"
                 value={grossAnnualSalary}
                 onChange={(e) => setGrossAnnualSalary(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <div>
@@ -768,13 +792,12 @@ export default function AdminAddEmployeePage() {
               </label>
               <div className="relative">
                 <input
-                  type="text"
-                  placeholder="Select"
-                  value={varComp1EffectiveDate}
-                  onChange={(e) => setVarComp1EffectiveDate(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
+                  ref={varComp1DateRef}
+                  type="date"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500"
+                  style={{ colorScheme: "light" }}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: DROPDOWN_ARROW_COLOR }}>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => varComp1DateRef.current?.showPicker()}>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -791,9 +814,9 @@ export default function AdminAddEmployeePage() {
                 className={`w-full rounded-lg border border-gray-300 px-3 py-2 bg-white ${varComp1Frequency === "" ? "text-gray-500" : "text-gray-900"}`}
               >
                 <option value="">Select</option>
+                <option value="daily">Daily</option>
                 <option value="monthly">Monthly</option>
                 <option value="quarterly">Quarterly</option>
-                <option value="annual">Annual</option>
               </SelectWithArrow>
             </div>
             <div>
@@ -819,7 +842,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter"
                 value={varComp1Title}
                 onChange={(e) => setVarComp1Title(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -831,7 +854,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter amount"
                 value={varComp1Amount}
                 onChange={(e) => setVarComp1Amount(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <div className="sm:col-span-2 flex justify-between pt-6">
@@ -857,7 +880,7 @@ export default function AdminAddEmployeePage() {
 
       {/* Step 5: Bank & Wallet Details — Figma 473-6568 */}
       {currentStep === 5 && (
-        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="add-employee-form-section rounded-2xl border border-gray-200 bg-white p-6">
           <h2
             className="mb-6 font-semibold"
             style={{
@@ -871,46 +894,9 @@ export default function AdminAddEmployeePage() {
           </h2>
           <form
             className="employee-step-form grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2"
-            onSubmit={async (e) => {
+            onSubmit={(e) => {
               e.preventDefault();
-              if (!token || submitting) return;
-              if (!firstName.trim() || !lastName.trim() || !personalEmail.trim()) {
-                alert("First name, last name, and personal email are required");
-                setCurrentStep(1);
-                return;
-              }
-              setSubmitting(true);
-              try {
-                await createEmployee(token, {
-                  first_name: firstName.trim(),
-                  last_name: lastName.trim(),
-                  email: personalEmail.trim(),
-                  work_email: workEmail || null,
-                  job_title: jobTitle || null,
-                  employment_type: employmentType || null,
-                  status: employeeStatus || "active",
-                  seniority_level: seniorityLevel || null,
-                  department: department || null,
-                  payment_method: paymentMethod || null,
-                  payment_preference: paymentPreference || null,
-                  compensation_type: compensationType || null,
-                  payment_currency_code: paymentCurrencyCode || null,
-                  gross_annual_salary: grossAnnualSalary ? Number(grossAnnualSalary) : null,
-                  bank_name: bankName || null,
-                  bank_address: bankAddress || null,
-                  swift_bic: swiftBic || null,
-                  iban: iban || null,
-                  usdt_erc_wallet: usdtErcWallet || null,
-                  usdc_erc_wallet: usdcErcWallet || null,
-                  usdc_poly_wallet: usdcPolyWallet || null,
-                  btc_wallet: btcWallet || null,
-                });
-                router.push(ROUTES.admin.employees);
-              } catch (err) {
-                alert(err instanceof Error ? err.message : "Failed to create employee");
-              } finally {
-                setSubmitting(false);
-              }
+              // TODO: submit all steps data
             }}
           >
             <div>
@@ -922,7 +908,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter bank name"
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -934,7 +920,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter bank address"
                 value={bankAddress}
                 onChange={(e) => setBankAddress(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -946,7 +932,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter SWIFT/BIC"
                 value={swiftBic}
                 onChange={(e) => setSwiftBic(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -958,7 +944,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter IBAN"
                 value={iban}
                 onChange={(e) => setIban(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -970,7 +956,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDT_ERC Wallet Address"
                 value={usdtErcWallet}
                 onChange={(e) => setUsdtErcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -982,7 +968,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDC_ERC Wallet Address"
                 value={usdcErcWallet}
                 onChange={(e) => setUsdcErcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -994,7 +980,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDC_Poly Wallet Address"
                 value={usdcPolyWallet}
                 onChange={(e) => setUsdcPolyWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1006,7 +992,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter BTC Wallet Address"
                 value={btcWallet}
                 onChange={(e) => setBtcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
             <div className="sm:col-span-2 flex justify-between pt-6">
@@ -1020,11 +1006,10 @@ export default function AdminAddEmployeePage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="rounded-lg px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-lg px-5 py-2.5 text-sm font-medium text-white"
                 style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
               >
-                {submitting ? "Saving..." : "Add Employee"}
+                Add Employee
               </button>
             </div>
           </form>

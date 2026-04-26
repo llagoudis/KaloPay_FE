@@ -40,8 +40,8 @@ function SectionCard({
 }) {
   return (
     <div
-      className={["view-transaction-section-card overflow-hidden bg-white shadow-sm", className].filter(Boolean).join(" ")}
-      style={{ borderRadius: "10px", border: "none", ...style }}
+      className={["view-transaction-section-card overflow-hidden", className].filter(Boolean).join(" ")}
+      style={{ borderRadius: "10px", border: "none", backgroundColor: "#fcfcfc", ...style }}
     >
       <div
         className={`view-transaction-section-header ${SECTION_HEADER_STYLE}`}

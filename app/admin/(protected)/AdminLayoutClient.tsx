@@ -26,9 +26,9 @@ export default function AdminLayoutClient({
   return (
     <div className="flex min-h-screen w-full" data-dashboard-theme data-theme={theme}>
       {/* Desktop sidebar */}
-      <div className="hidden md:block">
+      <div className="hidden md:block sticky top-0 h-screen flex-shrink-0">
         <div
-          className={`flex-shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out ${
+          className={`h-full overflow-hidden transition-[width] duration-200 ease-in-out ${
             isLight ? "" : "border-r border-[#1e293b]"
           }`}
           style={{ width: desktopSidebarCollapsed ? 0 : 240 }}
