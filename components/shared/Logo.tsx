@@ -30,7 +30,7 @@ export default function Logo({ href = "/", className = "", useImage = false, var
       priority
     />
   ) : (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-3">
       <div
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: circleBg }}
@@ -43,7 +43,7 @@ export default function Logo({ href = "/", className = "", useImage = false, var
         </span>
       </div>
       <span
-        className="text-lg font-semibold"
+        className="shrink-0 text-lg font-semibold whitespace-nowrap"
         style={
           variant === "dark"
             ? { color: accentColor || "#fff" }

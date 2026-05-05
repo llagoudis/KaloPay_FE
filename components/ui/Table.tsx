@@ -39,18 +39,21 @@ export default function Table<T extends Record<string, unknown>>({
   rowHover = true,
 }: TableProps<T>) {
   const bodyRowClass = rowDividers
-    ? cn("bg-transparent transition-colors", rowHover && "hover:bg-gray-50/90")
+    ? cn(
+        "bg-transparent transition-colors",
+        rowHover && "hover:bg-gray-50/90 table-dark-row-hover"
+      )
     : cn(
         "transition-colors",
-        bordered ? "bg-white" : "bg-transparent",
-        rowHover && (bordered ? "hover:bg-gray-50" : "hover:bg-white/[0.06]")
+        bordered ? "bg-white table-dark-row" : "bg-transparent table-dark-row",
+        rowHover && (bordered ? "hover:bg-gray-50 table-dark-row-hover" : "hover:bg-white/[0.06] table-dark-row-hover")
       );
 
   return (
     <div
       className={cn(
         "overflow-x-auto rounded-lg",
-        bordered && "border border-gray-200",
+        bordered && "border border-gray-200 table-dark-container",
         className
       )}
     >

@@ -1,0 +1,133 @@
+/* Payroll Executed — dark row lines (People-style inset gradients). Import from layout.tsx or globals if merged. */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table thead tr.payroll-executed-thead,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table thead tr.payroll-executed-thead {
+  border-bottom: none !important;
+  box-shadow: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.18) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: bottom !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr:not(:first-child),
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr:not(:first-child) {
+  border-top: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.18) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: top !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td {
+  border-top: none !important;
+}
+
+/* Bulk Payout — Recent Activity table (dark): #1e293b surfaces + light border (bulk-payouts + payroll pages) */
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-table-wrap,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-table-wrap,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-table-wrap,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-table-wrap {
+  background-color: rgb(30, 41, 59) !important; /* #1e293b */
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-thead-row,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-thead-row,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-thead-row,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-thead-row {
+  background-color: rgb(30, 41, 59) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-table-wrap thead th,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-table-wrap thead th,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-table-wrap thead th,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-table-wrap thead th {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-data-row,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-data-row,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-data-row,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-data-row {
+  background-color: rgb(30, 41, 59) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-data-row:hover,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-data-row:hover,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-data-row:hover,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-data-row:hover {
+  background-color: rgb(37, 50, 71) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-cell-text,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-cell-text,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-cell-text,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-cell-text {
+  color: #cad4e0 !important;
+  -webkit-text-fill-color: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expanded,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expanded,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expanded,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expanded {
+  background-color: rgb(30, 41, 59) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-nested-inner,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-nested-inner,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-nested-inner,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-nested-inner {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgb(30, 41, 59) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-th,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-th,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-th,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-th {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-row,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-row,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-row,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-row {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-td,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-td,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-td,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-td {
+  color: #cad4e0 !important;
+  -webkit-text-fill-color: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-td-address,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-nested-td-address,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-td-address,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-nested-td-address {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expand-btn,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expand-btn,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expand-btn,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expand-btn {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expand-btn:hover,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-activity-expand-btn:hover,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expand-btn:hover,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-activity-expand-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}

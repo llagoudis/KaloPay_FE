@@ -1,21 +1,50 @@
 @import "tailwindcss";
+@import "./payroll-executed-table-dividers.css";
+@import "./bulk-payout-activity-dark.css";
 
-/* Hide browser default calendar icon on date inputs */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  display: none;
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
-/* Remove focus outline from all inputs, selects, textareas in admin panel */
-input:focus,
-input:focus-visible,
-select:focus,
-select:focus-visible,
-textarea:focus,
-textarea:focus-visible,
-button:focus,
-button:focus-visible {
+/* ── Global: no focus ring/border change on any input in the user panel ── */
+[data-dashboard-theme] input:focus,
+[data-dashboard-theme] select:focus,
+[data-dashboard-theme] textarea:focus,
+[data-page] input:focus,
+[data-page] select:focus,
+[data-page] textarea:focus {
   outline: none !important;
   box-shadow: none !important;
+  border-color: inherit !important;
+}
+[data-dashboard-theme][data-theme="light"] input:focus,
+[data-dashboard-theme][data-theme="light"] select:focus,
+[data-dashboard-theme][data-theme="light"] textarea:focus {
+  border-color: #dfdfdf !important;
+}
+[data-dashboard-theme][data-theme="dark"] input:focus,
+[data-dashboard-theme][data-theme="dark"] select:focus,
+[data-dashboard-theme][data-theme="dark"] textarea:focus {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+/* Browser autofill yellow border override – edit modals */
+.edit-personal-details-modal input:-webkit-autofill,
+.edit-personal-details-modal input:-webkit-autofill:focus,
+.edit-personal-details-modal input:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px #fcfcfc inset !important;
+  box-shadow: 0 0 0 1000px #fcfcfc inset !important;
+  border-color: #dfdfdf !important;
+  outline: none !important;
+}
+[data-theme="dark"] .edit-personal-details-modal input:-webkit-autofill,
+[data-theme="dark"] .edit-personal-details-modal input:-webkit-autofill:focus,
+[data-theme="dark"] .edit-personal-details-modal input:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0 1000px #1c2b3d inset !important;
+  box-shadow: 0 0 0 1000px #1c2b3d inset !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  border-color: rgba(148,163,184,0.15) !important;
+  outline: none !important;
 }
 
 /* ============================================
@@ -39,12 +68,15 @@ button:focus-visible {
   /* Derived – always use these for dashboard (same as theme) */
   --color-text-primary: #ffffff;
   --color-border-subtle: rgba(158, 166, 179, 0.2);
-  --color-nav-bg: #04102A;
+  --color-nav-bg: #041029;
 
   /* Dashboard design (image match): page = dark blue like header, cards, accent, secondary text, icon bg */
-  /* Figma 337-4624: primary accent – update --color-figma-337-4624 to match design */
-  --color-figma-337-4624: #4A90E2;
-  --color-dash-bg: #04102A;
+  /* Muted UI gray — placeholders, date “Select”, calendar icon on Add Employee */
+  --color-add-employee-date-icon: #878787;
+
+  /* Site palette: primary accent — rgb(15, 80, 219) hsl(221 87% 46%) */
+  --color-figma-337-4624: #0f50db;
+  --color-dash-bg: #041029;
   --color-dash-card: #161B22;
   --color-dash-accent: var(--color-figma-337-4624);
   --color-dash-text-secondary: #A0AEC0;
@@ -74,20 +106,130 @@ button:focus-visible {
   --color-dash-card: #ffffff;
   --color-dash-text-primary: #171717;
   --color-dash-text-secondary: #64748b;
-  --color-dash-icon-bg: #e2e8f0;
+  --color-dash-icon-bg: #f1f5f9;
 }
+
+/* Global: remove all box-shadows in user panel */
+[data-dashboard-theme] div,
+[data-dashboard-theme] section,
+[data-dashboard-theme] button,
+[data-dashboard-theme] input,
+[data-dashboard-theme] select,
+[data-dashboard-theme] textarea,
+[data-dashboard-theme] nav,
+[data-dashboard-theme] a,
+[data-dashboard-theme] span,
+[data-dashboard-theme] ul,
+[data-dashboard-theme] li,
+[data-dashboard-theme] header,
+[data-dashboard-theme] table {
+  box-shadow: none !important;
+}
+
+/* Wallet card icon buttons */
+[data-dashboard-theme][data-theme="light"] .wallet-icon-btn,
+[data-theme="light"] .wallet-icon-btn { background-color: #e2e8f0 !important; color: #64748b !important; }
+[data-theme="dark"] .wallet-icon-btn { background-color: #2D3748 !important; color: #A0AEC0 !important; }
+/* Wallet address divider — dark mode */
+[data-dashboard-theme][data-theme="dark"] .wallet-address-row,
+[data-theme="dark"] .wallet-address-row { border-color: rgba(255, 255, 255, 0.08) !important; }
+
+/* Expand (arrow) button — light mode specific colors */
+[data-dashboard-theme][data-theme="light"] .wallet-expand-btn,
+[data-theme="light"] .wallet-expand-btn { background-color: #d5d8de !important; color: #9fa8b5 !important; }
 
 /* Light mode: table row hover */
 [data-dashboard-theme][data-theme="light"] tbody tr:hover {
   background-color: #f8fafc !important;
 }
 
-/* Payroll details summary table – light theme (image) */
-[data-dashboard-theme][data-theme="light"] .payroll-details-summary-header {
-  background-color: #EBF4FB !important;
+/* Payroll Reports page: no row hover in light mode */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll-reports"] tbody tr:hover {
+  background-color: transparent !important;
 }
-[data-dashboard-theme][data-theme="light"] .payroll-details-summary-row {
-  background-color: #F5F9FC !important;
+
+/* ── Reports page ── */
+[data-theme="light"] [data-page="reports"] .rp-outer-card { background-color: #f7f7fa; }
+[data-theme="dark"]  [data-page="reports"] .rp-outer-card { background-color: #1e293b; }
+
+[data-theme="light"] [data-page="reports"] .rp-inner-card { background-color: transparent; border-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="reports"] .rp-inner-card { background-color: transparent; border-color: rgba(255,255,255,0.12); }
+
+[data-theme="light"] [data-page="reports"] .rp-chart-card { background-color: transparent; border-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="reports"] .rp-chart-card { background-color: transparent; border-color: rgba(255,255,255,0.12); }
+
+[data-theme="light"] [data-page="reports"] .rp-primary { color: #111827; }
+[data-theme="dark"]  [data-page="reports"] .rp-primary { color: #ffffff !important; }
+
+[data-theme="light"] [data-page="reports"] .rp-section-title { color: #1f2937; }
+[data-theme="dark"]  [data-page="reports"] .rp-section-title { color: #ffffff !important; }
+
+[data-theme="light"] [data-page="reports"] .rp-muted { color: #6b7280; }
+[data-theme="dark"]  [data-page="reports"] .rp-muted { color: #9da4b0; }
+
+[data-theme="light"] [data-page="reports"] .rp-divider { background-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="reports"] .rp-divider { background-color: rgba(255,255,255,0.12); }
+
+[data-theme="light"] [data-page="reports"] .rp-list { border-color: rgba(0,0,0,0.05); }
+[data-theme="light"] [data-page="reports"] .rp-list > li { border-color: rgba(0,0,0,0.05) !important; border-top-color: rgba(0,0,0,0.05) !important; }
+[data-theme="dark"]  [data-page="reports"] .rp-list { border-color: rgba(255,255,255,0.10); }
+[data-theme="dark"]  [data-page="reports"] .rp-list > li { border-color: rgba(255,255,255,0.10) !important; border-top-color: rgba(255,255,255,0.10) !important; }
+
+[data-theme="light"] [data-page="reports"] .rp-tag { background-color: #F3F4F6; color: #1F2937; }
+[data-theme="dark"]  [data-page="reports"] .rp-tag { background-color: rgba(255,255,255,0.08); color: #cad4e0; }
+
+[data-theme="light"] [data-page="reports"] .rp-action-btn { color: #6b7280; }
+[data-theme="light"] [data-page="reports"] .rp-action-btn:hover { background-color: #f3f4f6; }
+[data-theme="dark"]  [data-page="reports"] .rp-action-btn { color: #9da4b0; }
+[data-theme="dark"]  [data-page="reports"] .rp-action-btn:hover { background-color: rgba(255,255,255,0.06); }
+
+[data-theme="light"] [data-page="reports"] .rp-back-btn { color: #374151; }
+[data-theme="light"] [data-page="reports"] .rp-back-btn:hover { background-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="reports"] .rp-back-btn { color: #ffffff; }
+
+[data-theme="dark"] [data-page="reports"] .reports-title { color: #ffffff !important; }
+
+[data-theme="light"] [data-page="reports"] .rp-chart-title { color: #6b7280; }
+[data-theme="dark"]  [data-page="reports"] .rp-chart-title { color: #9da4b0; }
+
+[data-theme="light"] [data-page="reports"] .rp-chart-value { color: #000000; }
+[data-theme="dark"]  [data-page="reports"] .rp-chart-value { color: #ffffff !important; }
+
+/* Audit Logs / Regulatory table header row */
+[data-theme="light"] .payroll-audit-thead-row { background-color: transparent; border-bottom: 1px solid #e5e7eb; }
+[data-theme="dark"] .payroll-audit-thead-row { background-color: transparent; border-bottom: 1px solid rgba(255,255,255,0.15); }
+
+/* Regulatory Reports — section wrapper card */
+[data-theme="light"] .reg-section-card { background-color: #f7f7fa; }
+[data-theme="dark"] .reg-section-card { background-color: #1e293b; }
+
+/* Regulatory Reports — section heading */
+[data-theme="light"] .reg-section-heading { color: #1F2937; }
+[data-theme="dark"] .reg-section-heading { color: #ffffff !important; }
+
+/* Regulatory Reports — inner report card */
+[data-theme="light"] .reg-inner-card { background-color: #fafafa; border: 1px solid #e5e7eb; }
+[data-theme="dark"] .reg-inner-card { background-color: transparent; border: 1px solid rgba(255,255,255,0.15); }
+
+/* Regulatory Reports — card title */
+[data-theme="light"] .reg-card-title { color: #1F2937; }
+[data-theme="dark"] .reg-card-title { color: #ffffff; }
+
+/* Regulatory Reports — card subtitle */
+[data-theme="light"] .reg-card-subtitle { color: #6B7280; }
+[data-theme="dark"] .reg-card-subtitle { color: #9da4b0; }
+
+/* Regulatory Reports — stat rows */
+[data-theme="light"] .reg-stat-row { color: #1F2937; }
+[data-theme="dark"] .reg-stat-row { color: #cad4e0 !important; }
+
+/* Regulatory Reports — outline download button */
+[data-theme="light"] .reg-outline-btn { background-color: #ffffff; border: 1px solid #e5e7eb; color: #1f2937; }
+[data-theme="dark"] .reg-outline-btn { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.2); color: #cad4e0; }
+
+/* Payroll details summary card (popup) — hsl(214 75% 96%) */
+[data-dashboard-theme][data-theme="light"] .payroll-details-summary {
+  background-color: #edf4fc;
 }
 
 /* Status pills – dark theme (default) */
@@ -109,6 +251,93 @@ button:focus-visible {
   background-color: #FFFACD !important;
   color: #D79E1B !important;
 }
+
+
+/* Edit modals – dark mode */
+[data-theme="dark"] .edit-personal-details-modal,
+[data-theme="dark"] .edit-modal-header {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .edit-personal-details-modal > div {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .edit-personal-details-modal input,
+[data-theme="dark"] .edit-personal-details-modal select,
+[data-theme="dark"] .edit-personal-details-modal textarea {
+  background-color: #1c2b3d !important;
+  border-color: rgba(148,163,184,0.15) !important;
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .edit-personal-details-modal .edit-personal-contact-combo,
+[data-theme="dark"] .edit-personal-details-modal .edit-personal-contact-combo > div {
+  background-color: #1c2b3d !important;
+  border-color: rgba(148,163,184,0.15) !important;
+}
+[data-theme="dark"] .edit-personal-details-modal label,
+[data-theme="dark"] .edit-personal-details-modal h2 {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .edit-personal-details-modal input::placeholder {
+  color: #64748b !important;
+}
+[data-theme="dark"] .edit-personal-details-modal button:not(.edit-personal-save-btn):not([aria-label="Close"]) {
+  color: #ffffff !important;
+  border-color: rgba(148,163,184,0.25) !important;
+  background-color: transparent !important;
+}
+[data-theme="dark"] .edit-notes-footer {
+  background-color: #1e293b !important;
+  border-top: none !important;
+}
+[data-theme="dark"] .edit-notes-modal textarea.edit-notes-textarea:focus {
+  border-color: rgba(148,163,184,0.15) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+[data-theme="dark"] .edit-notes-modal {
+  border: none !important;
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .edit-notes-modal textarea.edit-notes-textarea {
+  background-color: #1c2b3d !important;
+  border-color: rgba(148,163,184,0.15) !important;
+  color: #ffffff !important;
+}
+[data-theme="dark"] .edit-notes-modal textarea.edit-notes-textarea::placeholder {
+  color: #64748b !important;
+}
+[data-theme="dark"] .edit-personal-details-modal button[aria-label="Close"] {
+  background-color: #2d3f55 !important;
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .edit-personal-details-modal button[aria-label="Close"]:hover {
+  background-color: #2d3f55 !important;
+}
+
+/* Edit modals – light mode bg + border radius */
+.edit-personal-details-modal,
+.edit-personal-details-modal > div,
+.edit-personal-details-modal textarea,
+.edit-personal-details-modal .edit-personal-contact-combo,
+.edit-personal-details-modal .edit-personal-contact-combo > div {
+  background-color: #fcfcfc;
+}
+.edit-personal-details-modal {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+.edit-personal-details-modal > div {
+  background-color: #fcfcfc !important;
+}
+.edit-personal-details-modal > div:first-child {
+  border-radius: 16px 16px 0 0 !important;
+  border-bottom: none !important;
+}
+.edit-personal-details-modal > div:last-child {
+  border-radius: 0 0 16px 16px !important;
+}
+
+/* Edit Personal Details modal – scrollbar */
 
 /* Edit Personal Details modal – input labels: Poppins Medium 16px */
 .edit-personal-details-modal .edit-personal-label {
@@ -148,6 +377,7 @@ button:focus-visible {
 /* All inputs & selects: border, size, padding */
 .edit-personal-details-modal input,
 .edit-personal-details-modal select {
+  background-color: #fcfcfc;
   border: 1px solid #dfdfdf !important;
   border-radius: 8px !important;
   height: 42px !important;
@@ -156,6 +386,82 @@ button:focus-visible {
   box-sizing: border-box;
   width: 100%;
   max-width: 364px;
+}
+/* Remove focus ring/border on all inputs, selects, textareas in every edit modal */
+.edit-personal-details-modal input:focus,
+.edit-personal-details-modal select:focus,
+.edit-personal-details-modal textarea:focus {
+  border-color: #dfdfdf !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+[data-theme="dark"] .edit-personal-details-modal input:focus,
+[data-theme="dark"] .edit-personal-details-modal select:focus,
+[data-theme="dark"] .edit-personal-details-modal textarea:focus {
+  border-color: rgba(148,163,184,0.15) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Values inside fields (all edit modals): Poppins 400 14px lh 100% #878787 — placeholders match */
+.edit-personal-details-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.edit-personal-details-modal select,
+.edit-personal-details-modal textarea {
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  color: #878787 !important;
+  vertical-align: middle;
+}
+.edit-personal-details-modal input::placeholder,
+.edit-personal-details-modal textarea::placeholder {
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  color: #878787 !important;
+  vertical-align: middle;
+}
+/* Edit Notes — multi-line body: black text, line + word spacing (overrides lh 100% + gray above) */
+.edit-notes-modal textarea.edit-notes-textarea {
+  color: #000000;
+  line-height: 1.65 !important;
+  word-spacing: 0.06em !important;
+  letter-spacing: 0.01em !important;
+}
+.edit-notes-modal textarea.edit-notes-textarea::placeholder {
+  color: #000000;
+  line-height: 1.65 !important;
+  word-spacing: 0.06em !important;
+  letter-spacing: 0.01em !important;
+}
+.edit-personal-details-modal select.edit-personal-dropdown-border option {
+  color: #878787;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+}
+/* Native date (empty + filled) — WebKit inner text */
+.edit-personal-details-modal input[type="date"],
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit,
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit-text,
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit-month-field,
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit-day-field,
+.edit-personal-details-modal input[type="date"]::-webkit-datetime-edit-year-field {
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  color: #878787 !important;
+  -webkit-text-fill-color: #878787 !important;
 }
 
 .edit-personal-details-modal .edit-personal-dropdown-border {
@@ -183,6 +489,12 @@ button:focus-visible {
   height: auto !important;
   padding: 0 !important;
   min-height: unset !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  color: #878787 !important;
 }
 /* Combined contact: only outer div has border, inner input has no border */
 .edit-personal-details-modal .edit-personal-contact-combo input {
@@ -367,17 +679,556 @@ body {
 }
 
 /* Dashboard design tokens (image-accurate) */
-.bg-dash-page { background-color: var(--color-dash-bg); }
+.bg-dash-page { background-color: var(--color-dash-bg); overflow-x: hidden; }
 .bg-dash-card { background-color: var(--color-dash-card); }
 .bg-dash-icon { background-color: var(--color-dash-icon-bg); }
 .text-dash-secondary { color: var(--color-dash-text-secondary); }
 .text-dash-primary { color: var(--color-dash-text-primary); }
-[data-dashboard-theme] .bg-dash-page { background-color: var(--color-dash-bg) !important; }
+[data-dashboard-theme] .bg-dash-page { background-color: var(--color-dash-bg) !important; overflow-x: hidden !important; }
+/*
+  Light employer UI: paint the mesh once on the layout root (.employer-dash-shell) so it always wins
+  over Tailwind/order issues; inner .bg-dash-page stays transparent so the gradient shows through.
+*/
+[data-dashboard-theme][data-theme="light"].employer-dash-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background-color: #f0f0f7 !important;
+  background-image:
+    radial-gradient(ellipse 78% 62% at 0% 0%, #e1eafa 0%, transparent 70%),
+    radial-gradient(ellipse 78% 62% at 100% 0%, #e6edfa 0%, transparent 70%),
+    radial-gradient(ellipse 95% 48% at 50% 0%, #f0f0f7 0%, transparent 72%),
+    radial-gradient(ellipse 78% 62% at 100% 100%, #edf0fa 0%, transparent 70%),
+    radial-gradient(ellipse 78% 62% at 0% 100%, #ebeffa 0%, transparent 70%),
+    radial-gradient(ellipse 95% 48% at 50% 100%, #f0f0f7 0%, transparent 72%) !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+  background-attachment: fixed !important;
+}
+[data-dashboard-theme][data-theme="light"].employer-dash-shell .bg-dash-page {
+  background-color: transparent !important;
+  background-image: none !important;
+}
 [data-dashboard-theme] .bg-dash-card { background-color: var(--color-dash-card) !important; }
 [data-dashboard-theme] .bg-dash-icon { background-color: var(--color-dash-icon-bg) !important; }
 [data-dashboard-theme] .text-dash-secondary { color: var(--color-dash-text-secondary) !important; }
 [data-dashboard-theme] .text-dash-primary { color: var(--color-dash-text-primary) !important; }
-[data-dashboard-theme] .text-dash-secondary:hover { color: var(--color-dash-text-primary) !important; }
+
+/* Dashboard home: Monthly Analytics outer shell — dark uses dash-card; light keeps subtle gray panel */
+[data-dashboard-theme][data-theme="light"] .monthly-analytics-shell.bg-dash-card {
+  background-color: #f7f7fa !important;
+  border-color: #e6e6eb !important;
+}
+
+/* Dashboard home: Monthly Analytics outer shell — dark only */
+[data-dashboard-theme][data-theme="dark"] .monthly-analytics-shell {
+  background-color: #1e293b !important;
+  border-color: #1e293b !important;
+}
+[data-theme="dark"] .monthly-analytics-shell {
+  background-color: #1e293b !important;
+  border-color: #1e293b !important;
+}
+
+/* Monthly Analytics shell bg token (used directly by component inline style) */
+:root {
+  --monthly-analytics-shell-bg: var(--color-dash-card);
+}
+[data-dashboard-theme][data-theme="light"] {
+  --monthly-analytics-shell-bg: #f7f7fa;
+}
+[data-dashboard-theme][data-theme="dark"],
+[data-theme="dark"] {
+  --monthly-analytics-shell-bg: #1e293b;
+}
+
+/* Dashboard home: welcome banner */
+[data-dashboard-theme][data-theme="light"] .welcome-banner-card.bg-dash-card {
+  background-color: #f7f7fa !important;
+}
+[data-dashboard-theme][data-theme="dark"] .welcome-banner-card.bg-dash-card {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .welcome-banner-card.bg-dash-card {
+  background-color: #1e293b !important;
+}
+
+/* Dashboard home: wallet cards — border visible on slate (TSX sets base border; dark overrides here) */
+[data-dashboard-theme][data-theme="dark"] .wallet-card.bg-dash-card,
+[data-theme="dark"] .wallet-card.bg-dash-card,
+[data-dashboard-theme][data-theme="dark"] .wallet-card,
+[data-theme="dark"] .wallet-card {
+  background-color: #1e293b !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="light"] .wallet-card,
+[data-theme="light"] .wallet-card {
+  background-color: #fafafa !important;
+  border: 1px solid #d1d5db !important;
+  box-shadow: none !important;
+}
+
+/* Dashboard home: Monthly Analytics inner cards — light border */
+[data-dashboard-theme][data-theme="light"] .monthly-analytics-surface,
+[data-theme="light"] .monthly-analytics-surface {
+  border-color: #e8e8e8 !important;
+}
+
+/* Dashboard home: Monthly Analytics inner cards — dark only */
+[data-dashboard-theme][data-theme="dark"] .monthly-analytics-surface {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .monthly-analytics-surface {
+  background-color: #1e293b !important;
+}
+
+/* Payroll Expenses chart fill — adapts to dark mode */
+:root {
+  --chart-payroll-fill: #ebf2fa;
+}
+[data-dashboard-theme][data-theme="dark"],
+[data-theme="dark"] {
+  --chart-payroll-fill: rgba(40, 98, 222, 0.22);
+}
+
+/* Payroll details popup tokens (used directly by inline styles) */
+:root {
+  --payroll-details-modal-bg: #ffffff;
+  --payroll-details-modal-divider: #e2e8f0;
+  --payroll-details-modal-title: #1f2937;
+  --payroll-details-summary-bg: #edf4fc;
+  --payroll-details-employee-name: #827a1b;
+}
+[data-dashboard-theme][data-theme="dark"],
+[data-theme="dark"] {
+  --payroll-details-modal-bg: #1e293b;
+  --payroll-details-modal-divider: rgba(148, 163, 184, 0.25);
+  --payroll-details-modal-title: #ffffff;
+  --payroll-details-summary-bg: #1e293b;
+  --payroll-details-employee-name: #8a832c;
+}
+
+/* Payroll details popup surface — dark only (backup, in case any bg utility leaks in) */
+[data-dashboard-theme][data-theme="dark"] .payroll-details-surface,
+[data-theme="dark"] .payroll-details-surface {
+  background-color: #1e293b !important;
+}
+
+/* Dashboard home: Recent payroll batches — dark only */
+[data-dashboard-theme][data-theme="dark"] .recent-payroll-batches-card {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .recent-payroll-batches-card {
+  background-color: #1e293b !important;
+}
+[data-dashboard-theme][data-theme="dark"] .recent-payroll-batches-title {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .recent-payroll-batches-title {
+  color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] .recent-payroll-batches-card thead th,
+[data-theme="dark"] .recent-payroll-batches-card thead th,
+[data-dashboard-theme][data-theme="dark"] .recent-payroll-batches-card tbody td,
+[data-theme="dark"] .recent-payroll-batches-card tbody td {
+  border-bottom-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Recent Payroll Batches tokens (used directly by component inline style) */
+:root {
+  --recent-payroll-batches-bg: #f7f7fa;
+  --recent-payroll-batches-title: inherit;
+}
+[data-dashboard-theme][data-theme="dark"],
+[data-theme="dark"] {
+  --recent-payroll-batches-bg: #1e293b;
+  --recent-payroll-batches-title: #ffffff;
+}
+
+/* PayrollWizard step-2 calculation placeholder */
+[data-theme="light"] [data-page="payroll-create"] .payroll-calc-placeholder { background-color: #f5f6fa; border: 1px solid #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-calc-placeholder { background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); }
+
+/* PayrollWizard step-4 date input calendar icon – dark mode */
+[data-theme="dark"] [data-page="payroll-create"] .payroll-create-comment-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.7; }
+
+/* Bulk Payout upload form – payroll page dropzone text + button dark mode */
+[data-theme="dark"] [data-page="payroll"] .bulk-upload-dropzone-title { color: #e2e8f0 !important; -webkit-text-fill-color: #e2e8f0 !important; }
+[data-theme="dark"] [data-page="payroll"] .bulk-upload-browse-btn { background-color: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.15) !important; color: #e2e8f0 !important; -webkit-text-fill-color: #e2e8f0 !important; }
+
+/* Bulk Payout upload form – always light (even in dark mode) */
+.bulk-upload-form-card { background-color: #f7f7fa; border-color: #e5e7eb; }
+.bulk-upload-label { color: #374151; }
+.bulk-upload-select { background-color: #fff; border-color: #e5e7eb; color: #6b7280; }
+.bulk-upload-dropzone { border-color: #C7D2FE; background-color: #fff; }
+
+/* Card / section main headings (employer UI) */
+.dash-card-section-title {
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 24px;
+  letter-spacing: 0;
+  vertical-align: middle;
+  color: #1b2a3c;
+}
+@media (min-width: 640px) {
+  .dash-card-section-title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+}
+
+.dash-card-section-title--inverse {
+  color: #ffffff;
+}
+
+/* Bulk Payout — card heading: solid white on dark slate (dash-card-section-title is #1b2a3c) */
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-section-heading,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-section-heading,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-section-heading,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-section-heading {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Bulk Payout — Recent Activity subheading (history tab) */
+[data-dashboard-theme][data-theme="light"] [data-page="bulk-payouts"] .bulk-payout-recent-activity-heading,
+[data-theme="light"] [data-page="bulk-payouts"] .bulk-payout-recent-activity-heading,
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .bulk-payout-recent-activity-heading,
+[data-theme="light"] [data-page="payroll"] .bulk-payout-recent-activity-heading {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-recent-activity-heading,
+[data-theme="dark"] [data-page="bulk-payouts"] .bulk-payout-recent-activity-heading,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .bulk-payout-recent-activity-heading,
+[data-theme="dark"] [data-page="payroll"] .bulk-payout-recent-activity-heading {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+/* Payments page — heading: pure white in dark (avoid .text-white → --color-text-primary token) */
+[data-dashboard-theme][data-theme="dark"] [data-page="payments"] .payments-page-title,
+[data-theme="dark"] [data-page="payments"] .payments-page-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="payments"] .payments-page-title {
+  color: var(--color-dash-text-primary) !important;
+  -webkit-text-fill-color: var(--color-dash-text-primary) !important;
+}
+[data-page="payments"] .payments-page-title::selection {
+  background-color: rgba(148, 163, 184, 0.35) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Payroll → Payments tab: heading card — white title on slate in dark (.dash-card-section-title is #1b2a3c) */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-payments-heading-card,
+[data-theme="dark"] [data-page="payroll"] .payroll-payments-heading-card {
+  background-color: #1e293b !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-payments-heading-card .payroll-payments-heading,
+[data-theme="dark"] [data-page="payroll"] .payroll-payments-heading-card .payroll-payments-heading {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+}
+[data-page="payroll"] .payroll-payments-heading::selection {
+  background-color: rgba(148, 163, 184, 0.35) !important;
+  color: #ffffff !important;
+}
+
+/* Payroll / Payments — main card: dark surface + default light text (body #171717 was winning on buttons) */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card,
+[data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Payroll / Payments → Due for Execution vs Payroll Executed tabs */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-execution-tab--inactive {
+  color: #1f2937 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-execution-tab--inactive:hover {
+  color: #0f50db !important;
+  -webkit-text-fill-color: #0f50db !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--inactive,
+[data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--inactive {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--inactive:hover,
+[data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--inactive:hover {
+  color: rgba(255, 255, 255, 0.92) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.92) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--active,
+[data-theme="dark"] [data-page="payroll"] button.payroll-execution-tab.payroll-execution-tab--active {
+  color: #0f50db !important;
+  -webkit-text-fill-color: #0f50db !important;
+  border-bottom-color: #0f50db !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-execution-tabs-row,
+[data-theme="dark"] [data-page="payroll"] .payroll-execution-tabs-row {
+  border-bottom-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Payroll Due / Executed — one divider token so header rule + body row lines match on dark */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"],
+[data-theme="dark"] [data-page="payroll"] {
+  --payroll-table-divider: rgba(255, 255, 255, 0.48);
+}
+
+/* Payroll Due / Executed tables — header bottom rule: lighter on dark slate */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-due-batches-thead,
+[data-theme="dark"] [data-page="payroll"] .payroll-due-batches-thead,
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-thead,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-thead {
+  border-bottom-color: var(--payroll-table-divider) !important;
+  box-shadow: none !important;
+}
+
+/* Payroll table body — row lines (light: gray; dark: same as thead — no Tailwind divide-y) */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-batches-tbody > tr + tr,
+[data-theme="light"] [data-page="payroll"] .payroll-batches-tbody > tr + tr {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-batches-tbody > tr + tr,
+[data-theme="dark"] [data-page="payroll"] .payroll-batches-tbody > tr + tr {
+  border-top: 1px solid var(--payroll-table-divider) !important;
+}
+/* Payroll tables — cell-level top border (reliable with collapse + separate) */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-batches-tbody > tr + tr > td,
+[data-theme="light"] [data-page="payroll"] .payroll-batches-tbody > tr + tr > td {
+  border-top: 1px solid #e5e7eb;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-batches-tbody > tr + tr > td,
+[data-theme="dark"] [data-page="payroll"] .payroll-batches-tbody > tr + tr > td {
+  border-top: 1px solid var(--payroll-table-divider) !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td,
+[data-theme="light"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td {
+  border-top: 1px solid #e5e7eb !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td {
+  border-top: 1px solid var(--payroll-table-divider) !important;
+}
+
+/* Payroll Executed (dark) — same inset line technique as People table; borders alone were too faint */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table thead tr.payroll-executed-thead,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table thead tr.payroll-executed-thead {
+  border-bottom: none !important;
+  box-shadow: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.28) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: bottom !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr:not(:first-child),
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr:not(:first-child) {
+  border-top: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.28) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: top !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-payments-table tbody tr + tr td {
+  border-top: none !important;
+}
+
+/* Due for Execution (dark) — same inset row lines as People / Payroll Executed */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table thead tr.payroll-due-batches-thead,
+[data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table thead tr.payroll-due-batches-thead {
+  border-bottom: none !important;
+  box-shadow: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.28) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: bottom !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table tbody tr:not(:first-child),
+[data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table tbody tr:not(:first-child) {
+  border-top: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.28) 24px,
+    rgba(255, 255, 255, 0.18) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: top !important;
+  background-repeat: no-repeat !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table tbody tr + tr td,
+[data-theme="dark"] [data-page="payroll"] .payroll-due-batches-table tbody tr + tr td {
+  border-top: none !important;
+}
+
+/* Due for Execution — table body muted columns + view icon (light: slate; dark: readable gray-blue) */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-due-table-muted {
+  color: #1f2937 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-due-table-muted,
+[data-theme="dark"] [data-page="payroll"] .payroll-due-table-muted {
+  color: rgb(202, 212, 224) !important; /* #cad4e0 */
+  -webkit-text-fill-color: rgb(202, 212, 224) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card .payroll-due-table-muted,
+[data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card .payroll-due-table-muted {
+  color: rgb(202, 212, 224) !important;
+  -webkit-text-fill-color: rgb(202, 212, 224) !important;
+}
+
+/* Payroll Executed — Statement column: employee name (readable on dark) */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-executed-statement-name {
+  color: #1f2937 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-statement-name,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-statement-name {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card .payroll-executed-statement-name,
+[data-theme="dark"] [data-page="payroll"] .payroll-payments-main-card .payroll-executed-statement-name {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Due for Execution — View icon: filled slate chip (dark); light: soft surface */
+[data-dashboard-theme][data-theme="light"] [data-page="payroll"] .payroll-view-icon-btn,
+[data-theme="light"] [data-page="payroll"] .payroll-view-icon-btn {
+  color: #475569 !important;
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-view-icon-btn,
+[data-theme="dark"] [data-page="payroll"] .payroll-view-icon-btn {
+  color: #cad4e0 !important;
+  background-color: var(--color-dash-icon-bg) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  -webkit-text-fill-color: #cad4e0 !important;
+}
+
+/* Payroll Executed — filters: first-image filled controls on dark (not light-outline second image) */
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cad4e0 !important;
+  caret-color: #cad4e0 !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input::placeholder,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input::placeholder {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input:focus,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-search-input:focus {
+  border-color: rgba(255,255,255,0.08) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-search-icon,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-search-icon {
+  color: #94a3b8 !important;
+}
+[data-page="payroll"] .payroll-executed-filter-select {
+  padding-inline-end: 1.75rem !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cad4e0 !important;
+  color-scheme: dark;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select:focus,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select:focus {
+  border-color: rgba(255,255,255,0.08) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select option,
+[data-theme="dark"] [data-page="payroll"] .payroll-executed-filter-select option {
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+
+/* Employer dashboard: one max-width + horizontal padding — matches DashboardHeader and every main screen */
+.dash-shell {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 1440px;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+@media (min-width: 480px) {
+  .dash-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .dash-shell {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .dash-shell {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
 
 /* Dashboard accent from Figma 337-4624 – use for buttons, links, active states */
 .bg-dash-accent { background-color: var(--color-dash-accent); }
@@ -421,19 +1272,148 @@ body {
 }
 
 /* Add Employee form – light theme: white inputs + light border */
-[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
-[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select {
-  background-color: #ffffff !important;
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]) {
+  background-color: transparent !important;
   border: 1px solid #DFDFDF !important;
-  color: #111827 !important;
+  color: #1f2937 !important;
   border-radius: 8px !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
 }
-[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input::placeholder {
-  color: #9ca3af !important;
+/* Must match specificity of rule above — otherwise #1f2937 wins and native mm/dd/yyyy stays visible */
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty {
+  border-color: #DFDFDF !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-fields-wrapper,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-text,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-month-field,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-day-field,
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-year-field {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select {
+  background-color: transparent !important;
+  border: 1px solid #DFDFDF !important;
+  border-radius: 8px !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+}
+/* Empty select — “Select” etc: Poppins 400 14px lh 100% #878787; border stays muted */
+[data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select.add-employee-field-muted {
+  color: var(--color-add-employee-date-icon) !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+  border-color: #DFDFDF !important;
+}
+[data-page="add-employee"] select.add-employee-field-muted {
+  color: var(--color-add-employee-date-icon) !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+  border-color: #DFDFDF !important;
+}
+/* Custom chevron arrow — #9d9d9e, hides native arrow */
+[data-page="add-employee"] select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  padding-right: 2.75rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239d9d9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 16px 16px !important;
+}
+[data-page="add-employee"] select.w-24 {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  padding-right: 2rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239d9d9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.5rem center !important;
+  background-size: 14px 14px !important;
+}
+/* Empty native date: hide mm/dd/yyyy (WebKit); overlay shows “Select” only — muted border */
+[data-page="add-employee"] input[type="date"].add-employee-date-empty {
+  border-color: #DFDFDF !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit,
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-fields-wrapper,
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-text,
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-month-field,
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-day-field,
+[data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-year-field {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+/* Date field — calendar icon: 18×18, 2px stroke, var(--color-add-employee-date-icon) = #878787 */
+[data-page="add-employee"] input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 10px 3px 0 0;
+  cursor: pointer;
+  opacity: 1;
+  filter: none;
+  background-color: transparent;
+  /* Strokes encoded as %23878787 — keep in sync with --color-add-employee-date-icon */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2' stroke='%23878787' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 10h20' stroke='%23878787' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M8 2v4M16 2v4' stroke='%23878787' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2' stroke='%23878787' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 10h20' stroke='%23878787' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M8 2v4M16 2v4' stroke='%23878787' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+/* Add Employee — placeholder: Poppins 400 14px lh 100% letter 0 vertical-align middle #878787 */
+[data-page="add-employee"] input::placeholder {
+  color: var(--color-add-employee-date-icon) !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+}
+/* Date “Select” overlay — same typography as placeholder */
+[data-page="add-employee"] .add-employee-infield-hint-text {
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 100%;
+  letter-spacing: 0;
+  vertical-align: middle;
+  color: var(--color-add-employee-date-icon);
 }
 [data-dashboard-theme][data-theme="light"] [data-page="add-employee"] input:focus,
 [data-dashboard-theme][data-theme="light"] [data-page="add-employee"] select:focus {
-  border-color: #E5E7EB !important;
+  border-color: #DFDFDF !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -447,13 +1427,120 @@ body {
   box-sizing: border-box;
 }
 
+/* ========== Employee Profile page – dark mode ========== */
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-main-card {
+  background-color: #1e293b !important;
+  border: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-links-card {
+  background-color: #1e293b !important;
+  border: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-header {
+  background-color: #1e3a5f !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-title {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-body {
+  background-color: #1e293b !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-file {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-link-item {
+  background-color: transparent !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-link-item p {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-link-item p.text-sm {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] h1,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] h2:not(.emp-profile-section-title),
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] h3 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-body p,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-body span {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-body .text-\[\#6b7280\] {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card a {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card a:hover {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card h1 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card .text-sm {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-header {
+  background-color: #1e293b !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-title,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card h2,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card h3 {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card p,
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-file p {
+  color: #cbd5e1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-file .text-\[\#9CA3AF\] {
+  color: #64748b !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-file button {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-links-card {
+  background-color: #1e293b !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-header-card button {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-link-item span svg {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-section-body .text-\[\#1f2937\] {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card .border-dashed {
+  border-color: #334155 !important;
+  background: linear-gradient(to right, #1e293b, #1e3a5f) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-card .text-\[\#1f2937\] {
+  color: #f1f5f9 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="employee-profile"] .emp-profile-kyc-file .text-\[\#1f2937\] {
+  color: #f1f5f9 !important;
+}
+
 /* ========== Add Employee page – dark mode ========== */
 /* Cards + stepper: #1e293b rgb(30,41,59) — same as admin card token */
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card,
 [data-theme="dark"] [data-page="add-employee"] .add-employee-header-card {
   background-color: #1e293b !important;
-  border-color: #334155 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: none !important;
+  box-shadow: none !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card a,
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card h1,
@@ -461,16 +1548,28 @@ body {
 [data-theme="dark"] [data-page="add-employee"] .add-employee-header-card h1 {
   color: var(--color-dash-text-primary) !important;
 }
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-header-card a:hover,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-header-card a:hover {
+  background-color: transparent !important;
+}
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-card,
 [data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-card {
   background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  border: none !important;
+  box-shadow: none !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector,
-[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector {
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector:not(.add-employee-stepper-connector--completed),
+[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector:not(.add-employee-stepper-connector--completed) {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector--completed,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-stepper-connector--completed {
+  background-color: var(--color-dash-accent) !important;
+}
+/* Active step circle ring — light + dark */
+[data-theme="light"] [data-page="add-employee"] .add-employee-step-circle-active { background-color: #2563eb; color: #ffffff; box-shadow: 0 0 0 3px #f5f6fa, 0 0 0 7px #2563eb; }
+[data-theme="dark"]  [data-page="add-employee"] .add-employee-step-circle-active { background-color: #2563eb; color: #ffffff; box-shadow: 0 0 0 3px #1e293b, 0 0 0 7px #2563eb; }
+
 /* Step 1–5 circles on #1e293b surface */
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--pending,
 [data-theme="dark"] [data-page="add-employee"] .add-employee-step-circle--pending {
@@ -501,9 +1600,19 @@ body {
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="completed"],
 [data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="completed"] {
-  background-color: rgba(53, 202, 195, 0.18) !important;
-  color: #5eead4 !important;
-  border-color: rgba(53, 202, 195, 0.4) !important;
+  background-color: #dffffe !important;
+  color: #35cac3 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  width: 101px !important;
+  height: 26px !important;
+  padding: 4px 16px !important;
+  box-sizing: border-box !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="pending"],
 [data-theme="dark"] [data-page="add-employee"] .add-employee-status-pill[data-status="pending"] {
@@ -513,9 +1622,9 @@ body {
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-step-pending,
 [data-theme="dark"] [data-page="add-employee"] .add-employee-step-pending {
-  border-color: var(--color-dash-icon-bg) !important;
-  background-color: var(--color-dash-icon-bg) !important;
-  color: var(--color-dash-text-secondary) !important;
+  border-color: #2563eb !important;
+  background-color: transparent !important;
+  color: #2563eb !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-form-section,
 [data-theme="dark"] [data-page="add-employee"] .add-employee-form-section {
@@ -532,23 +1641,81 @@ body {
   color: #f1f5f9 !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
-[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select,
-[data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
-[data-theme="dark"] [data-page="add-employee"] select {
-  background-color: var(--color-dash-icon-bg) !important;
-  border: 1px solid var(--color-dash-icon-bg) !important;
+[data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]) {
+  background-color: #1e293b !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
   color: var(--color-dash-text-primary) !important;
   border-radius: 8px !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select,
+[data-theme="dark"] [data-page="add-employee"] select {
+  background-color: #1e293b !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 8px !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 500 !important;
+  font-size: 16px !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+  color: var(--color-dash-text-primary) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select.add-employee-field-muted,
+[data-theme="dark"] [data-page="add-employee"] select.add-employee-field-muted {
+  color: var(--color-add-employee-date-icon) !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty {
+  border-color: rgba(255,255,255,0.08) !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-fields-wrapper,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-fields-wrapper,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-text,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-text,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-month-field,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-month-field,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-day-field,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-day-field,
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-year-field,
+[data-theme="dark"] [data-page="add-employee"] input[type="date"].add-employee-date-empty::-webkit-datetime-edit-year-field {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input::placeholder,
 [data-theme="dark"] [data-page="add-employee"] input::placeholder {
-  color: var(--color-dash-text-secondary) !important;
+  color: var(--color-add-employee-date-icon) !important;
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  font-size: 14px !important;
+  line-height: 100% !important;
+  letter-spacing: 0 !important;
+  vertical-align: middle !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input:focus,
 [data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select:focus,
 [data-theme="dark"] [data-page="add-employee"] input:focus,
 [data-theme="dark"] [data-page="add-employee"] select:focus {
-  border-color: inherit !important;
+  border-color: rgba(255,255,255,0.08) !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -578,27 +1745,110 @@ body {
   color: var(--color-dash-text-primary) !important;
 }
 
-/* People List search – light theme only: white bg, light grey border */
+/* People List search – light theme only: white bg, #DFDFDF border (Figma filter row) */
 [data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input {
-  background-color: #FFFFFF !important;
+  background-color: transparent !important;
   background-image: none !important;
-  border: 1px solid #e5e7eb !important;
+  border: 1px solid #DFDFDF !important;
   color: #374151 !important;
 }
 [data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input::placeholder {
-  color: #9ca3af !important;
+  color: #6B7280 !important;
 }
 [data-dashboard-theme][data-theme="light"] .people-list-search-wrap input.people-search-input:focus {
-  border-color: #4A90E2 !important;
-  box-shadow: 0 0 0 1px #4A90E2 !important;
+  border-color: #dfdfdf !important;
+  box-shadow: none !important;
+}
+
+/* Filter selects: fixed 42px + tight line-height was clipping descenders (looks like white covering text) */
+[data-page="people"] .people-filter-select-wrap select.people-select {
+  line-height: 20px !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+}
+
+/* People list thead: UA stylesheet makes th font-weight bold — reset; 16px lh clips Poppins descenders */
+[data-page="people"] .people-table-wrap thead tr.people-table-head th {
+  font-family: var(--font-poppins), Poppins, sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  color: #6b7280 !important;
+  vertical-align: middle !important;
+  padding: 14px 24px !important;
+  overflow: visible !important;
+}
+
+/* People table: row dividers inset from L/R (not full bleed to card edge) */
+[data-page="people"] .people-table-wrap thead tr.people-table-head {
+  border-bottom: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    #e5e7eb 24px,
+    #e5e7eb calc(100% - 24px),
+    transparent calc(100% - 24px)
+  );
+  background-size: 100% 1px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+[data-page="people"] .people-table-body tr.people-table-row:not(:first-child) {
+  border-top: none !important;
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    #e5e7eb 24px,
+    #e5e7eb calc(100% - 24px),
+    transparent calc(100% - 24px)
+  );
+  background-size: 100% 1px;
+  background-position: top;
+  background-repeat: no-repeat;
+}
+
+/* ========== People page – light mode (header card bg; no Tailwind bg-white fight in dark) ========== */
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-info-banner {
+  background-color: #e3ebfa !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-banner-title {
+  color: #235bde !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-banner-desc {
+  color: #6b7280 !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-header-card {
+  background-color: #f7f7fa !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-list-card {
+  background-color: #f7f7fa !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-wrap {
+  background-color: #f7f7fa !important;
+}
+[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-wrap thead tr.people-table-head {
+  background-color: #f7f7fa !important;
 }
 
 /* ========== People page – dark mode ========== */
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-header-card,
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-card {
-  background-color: var(--color-dash-card) !important;
-  border: 1px solid var(--color-dash-icon-bg);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+[data-theme="dark"] [data-page="people"] .people-header-card {
+  background-color: #1e293b !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-card,
+[data-theme="dark"] [data-page="people"] .people-list-card {
+  background-color: #1e293b !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-title,
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-title {
@@ -614,63 +1864,109 @@ body {
   border-color: var(--color-dash-icon-bg) !important;
   color: var(--color-dash-text-primary) !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-info-banner {
-  background-color: rgba(74, 144, 226, 0.15) !important;
-  border-color: rgba(74, 144, 226, 0.4) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-info-banner,
+[data-theme="dark"] [data-page="people"] .people-info-banner {
+  background: #e1eafa !important;
+  border-color: #c3d7ff !important;
+  box-shadow: 0 1px 2px rgba(15, 79, 219, 0.06) !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-title {
-  color: #93c5fd !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-title,
+[data-theme="dark"] [data-page="people"] .people-banner-title {
+  color: #0f50db !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-desc {
-  color: var(--color-dash-text-secondary) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-banner-desc,
+[data-theme="dark"] [data-page="people"] .people-banner-desc {
+  color: #6b7280 !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-header,
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-filters {
   border-color: var(--color-dash-icon-bg) !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input {
-  background-color: var(--color-dash-icon-bg) !important;
-  border-color: var(--color-dash-icon-bg) !important;
-  color: var(--color-dash-text-primary) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input,
+[data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input {
+  background-color: transparent !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px !important;
+  padding: 9px 16px 9px 42px !important;
+  color: #cad4e0 !important;
+  caret-color: #cad4e0 !important;
+  box-shadow: none !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input::placeholder {
-  color: var(--color-dash-text-secondary) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input::placeholder,
+[data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input::placeholder {
+  color: #94a3b8 !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-search-icon {
-  color: var(--color-dash-text-secondary) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input:focus,
+[data-theme="dark"] [data-page="people"] .people-list-search-wrap input.people-search-input:focus {
+  border-color: rgba(255,255,255,0.08) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-search-icon,
+[data-theme="dark"] [data-page="people"] .people-search-icon {
+  color: #94a3b8 !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-select {
-  background-color: var(--color-dash-icon-bg) !important;
-  border-color: var(--color-dash-icon-bg) !important;
-  color: var(--color-dash-text-primary) !important;
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cad4e0 !important;
   color-scheme: dark;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-select option {
-  background: var(--color-dash-card);
-  color: var(--color-dash-text-primary);
+  background: #1e293b;
+  color: #e2e8f0;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-filter-select-chevron path {
+  stroke: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-wrap {
+  background-color: transparent !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-wrap thead {
+  background-color: #1e293b !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-head {
   border-color: var(--color-dash-icon-bg) !important;
   color: var(--color-dash-text-secondary) !important;
 }
-/* Light: row divider */
-[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-body tr.people-table-row {
-  border-top: 1px solid #f3f4f6;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-wrap thead tr.people-table-head th {
+  color: var(--color-dash-text-secondary) !important;
 }
-[data-dashboard-theme][data-theme="light"] [data-page="people"] .people-table-body tr.people-table-row:first-child {
-  border-top-width: 0;
-  border-top-style: none;
-}
+
+/* People table: dark — same inset dividers, lighter line on slate */
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body {
   border-color: transparent !important;
 }
-/* Dark: row divider */
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row {
-  border-top: 1px solid rgba(255, 255, 255, 0.04) !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-wrap thead tr.people-table-head,
+[data-theme="dark"] [data-page="people"] .people-table-wrap thead tr.people-table-head {
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.12) 24px,
+    rgba(255, 255, 255, 0.12) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: bottom !important;
+  background-repeat: no-repeat !important;
 }
-[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row:first-child {
-  border-top-width: 0 !important;
-  border-top-style: none !important;
+[data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row:not(:first-child),
+[data-theme="dark"] [data-page="people"] .people-table-body tr.people-table-row:not(:first-child) {
+  background-image: linear-gradient(
+    to right,
+    transparent 0,
+    transparent 24px,
+    rgba(255, 255, 255, 0.12) 24px,
+    rgba(255, 255, 255, 0.12) calc(100% - 24px),
+    transparent calc(100% - 24px)
+  ) !important;
+  background-size: 100% 1px !important;
+  background-position: top !important;
+  background-repeat: no-repeat !important;
 }
 [data-dashboard-theme][data-theme="dark"] [data-page="people"] .people-table-body .people-table-row:hover {
   background-color: rgba(255,255,255,0.05) !important;
@@ -710,7 +2006,34 @@ body {
 
 /* Checkboxes inside dashboard-theme */
 [data-dashboard-theme] input[type="checkbox"] {
-  accent-color: var(--color-gold-light);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  background-color: #ffffff;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+}
+[data-dashboard-theme] input[type="checkbox"]:checked {
+  background-color: var(--color-dash-accent);
+  border-color: var(--color-dash-accent);
+}
+[data-dashboard-theme] input[type="checkbox"]:checked::after {
+  content: "";
+  width: 4px;
+  height: 8px;
+  border: 2px solid #ffffff;
+  border-top: 0;
+  border-left: 0;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+[data-dashboard-theme] input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 79, 219, 0.2);
 }
 
 /* ========== Sidebar – dark theme ========== */
@@ -774,10 +2097,10 @@ aside .sidebar-nav-section-label {
 
 /* View Individual — cards only (section cards, details surface, bottom row, tab panels) */
 .view-individual-details-surface {
-  background-color: #ffffff;
+  background-color: #f5f6fa;
 }
 [data-theme="dark"] .view-individual-details-surface {
-  background-color: #04102a !important;
+  background-color: #041029 !important;
 }
 
 .view-individual-section-header {
@@ -795,7 +2118,7 @@ aside .sidebar-nav-section-label {
 }
 
 .view-individual-tab-panel {
-  background-color: #ffffff !important;
+  background-color: #f5f6fa;
 }
 [data-theme="dark"] .view-individual-tab-panel {
   background-color: var(--color-admin-card-surface) !important;
@@ -836,9 +2159,6 @@ aside .sidebar-nav-section-label {
   background-color: #ffffff !important;
 }
 /* Section cards (light-blue header + dark body): outer wrapper must match body — avoids white leaking at bottom corners */
-.view-company-detail-page .view-company-details-section {
-  background-color: #fcfcfc;
-}
 [data-dashboard-theme][data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
 [data-theme="dark"] .view-account-detail-page .view-account-details-section.bg-white,
 [data-dashboard-theme][data-theme="dark"] .view-company-detail-page .view-company-details-section.bg-white,
@@ -1504,8 +2824,8 @@ aside .sidebar-nav-section-label {
 
 /* Admin Wallet — balance cards: same surface as other admin cards; very subtle outer edge */
 .admin-wallet-balance-card {
-  background-color: #fafafa;
-  border: none;
+  background-color: #f8fafc;
+  border: 1px solid #e8eef4;
 }
 [data-dashboard-theme][data-theme="dark"] .admin-wallet-balance-card,
 [data-theme="dark"] .admin-wallet-balance-card {
@@ -1835,4 +3155,484 @@ aside .sidebar-nav-section-label {
     font-weight: 400 !important;
   }
 
+}
+
+/* Payroll Reports — breakdown cards (light/dark adaptive) */
+[data-theme="light"] .payroll-breakdown-card {
+  background-color: #fafafa;
+  border: 1px solid #e5e7eb;
+}
+[data-theme="light"] .payroll-breakdown-heading {
+  background-color: #fafafa;
+  color: #1F2937;
+}
+[data-theme="light"] .payroll-breakdown-item {
+  background-color: #F4F4F4;
+}
+[data-theme="light"] .payroll-breakdown-chart-inner {
+  background-color: #F9FAFB;
+  border-color: #e5e7eb;
+}
+[data-theme="dark"] .payroll-breakdown-chart-inner {
+  background-color: #162032;
+  border-color: rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .payroll-breakdown-card {
+  background-color: #1e293b;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .payroll-breakdown-heading {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+[data-theme="dark"] .payroll-breakdown-item {
+  background-color: #162032;
+}
+
+/* Payroll Reports — inactive tab color (light/dark adaptive) */
+[data-theme="light"] .payroll-report-tab-inactive {
+  color: #6b7280;
+}
+[data-theme="dark"] .payroll-report-tab-inactive {
+  color: #ffffff;
+}
+
+/* Payroll Reports — table cell text (light/dark adaptive) */
+[data-theme="light"] .payroll-table-cell {
+  color: #1F2937;
+}
+[data-theme="dark"] .payroll-table-cell {
+  color: #cad4e0;
+}
+
+/* Payroll Reports — metric card title (light/dark adaptive) */
+[data-theme="light"] .payroll-metric-title {
+  color: #6b7280;
+}
+[data-theme="dark"] .payroll-metric-title {
+  color: #cad4e0;
+}
+
+/* Payroll Reports — metric card border (light/dark adaptive) */
+[data-theme="light"] .payroll-metric-card {
+  border-color: #e3e3e3;
+  background-color: transparent;
+}
+
+/* Payroll Reports — table header text (light/dark adaptive) */
+[data-theme="light"] .payroll-table-header {
+  color: #6B7280;
+}
+[data-theme="dark"] .payroll-table-header {
+  color: #cad4e0 !important;
+}
+
+/* Payroll Reports — table row border (light/dark adaptive) */
+[data-theme="light"] .payroll-table-row {
+  border-bottom: 1px solid #e5e7eb;
+}
+[data-theme="dark"] .payroll-table-row {
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .payroll-metric-card {
+  border-color: rgba(255,255,255,0.15);
+}
+
+/* Payroll Reports — breakdown select (light/dark adaptive) */
+[data-theme="light"] .payroll-breakdown-select {
+  background-color: #ffffff;
+  color: #1F2937;
+}
+[data-theme="dark"] .payroll-breakdown-select {
+  background-color: #162033;
+  color: #9da4b0;
+}
+
+/* Transfers + Payroll Reports — outer cards dark mode */
+[data-theme="dark"] .transfers-outer-card {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .payroll-reports-outer-card {
+  background-color: #1e293b !important;
+}
+
+/* Payroll Reports — search input, select date, breakdown-by row (light mode only) */
+[data-theme="light"] .payroll-reports-search { background-color: transparent; }
+[data-theme="light"] .payroll-select-date { background-color: transparent; }
+[data-theme="dark"] .payroll-select-date {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-theme="dark"] [data-page="payroll-reports"] .dash-card-section-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-theme="light"] .payroll-breakdown-by-row {
+  background-color: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+/* Transfers page — dark mode text */
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .dash-card-section-title,
+[data-theme="dark"] [data-page="transfers"] .dash-card-section-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-basic-heading,
+[data-theme="dark"] [data-page="transfers"] .transfers-basic-heading {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-label,
+[data-theme="dark"] [data-page="transfers"] .transfers-label {
+  color: #cad4e0 !important;
+  -webkit-text-fill-color: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-from-select,
+[data-theme="dark"] [data-page="transfers"] .transfers-from-select {
+  color: #cad4e0 !important;
+  color-scheme: dark;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-from-select option,
+[data-theme="dark"] [data-page="transfers"] .transfers-from-select option {
+  background-color: #1e293b !important;
+  color: #cad4e0 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input,
+[data-theme="dark"] [data-page="transfers"] .transfers-input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+  border-color: #364354 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input::placeholder,
+[data-theme="dark"] [data-page="transfers"] .transfers-input::placeholder {
+  color: #cad4e0 !important;
+  -webkit-text-fill-color: #cad4e0 !important;
+  opacity: 1 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input:hover,
+[data-theme="dark"] [data-page="transfers"] .transfers-input:hover,
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input:focus,
+[data-theme="dark"] [data-page="transfers"] .transfers-input:focus {
+  background-color: transparent !important;
+  border-color: #364354 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input-wrap,
+[data-theme="dark"] [data-page="transfers"] .transfers-input-wrap {
+  background-color: transparent !important;
+  border-color: #364354 !important;
+  box-shadow: none !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input-wrap:hover,
+[data-theme="dark"] [data-page="transfers"] .transfers-input-wrap:hover,
+[data-dashboard-theme][data-theme="dark"] [data-page="transfers"] .transfers-input-wrap:focus-within,
+[data-theme="dark"] [data-page="transfers"] .transfers-input-wrap:focus-within {
+  background-color: transparent !important;
+  border-color: #364354 !important;
+  box-shadow: none !important;
+}
+
+/* ── Transfers modals (Confirm withdrawal + 2FA) — dark mode ── */
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-card {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-close-btn {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-label {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-value {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-divider {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-cancel-btn {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #cad4e0 !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-desc {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-card input {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+[data-theme="dark"] [data-page="transfers"] .transfers-modal-card input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* ── Add People popup — dark mode only ── */
+[data-theme="dark"] .add-people-modal {
+  background-color: #1e293b !important;
+}
+[data-theme="dark"] .add-people-modal .dash-card-section-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-theme="dark"] .add-people-modal > div:first-child {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme="dark"] .add-people-modal button[class*="rounded-xl"] {
+  background-color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-theme="dark"] .add-people-modal p.font-semibold {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+[data-theme="dark"] .add-people-modal p.text-gray-500 {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+[data-theme="dark"] .add-people-modal div.text-center {
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+}
+[data-theme="dark"] .add-people-modal button.text-gray-400 {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .add-people-modal span.text-gray-400 {
+  color: #64748b !important;
+}
+
+/* ── Mass Import popup — dark mode only ── */
+[data-theme="dark"] .mass-import-modal { background-color: #1e293b !important; }
+[data-theme="dark"] .mass-import-modal .dash-card-section-title { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+[data-theme="dark"] .mass-import-modal h2 { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+[data-theme="dark"] .mass-import-modal p.text-gray-500 { color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; }
+[data-theme="dark"] .mass-import-modal > div:first-child { border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .mass-import-modal button.text-gray-400 { color: #94a3b8 !important; }
+/* Template & guidelines card */
+[data-theme="dark"] .mass-import-modal section > div[class*="bg-[#F9FAFB]"] { background-color: #243448 !important; }
+[data-theme="dark"] .mass-import-modal h3 { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+[data-theme="dark"] .mass-import-modal p.text-gray-600 { color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; }
+[data-theme="dark"] .mass-import-modal button.text-gray-800 { color: #cbd5e1 !important; -webkit-text-fill-color: #cbd5e1 !important; }
+/* Mass import template row */
+[data-theme="dark"] .mass-import-modal div[class*="border-gray-200"][class*="bg-white"] { background-color: #0f1f35 !important; border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .mass-import-modal p.text-gray-900 { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+[data-theme="dark"] .mass-import-modal p.text-gray-500 { color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; }
+[data-theme="dark"] .mass-import-modal button[class*="border-gray-300"] { background-color: transparent !important; border-color: rgba(255,255,255,0.15) !important; color: #cbd5e1 !important; }
+/* Upload CSV area */
+[data-theme="dark"] .mass-import-modal h3.text-gray-900 { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+[data-theme="dark"] .mass-import-modal p.text-gray-700 { color: #94a3b8 !important; -webkit-text-fill-color: #94a3b8 !important; }
+[data-theme="dark"] .mass-import-modal div[class*="border-dashed"] { background-color: #1e293b !important; }
+/* Cancel button */
+[data-theme="dark"] .mass-import-modal button[class*="text-gray-700"] { background-color: transparent !important; border-color: rgba(255,255,255,0.15) !important; color: #cbd5e1 !important; }
+/* "How to mass import employees" text */
+[data-theme="dark"] .mass-import-modal span[class*="text-[#1F2937]"] { color: #c8d2de !important; -webkit-text-fill-color: #c8d2de !important; }
+
+/* ===== Create Payroll Run page ===== */
+
+/* Header card — matches add-employee / people pattern */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-header-card { background-color: #f5f6fa; border: none; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-header-card { background-color: #1e293b; border: none; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-back-btn { color: #000000; }
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-back-btn:hover { background-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-back-btn { color: #9da4b0; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-back-btn:hover { background-color: rgba(255,255,255,0.06); }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-title { color: #000000; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-title { color: #ffffff; }
+
+/* Stepper card — same bg as add-employee */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-stepper-card { background-color: #f5f6fa; border: none; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-stepper-card { background-color: #1e293b; border: none; }
+
+/* Stepper connectors */
+[data-theme="light"] [data-page="payroll-create"] .payroll-stepper-connector--done { background-color: #2563eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-stepper-connector--done { background-color: #2563eb; }
+[data-theme="light"] [data-page="payroll-create"] .payroll-stepper-connector--pending { background-color: #CCCCCC; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-stepper-connector--pending { background-color: rgba(255,255,255,0.1); }
+
+/* Active step circle — ring with gap matching stepper card bg */
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-circle-active { background-color: #2563eb; color: #ffffff; box-shadow: 0 0 0 3px #f5f6fa, 0 0 0 7px #2563eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-circle-active { background-color: #2563eb; color: #ffffff; box-shadow: 0 0 0 3px #1e293b, 0 0 0 7px #2563eb; }
+
+/* Pending step circle — dark mode */
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-circle-pending { border-color: rgba(255,255,255,0.14) !important; color: #64748b !important; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-circle-inactive { background-color: #f3f4f6; color: #9ca3af; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-circle-inactive { background-color: rgba(255,255,255,0.08); color: #64748b; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-label { color: #000000; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-label { color: #f1f5f9; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-badge-pending { background-color: transparent; color: #A8AABC; border-color: #A8AABC; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-badge-pending { background-color: transparent; color: #64748b; border-color: rgba(255,255,255,0.14); }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-badge-active { background-color: #E9F4FF; color: #0F4FDB; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-badge-active { background-color: rgba(74,144,226,0.2); color: #93c5fd; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-badge-done { background-color: #DFFFFE; color: #35CAC3; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-badge-done { background-color: rgba(53,202,195,0.15); color: #5eead4; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-step-connector { background-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-step-connector { background-color: rgba(255,255,255,0.1); }
+
+/* Blue connector (step completed) */
+[data-page="payroll-create"] .payroll-step-connector--active { background-color: #0F50DB; }
+
+/* Main card */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-card { background-color: #f5f6fa; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding-bottom: 0.5rem; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-card { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; padding-bottom: 0.5rem; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-card-header-border { border-color: #e5e7eb; border-bottom-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-card-header-border { border-color: rgba(255,255,255,0.08); border-bottom-color: rgba(255,255,255,0.08); }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-card-title { color: #111827; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-card-title { color: #ffffff; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-card-sub { color: #6b7280; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-card-sub { color: #9da4b0; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-date-input { border-color: #e5e7eb; background-color: #f9fafb; border-radius: 0.5rem; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-date-input { border-color: rgba(255,255,255,0.1); background-color: rgba(255,255,255,0.04); border-radius: 0.5rem; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-date-text { color: #6b7280; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-date-text { color: #9da4b0; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-date-icon { color: #9ca3af; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-date-icon { color: #9da4b0; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-section-icon { color: #374151; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-section-icon { color: #9da4b0; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-section-title { color: #111827; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-section-title { color: #ffffff; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-table-head th { color: #9ca3af; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-table-head th { color: #9da4b0; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.75rem; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-table-row { border-top: 1px solid #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-table-row { border-top: 1px solid rgba(255,255,255,0.05); }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-emp-name { color: #111827; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-emp-name { color: #ffffff; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-emp-dept { color: #6b7280; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-emp-dept { color: #9da4b0; }
+
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-salary { color: #111827; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-salary { color: #ffffff; }
+
+/* Spinner input */
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-spinner-wrap { border-color: rgba(255,255,255,0.1) !important; background-color: rgba(255,255,255,0.04) !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-spinner-divider { border-color: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-spinner-val { color: #ffffff !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-spinner-btn { border-color: rgba(255,255,255,0.08) !important; color: #9da4b0 !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-spinner-btn:hover { color: #ffffff !important; }
+
+/* Avatar overlap border — matches card surface in dark mode */
+[data-theme="light"] [data-page="payroll-create"] .payroll-avatar-border { border-color: #ffffff !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-avatar-border { border-color: #1e293b !important; }
+
+/* Warning banner */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-warning-banner { background-color: #fcfbe8; border-color: #fcd34d; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-warning-banner { background-color: rgba(234,179,8,0.08); border-color: rgba(234,179,8,0.25); }
+
+/* "High Now" badge */
+[data-theme="light"] [data-page="payroll-create"] .payroll-high-now-badge { background-color: #fef9c3; color: #a16207; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-high-now-badge { background-color: rgba(234,179,8,0.12); color: #fcd34d; }
+
+/* Send For Review modal — amber icon circle */
+[data-theme="light"] [data-page="payroll-create"] .payroll-send-review-icon-bg { background-color: #fef9c3; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-send-review-icon-bg { background-color: rgba(234,179,8,0.15); }
+
+/* Back button inside steps */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-back-step-btn { color: #6b7280; border-color: #d1d5db; }
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-back-step-btn:hover { background-color: #f3f4f6; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-back-step-btn { color: #9da4b0; border-color: rgba(255,255,255,0.1); }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-back-step-btn:hover { background-color: rgba(255,255,255,0.05); }
+
+/* Review step rows */
+[data-theme="light"] [data-page="payroll-create"] .payroll-review-row { border-color: #e5e7eb; background-color: #ffffff; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-review-row { border-color: rgba(255,255,255,0.08); background-color: rgba(255,255,255,0.02); }
+
+/* Review step expanded section */
+[data-theme="light"] [data-page="payroll-create"] .payroll-review-expand { background-color: #f7f9fa; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-review-expand { background-color: rgba(255,255,255,0.02); }
+
+/* Review expand arrow bg when open */
+[data-theme="light"] [data-page="payroll-create"] .payroll-review-arrow-open { background-color: #dbebff; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-review-arrow-open { background-color: rgba(37,99,235,0.15); }
+
+/* Form inputs (comment, date, textarea) */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-comment-input { border-color: #e5e7eb; background-color: #fcfcfc; color: #374151; }
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-comment-input::placeholder { color: #9ca3af; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-comment-input { border-color: rgba(255,255,255,0.1) !important; background-color: rgba(255,255,255,0.04) !important; color: #ffffff !important; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-comment-input::placeholder { color: #64748b; }
+
+/* Execution: funding card */
+[data-theme="light"] [data-page="payroll-create"] .payroll-exec-funding-card { border-color: #e5e7eb; background-color: #fafafa; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-exec-funding-card { border-color: rgba(255,255,255,0.08); background-color: rgba(255,255,255,0.03); }
+
+/* Totals row border */
+[data-theme="light"] [data-page="payroll-create"] .payroll-create-totals-row { border-top: 2px solid #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-create-totals-row { border-top: 2px solid rgba(255,255,255,0.1); }
+
+/* Modal card */
+[data-theme="light"] [data-page="payroll-create"] .payroll-modal-card { background-color: #ffffff; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-modal-card { background-color: #1e293b; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+
+/* File generation cards */
+[data-theme="light"] [data-page="payroll-create"] .payroll-file-card { border-color: #e5e7eb; background-color: #fafafa; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-file-card { border-color: rgba(255,255,255,0.08); background-color: rgba(255,255,255,0.02); }
+
+/* Government reporting rows */
+[data-theme="light"] [data-page="payroll-create"] .payroll-gov-row { border-color: #e5e7eb; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-gov-row { border-color: rgba(255,255,255,0.08); }
+
+/* Government reporting buttons */
+[data-theme="light"] [data-page="payroll-create"] .payroll-gov-btn { border-color: #d1d5db; color: #374151; background-color: #fcfcfc; }
+[data-theme="light"] [data-page="payroll-create"] .payroll-gov-btn:hover { background-color: #f3f4f6; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-gov-btn { border-color: rgba(255,255,255,0.1); color: #9da4b0; }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-gov-btn:hover { background-color: rgba(255,255,255,0.05); }
+[data-theme="dark"]  [data-page="payroll-create"] .payroll-gov-btn:hover { background-color: rgba(255,255,255,0.05); }
+
+/* ── All user-panel select/dropdown elements: 30% height reduction ──────────
+   Native <select> dropdown direction is browser-controlled (opens below by
+   default; flips upward only when there is not enough viewport space below).
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-dashboard-theme] select,
+[data-page] select {
+  height: 30px !important;
+  min-height: 30px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  line-height: 1.3 !important;
+  box-sizing: border-box !important;
+}
+/* People filter select wrapper: match reduced height */
+[data-page="people"] .people-filter-select-wrap {
+  height: 30px !important;
+  min-height: 30px !important;
+}
+[data-page="people"] .people-select {
+  height: 30px !important;
+  min-height: 30px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
 }

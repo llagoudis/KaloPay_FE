@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { useEmployerAuthStore } from "@/store/employerAuthStore";
+import { useEmployeeAuthStore } from "@/store/employeeAuthStore";
 
-type Role = "admin";
+type Role = "admin" | "employer" | "employee";
 
 interface HeaderProps {
   role: Role;
@@ -15,10 +17,14 @@ interface HeaderProps {
 
 const loginUrls: Record<Role, string> = {
   admin: "/admin/login",
+  employer: "/user/login",
+  employee: "/employee/login",
 };
 
 const cookieNames: Record<Role, string> = {
   admin: "admin-auth",
+  employer: "employer-auth",
+  employee: "employee-auth",
 };
 
 export default function Header({ role, onMenuClick, theme: externalTheme, onThemeChange }: HeaderProps) {
@@ -30,9 +36,12 @@ export default function Header({ role, onMenuClick, theme: externalTheme, onThem
   const setTheme = onThemeChange ?? setInternalTheme;
   const isLight = theme === "light";
 
-  const store = useAdminAuthStore();
+  const adminStore = useAdminAuthStore();
+  const employerStore = useEmployerAuthStore();
+  const employeeStore = useEmployeeAuthStore();
+  const storeMap = { admin: adminStore, employer: employerStore, employee: employeeStore };
+  const store = storeMap[role];
   const user = store.user;
-  void role;
 
   function handleLogout() {
     store.clearAuth();
@@ -69,8 +78,8 @@ export default function Header({ role, onMenuClick, theme: externalTheme, onThem
           type="button"
           className={
             isLight
-              ? "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#E6E6E6] bg-[#F5F6FA] text-gray-400 sm:hidden"
-              : "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#334155] bg-[#1e293b] text-gray-400 sm:hidden"
+              ? "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#E6E6E6] bg-transparent text-gray-400 sm:hidden"
+              : "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#334155] bg-transparent text-gray-400 sm:hidden"
           }
           aria-label="Search"
         >

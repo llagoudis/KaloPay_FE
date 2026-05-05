@@ -6,8 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { ROUTES } from "@/lib/constants/routes";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { useEmployerAuthStore } from "@/store/employerAuthStore";
+import { useEmployeeAuthStore } from "@/store/employeeAuthStore";
 
-type Role = "admin";
+type Role = "admin" | "employer" | "employee";
 
 // Icons as inline SVG components
 const IconManagement = ({ className, active, color: _color }: { className?: string; active?: boolean; color?: string }) => (
@@ -103,14 +105,34 @@ const adminNavSections = [
 
 const navItems: Record<Role, { label: string; href: string }[]> = {
   admin: [], // admin uses adminNavSections
+  employer: [
+    { label: "Dashboard", href: ROUTES.employer.dashboard },
+    { label: "People", href: ROUTES.employer.people },
+    { label: "Payroll", href: ROUTES.employer.payroll },
+    { label: "Payments", href: ROUTES.employer.payments },
+    { label: "Bulk Payouts", href: ROUTES.employer.bulkPayouts },
+    { label: "Transfers", href: ROUTES.employer.transfers },
+    { label: "Reports", href: ROUTES.employer.reports },
+    { label: "Settings", href: ROUTES.employer.settings },
+  ],
+  employee: [
+    { label: "Dashboard", href: ROUTES.employee.dashboard },
+    { label: "Leave", href: ROUTES.employee.leave },
+    { label: "Reports", href: ROUTES.employee.reports },
+    { label: "Settings", href: ROUTES.employee.settings },
+  ],
 };
 
 const loginUrls: Record<Role, string> = {
   admin: "/admin/login",
+  employer: "/user/login",
+  employee: "/employee/login",
 };
 
 const cookieNames: Record<Role, string> = {
   admin: "admin-auth",
+  employer: "employer-auth",
+  employee: "employee-auth",
 };
 
 interface SidebarProps {
@@ -122,7 +144,11 @@ export default function Sidebar({ role }: SidebarProps) {
   const router = useRouter();
   const [managementOpen, setManagementOpen] = useState(true);
   const [administrationOpen, setAdministrationOpen] = useState(true);
-  const store = useAdminAuthStore();
+  const adminStore = useAdminAuthStore();
+  const employerStore = useEmployerAuthStore();
+  const employeeStore = useEmployeeAuthStore();
+  const storeMap = { admin: adminStore, employer: employerStore, employee: employeeStore };
+  const store = storeMap[role];
 
   function handleLogout() {
     store.clearAuth();
@@ -144,7 +170,7 @@ export default function Sidebar({ role }: SidebarProps) {
       {/* Logo */}
       <div className="flex flex-col px-6 pt-6 pb-4">
         <Link
-          href={ROUTES.admin.dashboard}
+          href={isAdmin ? ROUTES.admin.dashboard : role === "employer" ? ROUTES.employer.dashboard : ROUTES.employee.dashboard}
           className="focus:outline-none"
         >
           <span className="text-xl font-bold text-blue-600">KaLoPay</span>
