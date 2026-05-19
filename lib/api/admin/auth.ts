@@ -10,10 +10,16 @@ import {
 } from "@/lib/api/mockAuth";
 
 export async function adminLogin(email: string, password: string) {
-  // TEMP: bypass auth for demo/testing.
-  void email;
-  void password;
-  return mockLogin("admin");
+  const res = await fetch(`${API_BASE_URL}/admin/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Login failed");
+  }
+  return res.json();
 }
 
 export async function adminLogout() {
