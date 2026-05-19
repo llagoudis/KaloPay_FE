@@ -75,3 +75,21 @@ export async function employeeResendVerification(email: string) {
     return res.json();
   }, () => mockResendVerification());
 }
+
+export async function employeeResetPassword(code: string, email: string, newPassword: string) {
+  const res = await fetch(`${API_BASE_URL}/employee/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, email, newPassword }),
+  });
+  if (!res.ok) throw new Error("Reset failed");
+  return res.json();
+}
+
+export async function employeeGetMe(token: string) {
+  const res = await fetch(`${API_BASE_URL}/employee/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch user");
+  return res.json();
+}

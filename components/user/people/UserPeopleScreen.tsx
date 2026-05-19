@@ -6,20 +6,7 @@ import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import AddPeoplePopup from "@/components/user/people/AddPeoplePopup";
 import MassImportPopup from "@/components/user/people/MassImportPopup";
-<<<<<<< HEAD
 import { usePeople } from "@/hooks/employer/useUserPanel";
-=======
-
-const mockPeople = [
-  { id: "E001", name: "John Doe", role: "Accountant", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-07-01" },
-  { id: "E002", name: "Alice Johnson", role: "Senior Dev", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-06-15" },
-  { id: "E003", name: "Bob Smith", role: "Manager", country: "UK", workerType: "Contractor", workerStatus: "Active" as const, startDate: "2024-05-01" },
-  { id: "E004", name: "Carol White", role: "Analyst", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-04-10" },
-  { id: "E005", name: "Eva Green", role: "Junior Dev", country: "Germany", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-07-01" },
-  { id: "E006", name: "Frank Miller", role: "Designer", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-03-20" },
-  { id: "E007", name: "Grace Lee", role: "HR Specialist", country: "UK", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-02-01" },
-];
->>>>>>> a32072efce53ac2e9806955cc3e4970231ab5427
 
 const peopleFilterSelectClass =
   "people-select box-border h-[30px] min-h-[30px] min-w-0 max-w-full appearance-none rounded-lg border border-[#DFDFDF] bg-[#f7f7fa] py-[4px] pl-4 pr-9 text-[14px] font-normal leading-[20px] tracking-normal text-[#878787] [font-family:var(--font-poppins),Poppins,sans-serif] shadow-none focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)] [color-scheme:light]";
