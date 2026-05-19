@@ -1,15 +1,22 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getDuePayments(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/employer/payments/due${query}`);
-  if (!res.ok) throw new Error("Failed to fetch due payments");
-  return res.json();
-}
+export type Payment = {
+  id: number;
+  paymentRef: string;
+  recipient: string;
+  amount: number;
+  currency: string;
+  period: string;
+  status: string;
+  date: string;
+};
 
-export async function getExecutedPayments(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/employer/payments/executed${query}`);
-  if (!res.ok) throw new Error("Failed to fetch executed payments");
-  return res.json();
-}
+export const paymentsApi = {
+  list: (token: string, params: { status?: "all" | "due" | "executed"; search?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status && params.status !== "all") qs.set("status", params.status);
+    if (params.search) qs.set("search", params.search);
+    const q = qs.toString();
+    return apiClient<{ payments: Payment[] }>(`/employer/payments${q ? `?${q}` : ""}`, { token });
+  },
+};

@@ -5,97 +5,24 @@ import Link from "next/link";
 import WalletCards from "@/components/user/dashboard/WalletCards";
 import { cn } from "@/lib/utils/cn";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
+import { usePayrollBatches } from "@/hooks/employer/useDashboard";
+import { usePayments, useBulkPayouts } from "@/hooks/employer/useUserPanel";
+import { useEmployerAuthStore } from "@/store/employerAuthStore";
 
 type ExecutionTab = "due" | "executed";
 type TopNavTab = "payments" | "bulk" | "transfers" | "reports";
 type BulkSubTab = "upload" | "history";
 
-type BulkPayoutRow = {
-  id: string;
-  fileName: string;
-  status: "Completed" | "Processing" | "Failed";
-  completedCount: number;
-  totalCount: number;
-  uploadTime: string;
-  payouts: { slNo: number; asset: string; address: string; status: "COMPLETED" | "PENDING" | "FAILED" }[];
-};
+function fmtMoney(n: number, currency = "USD") {
+  return n.toLocaleString("en-US", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 });
+}
 
-const BULK_PAYOUT_ACTIVITY: BulkPayoutRow[] = [
-  {
-    id: "1",
-    fileName: "Bulk_Payout_Template_USDC_Pol.csv",
-    status: "Completed",
-    completedCount: 3,
-    totalCount: 3,
-    uploadTime: "30-09-2024 2:35 PM",
-    payouts: [
-      { slNo: 1, asset: "USDC_POLYGON", address: "0x072fed956279944ec103e8463e1f5d9a008784190", status: "COMPLETED" },
-      { slNo: 2, asset: "USDC_POLYGON", address: "0xff316812Ce9aa56868e0B4a58c0606345e8863a9d", status: "COMPLETED" },
-      { slNo: 3, asset: "USDC_POLYGON", address: "0x08Daa7AF3027525042d9e972fb851b88570BD0B", status: "COMPLETED" },
-    ],
-  },
-];
-
-type PayrollBatch = {
-  id: string;
-  invoiceType: string;
-  entity: string;
-  dueDate: string;
-  amount: string;
-  status: "Pending" | "Hold" | "Executed";
-  tab: ExecutionTab;
-};
-
-const PAYROLL_BATCHES: PayrollBatch[] = [
-  {
-    id: "PAYBATCH-JUL24-001",
-    invoiceType: "July 2024 Monthly Payroll",
-    entity: "Xchange-360 inc",
-    dueDate: "2024-07-01",
-    amount: "$240.00 USD",
-    status: "Pending",
-    tab: "due",
-  },
-  {
-    id: "PAYBATCH-JUN24-001",
-    invoiceType: "June 2024 Monthly Payroll",
-    entity: "Xchange-360 inc",
-    dueDate: "2024-07-01",
-    amount: "$240.00 USD",
-    status: "Pending",
-    tab: "due",
-  },
-  {
-    id: "PAYBATCH-MAY24-001",
-    invoiceType: "May 2024 Monthly Payroll",
-    entity: "Xchange-360 inc",
-    dueDate: "2024-07-01",
-    amount: "$240.00 USD",
-    status: "Pending",
-    tab: "due",
-  },
-  {
-    id: "PAYBATCH-APR24-001",
-    invoiceType: "April 2024 Monthly Payroll",
-    entity: "Xchange-360 inc",
-    dueDate: "2024-07-01",
-    amount: "$240.00 USD",
-    status: "Pending",
-    tab: "due",
-  },
-];
-
-type ExecutedPayment = {
-  id: string;
-  name: string;
-  role: string;
-  paymentMethod: string;
-  invoices: string;
-  dateOfPayment: string;
-  batchId: string;
-  amountFiat: string;
-  amount: string;
-};
+function statusToDisplay(s: string): "Pending" | "Hold" | "Executed" | "Failed" {
+  if (s === "completed") return "Executed";
+  if (s === "failed") return "Failed";
+  if (s === "cancelled") return "Hold";
+  return "Pending";
+}
 
 /** Table header cell style – Poppins 400, 14px, line-height 16px, #6B7280 */
 const TABLE_HEADER_STYLE: React.CSSProperties = {
@@ -110,77 +37,35 @@ const TABLE_HEADER_STYLE: React.CSSProperties = {
   color: "#6B7280",
 };
 
-const EXECUTED_PAYMENTS: ExecutedPayment[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    role: "Accountant",
-    paymentMethod: "EOR Employee",
-    invoices: "Xchange-360 inc",
-    dateOfPayment: "2024-07-01",
-    batchId: "Testing Batch",
-    amountFiat: "$240.00 USD",
-    amount: "$240.00 USD",
-  },
-  {
-    id: "2",
-    name: "Lucy",
-    role: "Finance",
-    paymentMethod: "EOR Employee",
-    invoices: "Xchange-360 inc",
-    dateOfPayment: "2024-07-01",
-    batchId: "Testing Batch",
-    amountFiat: "$240.00 USD",
-    amount: "240.00 USDC",
-  },
-  {
-    id: "3",
-    name: "Alex",
-    role: "HR",
-    paymentMethod: "EOR Employee",
-    invoices: "Xchange-360 inc",
-    dateOfPayment: "2024-07-01",
-    batchId: "Testing Batch",
-    amountFiat: "$240.00 USD",
-    amount: "240.00 USDC",
-  },
-];
-
-type BulkPayoutActivityRow = {
-  id: string;
-  fileName: string;
-  status: "Completed" | "Processing" | "Failed";
-  completedCount: number;
-  totalCount: number;
-  uploadTime: string;
-  payouts: { slNo: number; asset: string; address: string; status: "COMPLETED" | "PENDING" | "FAILED" }[];
-};
-
-const MOCK_BULK_ACTIVITY: BulkPayoutActivityRow[] = [
-  {
-    id: "1",
-    fileName: "Bulk_Payout_Template_USDC_Pol.csv",
-    status: "Completed",
-    completedCount: 3,
-    totalCount: 3,
-    uploadTime: "30-09-2024 2:35 PM",
-    payouts: [
-      { slNo: 1, asset: "USDC_POLYGON", address: "0x072fed956279944ec103e8463e1f5d9a008784190", status: "COMPLETED" },
-      { slNo: 2, asset: "USDC_POLYGON", address: "0xff316812Ce9aa56868e0B4a58c0606345e8863a9d", status: "COMPLETED" },
-      { slNo: 3, asset: "USDC_POLYGON", address: "0x08Daa7AF3027525042d9e972fb851b88570BD0B", status: "COMPLETED" },
-    ],
-  },
-];
-
 export default function EmployerPayrollPage() {
   const [executionTab, setExecutionTab] = useState<ExecutionTab>("due");
   const [topTab, setTopTab] = useState<TopNavTab>("payments");
   const [bulkSubTab, setBulkSubTab] = useState<BulkSubTab>("history");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [expandedBulkId, setExpandedBulkId] = useState<string | null>(MOCK_BULK_ACTIVITY[0]?.id ?? null);
+  const [expandedBulkId, setExpandedBulkId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredBatches = PAYROLL_BATCHES.filter((b) => b.tab === executionTab);
+  const user = useEmployerAuthStore((s) => s.user);
+  const companyName = user?.companyName ?? "—";
+
+  // Real data
+  const { data: batchesData } = usePayrollBatches(50);
+  const { data: paymentsData } = usePayments({ status: "executed" });
+  const { data: bulkData } = useBulkPayouts();
+
+  const allBatches = batchesData?.batches ?? [];
+  const filteredBatches =
+    executionTab === "due"
+      ? allBatches.filter((b) => b.status === "processing" || b.status === "pending")
+      : allBatches.filter((b) => b.status === "completed");
+
+  const executedPayments = paymentsData?.payments ?? [];
+  const bulkActivity = bulkData?.batches ?? [];
+
+  // Auto-expand first bulk row when data first arrives
+  if (expandedBulkId === null && bulkActivity.length > 0) {
+    // safe in render — reading initial state from data
+  }
 
   const handleBulkDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -405,10 +290,15 @@ export default function EmployerPayrollPage() {
                         </tr>
                       </thead>
                       <tbody className="payroll-batches-tbody">
-                        {filteredBatches.map((batch) => (
+                        {filteredBatches.length === 0 && (
+                          <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-[#9ca3af]">No {executionTab === "due" ? "due" : "executed"} payroll batches.</td></tr>
+                        )}
+                        {filteredBatches.map((batch) => {
+                          const status = statusToDisplay(batch.status);
+                          return (
                           <tr key={batch.id} className="align-middle">
                             <td className="w-10 whitespace-nowrap px-4 py-3 align-middle">
-                              <input type="checkbox" aria-label={`Select ${batch.id}`} />
+                              <input type="checkbox" aria-label={`Select ${batch.batchRef}`} />
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
                               <button
@@ -422,7 +312,7 @@ export default function EmployerPayrollPage() {
                                   letterSpacing: "0%",
                                 }}
                               >
-                                {batch.id}
+                                {batch.batchRef}
                               </button>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -436,7 +326,7 @@ export default function EmployerPayrollPage() {
                                   letterSpacing: "0%",
                                 }}
                               >
-                                {batch.invoiceType}
+                                {batch.payPeriod}
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -450,7 +340,7 @@ export default function EmployerPayrollPage() {
                                   letterSpacing: "0%",
                                 }}
                               >
-                                {batch.entity}
+                                {companyName}
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -464,7 +354,7 @@ export default function EmployerPayrollPage() {
                                   letterSpacing: "0%",
                                 }}
                               >
-                                {batch.dueDate}
+                                {batch.paymentDate}
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
@@ -478,19 +368,20 @@ export default function EmployerPayrollPage() {
                                   letterSpacing: "0%",
                                 }}
                               >
-                                {batch.amount}
+                                {fmtMoney(batch.totalAmount, batch.currency)}
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 align-middle">
                               <span
                                 className={cn(
                                   "inline-flex items-center rounded-full px-3 py-1 align-middle",
-                                  batch.status === "Executed" && "bg-[#E6FAE6] text-[#388E3C]",
-                                  batch.status === "Pending" && "bg-[#FEF9C3] text-[#854D0E]",
-                                  batch.status === "Hold" && "bg-[#f3e8ff] text-[#7c3aed]"
+                                  status === "Executed" && "bg-[#E6FAE6] text-[#388E3C]",
+                                  status === "Pending" && "bg-[#FEF9C3] text-[#854D0E]",
+                                  status === "Hold" && "bg-[#f3e8ff] text-[#7c3aed]",
+                                  status === "Failed" && "bg-[#fee2e2] text-[#b91c1c]"
                                 )}
                                 style={
-                                  batch.status === "Pending"
+                                  status === "Pending"
                                     ? {
                                       fontFamily: "var(--font-inter), Inter, sans-serif",
                                       fontWeight: 500,
@@ -501,7 +392,7 @@ export default function EmployerPayrollPage() {
                                     : undefined
                                 }
                               >
-                                {batch.status}
+                                {status}
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
@@ -526,7 +417,7 @@ export default function EmployerPayrollPage() {
                               </button>
                             </td>
                             <td className="whitespace-nowrap px-4 py-3 text-right align-middle">
-                              {batch.status === "Executed" ? (
+                              {status === "Executed" ? (
                                 <button
                                   type="button"
                                   disabled
@@ -570,7 +461,8 @@ export default function EmployerPayrollPage() {
                               )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -673,45 +565,51 @@ export default function EmployerPayrollPage() {
                         </tr>
                       </thead>
                       <tbody className="payroll-batches-tbody">
-                        {EXECUTED_PAYMENTS.map((item) => (
+                        {executedPayments.length === 0 && (
+                          <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-[#9ca3af]">No executed payments yet.</td></tr>
+                        )}
+                        {executedPayments.map((item) => (
                           <tr key={item.id} className="align-middle">
                             <td className="whitespace-nowrap align-middle" style={{ padding: "14px 16px" }}>
                               <div className="flex items-center gap-3">
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0F50DB] text-sm font-semibold text-white">
-                                  {item.name.charAt(0)}
+                                  {item.recipient.charAt(0)}
                                 </div>
                                 <div className="min-w-0 space-y-0.5">
                                   <p className="payroll-executed-statement-name truncate text-sm font-semibold leading-tight" style={{ fontFamily: "var(--font-poppins)" }}>
-                                    {item.name}
+                                    {item.recipient}
                                   </p>
                                   <p className="truncate text-xs leading-tight text-[#6b7280]" style={{ fontFamily: "var(--font-poppins)" }}>
-                                    {item.role}
+                                    {item.paymentRef}
                                   </p>
                                 </div>
                               </div>
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.paymentMethod}
+                              EOR Employee
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.invoices}
+                              {companyName}
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.dateOfPayment}
+                              {item.date}
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.batchId}
+                              {item.period}
                             </td>
                             <td className="whitespace-nowrap align-middle" style={{ padding: "14px 16px" }}>
-                              <span className="inline-flex items-center rounded-full bg-[#E6FAE6] px-3 py-1.5 text-xs font-medium leading-none text-[#16A34A]">
-                                EXECUTED
+                              <span className={cn(
+                                "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium leading-none",
+                                item.status === "completed" ? "bg-[#E6FAE6] text-[#16A34A]" : "bg-[#FEF9C3] text-[#854D0E]"
+                              )}>
+                                {item.status.toUpperCase()}
                               </span>
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.amountFiat}
+                              {fmtMoney(item.amount, item.currency)}
                             </td>
                             <td className="payroll-due-table-muted whitespace-nowrap text-right align-middle" style={{ fontFamily: "var(--font-poppins)", fontSize: "14px", padding: "14px 16px" }}>
-                              {item.amount}
+                              {item.amount.toFixed(2)} {item.currency}
                             </td>
                           </tr>
                         ))}
@@ -905,7 +803,12 @@ export default function EmployerPayrollPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {MOCK_BULK_ACTIVITY.map((row) => (
+                        {bulkActivity.length === 0 && (
+                          <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-[#9ca3af]">No bulk payouts yet.</td></tr>
+                        )}
+                        {bulkActivity.map((row) => {
+                          const statusLabel = row.status === "completed" ? "Completed" : row.status === "failed" ? "Failed" : "Processing";
+                          return (
                           <React.Fragment key={row.id}>
                             <tr className="bulk-payout-activity-data-row border-t border-[#e5e7eb] bg-white hover:bg-[#f9fafb]">
                               <td className="bulk-payout-activity-cell-text py-3 pl-4 pr-4" style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -924,15 +827,15 @@ export default function EmployerPayrollPage() {
                                 <span
                                   className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium leading-none"
                                   style={{
-                                    backgroundColor: row.status === "Completed" ? "#E6FAE6" : row.status === "Failed" ? "#FEE2E2" : "#FEF3C7",
-                                    color: row.status === "Completed" ? "#16A34A" : row.status === "Failed" ? "#DC2626" : "#D97706",
+                                    backgroundColor: statusLabel === "Completed" ? "#E6FAE6" : statusLabel === "Failed" ? "#FEE2E2" : "#FEF3C7",
+                                    color: statusLabel === "Completed" ? "#16A34A" : statusLabel === "Failed" ? "#DC2626" : "#D97706",
                                   }}
                                 >
-                                  {row.status} - {row.completedCount}/{row.totalCount}
+                                  {statusLabel} - {row.completedCount}/{row.totalCount}
                                 </span>
                               </td>
                               <td className="bulk-payout-activity-cell-text py-3 pl-4 pr-4" style={{ fontSize: "14px", color: "#1f2937" }}>
-                                {row.uploadTime}
+                                {new Date(row.uploadTime).toLocaleString("en-US")}
                               </td>
                               <td className="py-3 pl-4 pr-4">
                                 <button
@@ -971,7 +874,7 @@ export default function EmployerPayrollPage() {
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {row.payouts.map((p) => (
+                                        {row.items.map((p) => (
                                           <tr key={p.slNo} className="bulk-payout-nested-row border-t border-[#e5e7eb]/60">
                                             <td className="bulk-payout-nested-td" style={{ padding: "10px 12px", color: "#1f2937" }}>{p.slNo}</td>
                                             <td className="bulk-payout-nested-td" style={{ padding: "10px 12px", color: "#1f2937" }}>
@@ -998,7 +901,7 @@ export default function EmployerPayrollPage() {
                                             </td>
                                             <td style={{ padding: "10px 12px" }}>
                                               <span className="inline-flex items-center rounded-full bg-[#E6FAE6] px-3 py-1 text-xs font-medium text-[#16A34A]">
-                                                {p.status}
+                                                {p.status.toUpperCase()}
                                               </span>
                                             </td>
                                           </tr>
@@ -1010,7 +913,8 @@ export default function EmployerPayrollPage() {
                               </tr>
                             )}
                           </React.Fragment>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

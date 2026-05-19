@@ -1,26 +1,71 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getPayrollRuns(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/employer/payroll${query}`);
-  if (!res.ok) throw new Error("Failed to fetch payroll runs");
-  return res.json();
-}
+export type PayrollEmployee = {
+  id: number;
+  name: string;
+  jobTitle: string;
+  department: string;
+  country: string;
+  currency: string;
+  annualSalary: number;
+  monthlyGross: number;
+  hasBank: boolean;
+};
 
-export async function createPayrollRun(data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/employer/payroll`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error("Failed to create payroll run");
-  return res.json();
-}
+export type FundingStatus = {
+  required: number;
+  available: number;
+  sufficient: boolean;
+  currency: string;
+};
 
-export async function executePayrollRun(id: string) {
-  const res = await fetch(`${API_BASE_URL}/employer/payroll/${id}/execute`, {
-    method: "POST",
-  });
-  if (!res.ok) throw new Error("Failed to execute payroll run");
-  return res.json();
-}
+export type RunPayrollInput = {
+  period?: string;
+  paymentDate?: string;
+  description?: string;
+  execute?: boolean;
+  employees: {
+    id: number;
+    gross: number;
+    overtime?: number;
+    bonuses?: number;
+    commissions?: number;
+    expenses?: number;
+    unpaidDays?: number;
+  }[];
+};
+
+export type PayrollRunLine = {
+  employeeId: number;
+  gross: number;
+  deductions: number;
+  net: number;
+  employerCost: number;
+  incomeTax: number;
+  social: number;
+  health: number;
+};
+
+export type PayrollRunResult = {
+  batchId: number;
+  batchRef: string;
+  status: string;
+  summary: {
+    totalGross: number;
+    totalNet: number;
+    totalEmployerCost: number;
+    employeeCount: number;
+  };
+  lines: PayrollRunLine[];
+};
+
+export const payrollApi = {
+  listEmployees: (token: string) =>
+    apiClient<{ employees: PayrollEmployee[] }>(`/employer/payroll/employees`, { token }),
+
+  fundingStatus: (token: string, required: number) =>
+    apiClient<FundingStatus>(`/employer/payroll/funding-status?required=${required}`, { token }),
+
+  run: (token: string, data: RunPayrollInput) =>
+    apiClient<PayrollRunResult>(`/employer/payroll/run`, { token, method: "POST", body: data }),
+};

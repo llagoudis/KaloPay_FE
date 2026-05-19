@@ -4,7 +4,7 @@ export default function AdminAdministratorsPage() {
   return (
     <div className="admin-administrators-page w-full space-y-6">
       <div
-        className="admin-administrators-title-card admin-page-title-strip w-full rounded-[10px] bg-white"
+        className="admin-administrators-title-card w-full rounded-[10px] bg-white"
         style={{ padding: "24px" }}
       >
         <h1

@@ -52,10 +52,8 @@ export default function LoginForm({
         onSetAuth(res.user as never, res.token);
         router.push(dashboardUrl);
       }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Invalid email or password. Please try again."
-      );
+    } catch {
+      setError("Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }

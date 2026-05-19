@@ -2,6 +2,16 @@
 
 import PayrollExpensesChart from "./PayrollExpensesChart";
 import LoremEpsumChart from "./LoremEpsumChart";
+import { useMonthlyStats } from "@/hooks/employer/useDashboard";
+
+function formatMoney(n: number) {
+  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+
+function formatDelta(n: number, suffix: string) {
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n}${suffix}`;
+}
 
 /** Four capsule bars: light–dark–light–light heights per analytics reference */
 function TotalPaymentsBarIcon() {
@@ -72,6 +82,14 @@ const cardClass =
   "monthly-analytics-surface flex w-full items-center rounded-xl border border-[var(--color-dash-icon-bg)] bg-[#fcfcfc] p-4 sm:p-6";
 
 export default function MonthlyAnalytics() {
+  const { data, isLoading } = useMonthlyStats();
+  const totalAmount = data?.totalPayments.amount ?? 0;
+  const totalDelta = data?.totalPayments.deltaPct ?? 0;
+  const empCount = data?.activeEmployees.count ?? 0;
+  const empDelta = data?.activeEmployees.deltaCount ?? 0;
+  const totalDeltaColor = totalDelta >= 0 ? "#22c55e" : "#ef4444";
+  const empDeltaColor = empDelta >= 0 ? "#22c55e" : "#ef4444";
+
   return (
     <div
       className="monthly-analytics-shell mb-10 rounded-2xl border border-[var(--color-dash-icon-bg)] bg-dash-card py-5 pr-4 pl-3 sm:pr-5 sm:pl-4 md:py-6 md:pr-5 md:pl-4 lg:py-8 lg:pr-6 lg:pl-5"
@@ -91,13 +109,15 @@ export default function MonthlyAnalytics() {
         <div className={cardClass}>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-normal text-[#94a3b8]">Total Payments</p>
-            <p className="mt-2 text-2xl font-bold text-dash-primary">$245,670</p>
-            <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-[#22c55e]">
+            <p className="mt-2 text-2xl font-bold text-dash-primary">
+              {isLoading ? "…" : formatMoney(totalAmount)}
+            </p>
+            <p className="mt-2 flex items-center gap-1.5 text-sm font-medium" style={{ color: totalDeltaColor }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                 <polyline points="17 6 23 6 23 12" />
               </svg>
-              +12.5% vs last month
+              {formatDelta(totalDelta, "% vs last month")}
             </p>
           </div>
           <div className="ml-4 flex h-[56px] shrink-0 items-end justify-center" aria-hidden>
@@ -107,8 +127,12 @@ export default function MonthlyAnalytics() {
         <div className={`${cardClass} justify-between`}>
           <div className="min-w-0 flex-1 pr-4">
             <p className="text-sm font-normal text-[#94a3b8]">Active Employees</p>
-            <p className="mt-2 text-2xl font-bold text-dash-primary">156</p>
-            <p className="mt-2 text-sm font-medium text-[#22c55e]">+5 employees vs last month</p>
+            <p className="mt-2 text-2xl font-bold text-dash-primary">
+              {isLoading ? "…" : empCount}
+            </p>
+            <p className="mt-2 text-sm font-medium" style={{ color: empDeltaColor }}>
+              {formatDelta(empDelta, " employees vs last month")}
+            </p>
           </div>
           <div className="flex shrink-0 items-center justify-center" aria-hidden>
             <ActiveEmployeesIllustration />

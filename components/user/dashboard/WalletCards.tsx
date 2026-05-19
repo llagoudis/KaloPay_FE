@@ -1,24 +1,68 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
+import { useWallets, useAuthErrorRecovery } from "@/hooks/employer/useDashboard";
+import type { Wallet } from "@/lib/api/employer/dashboard";
 
-const walletCards = [
-  { currency: "Euro", amount: "€5.998600", eur: "€6.00 EUR", address: "1701*****6600", icon: "€", iconBg: "euro" },
-  { currency: "BTC", amount: "€5.998600", eur: "€6.00 EUR", address: "1701*****6600", icon: "B", iconBg: "btc" },
-  { currency: "USDT (ERC20)", amount: "€5.998600", eur: "€6.00 EUR", address: "1701*****6600", icon: "T", iconBg: "teal" },
-  { currency: "USDT (ERC20)", amount: "€5.998600", eur: "€6.00 EUR", address: "1701*****6600", icon: "$", iconBg: "usdc" },
-];
+function maskAddress(addr: string | null) {
+  if (!addr) return "—";
+  if (addr.length <= 10) return addr;
+  return `${addr.slice(0, 4)}*****${addr.slice(-4)}`;
+}
+
+function iconBgKey(currency: string): "euro" | "btc" | "teal" | "usdc" | "default" {
+  const c = currency.toLowerCase();
+  if (c.includes("eur")) return "euro";
+  if (c.includes("btc") || c.includes("bitcoin")) return "btc";
+  if (c.includes("usdt")) return "teal";
+  if (c.includes("usdc") || c.includes("usd")) return "usdc";
+  return "default";
+}
+
+function formatAmount(balance: string, currency: string) {
+  const num = Number(balance);
+  if (!Number.isFinite(num)) return balance;
+  const c = currency.toLowerCase();
+  const symbol = c.includes("eur") ? "€" : c.includes("usd") || c.includes("usdt") || c.includes("usdc") ? "$" : "";
+  const decimals = c.includes("btc") || c.includes("eth") ? 8 : 2;
+  return `${symbol}${num.toFixed(decimals)}`;
+}
 
 export default function WalletCards() {
-  function handleCopy(address: string) {
+  const { data, isLoading, error } = useWallets();
+  useAuthErrorRecovery(error);
+
+  function handleCopy(address: string | null) {
+    if (!address) return;
     navigator.clipboard.writeText(address).catch(() => {});
+  }
+
+  const cards: (Wallet & { iconBg: ReturnType<typeof iconBgKey> })[] =
+    (data?.wallets ?? []).map((w) => ({ ...w, iconBg: iconBgKey(w.currency) }));
+
+  if (isLoading) {
+    return (
+      <section className="mb-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={`sk-${i}`} className="wallet-card box-border h-[220px] animate-pulse rounded-xl border border-solid border-[#d1d5db] bg-[#f3f4f6]" />
+        ))}
+      </section>
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <section className="mb-10 rounded-xl border border-dashed border-[#d1d5db] p-8 text-center text-dash-secondary">
+        No wallets yet.
+      </section>
+    );
   }
 
   return (
     <section className="mb-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      {walletCards.map((card, i) => (
+      {cards.map((card) => (
         <div
-          key={`${card.currency}-${i}`}
+          key={card.id}
           className="wallet-card box-border rounded-xl border border-solid border-[#d1d5db] bg-[#fafafa] p-6"
         >
           <div className="flex items-start justify-between">
@@ -58,7 +102,7 @@ export default function WalletCards() {
                   <text x="13" y="18" textAnchor="middle" fontSize="13" fontWeight="700" fill="white" fontFamily="Arial,sans-serif">$</text>
                 </svg>
               ) : (
-                card.icon
+                card.currency.charAt(0)
               )}
             </div>
             <button
@@ -77,7 +121,7 @@ export default function WalletCards() {
           </p>
           <div className="mt-1 flex items-center justify-between gap-2">
             <p className="align-middle text-[24px] font-semibold leading-[20.54px] tracking-normal text-dash-primary [font-family:var(--font-poppins),Poppins,sans-serif]">
-              {card.amount}
+              {formatAmount(card.balance, card.currency)}
             </p>
             <button
               type="button"
@@ -98,14 +142,14 @@ export default function WalletCards() {
               </svg>
             </button>
           </div>
-          <p className="mt-1 text-sm text-dash-secondary">{card.eur}</p>
+          <p className="mt-1 text-sm text-dash-secondary">{card.holder ?? "—"}</p>
           <div className="wallet-address-row mx-2 mt-6 flex items-center justify-between gap-2 border-t border-[#e5e7eb] pt-4">
             <span className="shrink-0 align-middle text-[13px] font-normal leading-[100%] tracking-normal text-dash-secondary [font-family:var(--font-poppins),Poppins,sans-serif]">
-              Wallet address
+              {card.type === "Crypto" ? "Wallet address" : "IBAN"}
             </span>
             <div className="flex min-w-0 items-center gap-2">
               <span className="truncate align-middle text-[11px] font-medium leading-[100%] tracking-normal text-dash-primary [font-family:var(--font-inter),Inter,sans-serif]">
-                {card.address}
+                {maskAddress(card.address)}
               </span>
               <button
                 type="button"

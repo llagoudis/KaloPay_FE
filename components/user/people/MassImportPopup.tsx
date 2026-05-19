@@ -2,12 +2,18 @@
 
 import { useState, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useBulkImportPeople } from "@/hooks/employer/useUserPanel";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onImport?: (file: File) => void;
 };
+
+const SAMPLE_CSV =
+  "firstName,lastName,email,jobTitle,department,country,employmentType,grossAnnualSalary,paymentCurrencyCode\n" +
+  "Jane,Doe,jane.doe@example.com,Developer,Engineering,United States,full-time,80000,USD\n" +
+  "John,Smith,john.smith@example.com,Designer,Product,United States,full-time,75000,USD\n";
 
 /** Mass Import modal – Figma 106-1036 + error state 119-3010. */
 const ALLOWED_EXTENSIONS = [".csv", ".xlsx"];
@@ -24,7 +30,9 @@ export default function MassImportPopup({ open, onClose, onImport }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [drag, setDrag] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ createdCount: number; errors: { row: number; message: string }[] } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const importMutation = useBulkImportPeople();
 
   if (!open) return null;
 
@@ -64,26 +72,44 @@ export default function MassImportPopup({ open, onClose, onImport }: Props) {
     return "Invalid file.";
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!file) return;
     setError(null);
     if (!isValidFile(file)) {
       setError(getErrorMessage(file));
       return;
     }
-    onImport?.(file);
-    handleClose();
+    try {
+      const r = await importMutation.mutateAsync(file);
+      setResult(r);
+      onImport?.(file);
+      // If clean (no errors), auto-close after a short delay
+      if (r.errors.length === 0) {
+        setTimeout(() => handleClose(), 1500);
+      }
+    } catch (e) {
+      setError((e as Error).message ?? "Import failed");
+    }
   }
 
   function handleClose() {
     setFile(null);
     setError(null);
+    setResult(null);
     if (inputRef.current) inputRef.current.value = "";
     onClose();
   }
 
   function handleDownloadTemplate() {
-    // TODO: serve actual template file
+    const blob = new Blob([SAMPLE_CSV], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kalopay-people-template.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -219,8 +245,33 @@ export default function MassImportPopup({ open, onClose, onImport }: Props) {
             )}
           </div>
           <p className="mt-2 text-xs text-gray-700">
-            Supported format: .csv, .xlsx · Max file size: 10 MB, max rows allowed: 1000
+            Supported format: .csv · Max file size: 10 MB. Required columns: firstName, lastName, email.
           </p>
+
+          {result && (
+            <div
+              className={cn(
+                "mt-4 rounded-xl border px-4 py-3 text-sm",
+                result.errors.length === 0
+                  ? "border-green-200 bg-green-50 text-green-800"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
+              )}
+            >
+              <p className="font-semibold">
+                Imported {result.createdCount}{" "}
+                {result.createdCount === 1 ? "person" : "people"}.
+                {result.errors.length > 0 && ` ${result.errors.length} row(s) failed:`}
+              </p>
+              {result.errors.length > 0 && (
+                <ul className="mt-1 list-disc pl-5 text-xs">
+                  {result.errors.slice(0, 8).map((e, i) => (
+                    <li key={i}>Row {e.row}: {e.message}</li>
+                  ))}
+                  {result.errors.length > 8 && <li>… and {result.errors.length - 8} more</li>}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Actions */}
@@ -230,15 +281,15 @@ export default function MassImportPopup({ open, onClose, onImport }: Props) {
             onClick={handleClose}
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            {result ? "Close" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={handleNext}
-            disabled={!file}
+            disabled={!file || importMutation.isPending}
             className="inline-flex items-center justify-center rounded-lg bg-[rgb(15,80,219)] px-4 py-2 text-sm font-medium text-white transition enabled:hover:bg-[#0d46c3] disabled:cursor-not-allowed disabled:!bg-[rgb(15,80,219)] disabled:!opacity-100"
           >
-            Next
+            {importMutation.isPending ? "Importing…" : result ? "Re-import" : "Import"}
           </button>
         </div>
         </div>

@@ -1,19 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { cn } from "@/lib/utils/cn";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import {
-  getAdministrators,
-  createAdministrator,
-  updateAdministrator,
-  deleteAdministrator,
-  type Administrator,
-} from "@/lib/api/admin/administrators";
 
 type AdministratorRow = {
   id: number;
@@ -27,25 +19,35 @@ type AdministratorRow = {
 
 type AdministratorTableRow = AdministratorRow & { actions: null };
 
-function splitName(fullName: string): { firstName: string; lastName: string } {
-  const parts = (fullName ?? "").trim().split(/\s+/);
-  if (parts.length === 0) return { firstName: "", lastName: "" };
-  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
-  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
-}
-
-function toRow(a: Administrator): AdministratorRow {
-  const { firstName, lastName } = splitName(a.name ?? "");
-  return {
-    id: a.id,
-    firstName,
-    lastName,
-    email: a.email ?? "",
+const mockAdministrators: AdministratorRow[] = [
+  {
+    id: 5,
+    firstName: "Harsha",
+    lastName: "Parthasarathy",
+    email: "harshaparathasarathy@...",
     role: "Super Admin",
-    enabled: a.is_email_verified ?? true,
-    twoFactorAuth: a.two_factor_enabled ?? false,
-  };
-}
+    enabled: false,
+    twoFactorAuth: false,
+  },
+  {
+    id: 17,
+    firstName: "Keshav",
+    lastName: "Sharma",
+    email: "keshav@simplipeap.com",
+    role: "Super Admin",
+    enabled: false,
+    twoFactorAuth: false,
+  },
+  {
+    id: 12,
+    firstName: "NIKIFOROS",
+    lastName: "hadjichristodoulou",
+    email: "nikiforos.hadjichristodoulou@...",
+    role: "Super Admin",
+    enabled: false,
+    twoFactorAuth: false,
+  },
+];
 
 type AdminFormMode = "create" | "edit";
 
@@ -85,24 +87,7 @@ export default function AdminTable() {
 
   const isLight = theme === "light";
 
-  const token = useAdminAuthStore((s) => s.token);
-  const [rows, setRows] = useState<AdministratorRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchRows = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getAdministrators(token);
-      setRows((res.data ?? []).map(toRow));
-    } catch (err) {
-      console.error("Failed to fetch administrators:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+  const [rows, setRows] = useState<AdministratorRow[]>(mockAdministrators);
 
   const [menuOpenForId, setMenuOpenForId] = useState<number | null>(null);
 
@@ -199,30 +184,40 @@ export default function AdminTable() {
       }
     }
 
-    if (!token) {
-      setFormError("You must be logged in.");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      // UI-only: local state update.
       if (formMode === "create") {
-        await createAdministrator(token, {
-          name: fullName,
+        const nextId = (rows.reduce((m, r) => Math.max(m, r.id), 0) ?? 0) + 1;
+        const newRow: AdministratorRow = {
+          id: nextId,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           email: email.trim(),
-          password,
-        });
+          role,
+          enabled,
+          twoFactorAuth: false,
+        };
+        setRows((prev) => [newRow, ...prev]);
       } else if (formMode === "edit" && editTarget) {
-        await updateAdministrator(token, String(editTarget.id), {
-          name: fullName,
-          email: email.trim(),
-        });
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === editTarget.id
+              ? {
+                  ...r,
+                  firstName: firstName.trim(),
+                  lastName: lastName.trim(),
+                  email: email.trim(),
+                  role,
+                  enabled,
+                  // Keep existing 2FA value
+                }
+              : r
+          )
+        );
       }
-      await fetchRows();
+
       closeForm();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Operation failed");
     } finally {
       setSubmitting(false);
     }
@@ -396,22 +391,16 @@ export default function AdminTable() {
         </Button>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-        </div>
-      ) : (
-        <Table<AdministratorTableRow>
-          columns={columns}
-          data={tableData}
-          emptyMessage="No administrators found."
-          className="admin-list-table admin-administrators-table mt-6 border-0 border-gray-100"
-          tableClassName="min-w-max"
-          bordered={false}
-          rowDividers={true}
-          rowHover={false}
-        />
-      )}
+      <Table<AdministratorTableRow>
+        columns={columns}
+        data={tableData}
+        emptyMessage="No administrators found."
+        className="admin-list-table admin-administrators-table mt-6 border-0 border-gray-100"
+        tableClassName="min-w-max"
+        bordered={false}
+        rowDividers
+        rowHover={false}
+      />
 
       <Modal
         isOpen={formOpen}
@@ -550,16 +539,10 @@ export default function AdminTable() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={async () => {
-          if (!deleteTarget || !token) return;
-          try {
-            await deleteAdministrator(token, String(deleteTarget.id));
-            await fetchRows();
-          } catch (err) {
-            alert(err instanceof Error ? err.message : "Failed to delete administrator");
-          } finally {
-            setDeleteTarget(null);
-          }
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          setRows((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+          setDeleteTarget(null);
         }}
         title="Delete administrator"
         message="Are you sure you want to delete this administrator?"

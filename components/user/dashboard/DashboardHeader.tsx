@@ -55,8 +55,9 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
     }
   }
 
-  const displayName = user?.name ?? "Loukas";
-  const displayEmail = user?.email ?? "johndoe@email.com";
+  const displayName = user?.companyName ?? user?.name ?? "—";
+  const displayEmail = user?.email ?? "—";
+  const avatarInitial = (user?.companyName ?? user?.name ?? "?").charAt(0).toUpperCase();
 
   const navPillDarkBg = "linear-gradient(180deg, #1a2332 0%, #0f172a 100%)";
 

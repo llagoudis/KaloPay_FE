@@ -1,9 +1,7 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use } from "react";
 import Button from "@/components/ui/Button";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getTransaction } from "@/lib/api/admin/transactions";
 
 const SECTION_HEADER_STYLE =
   "border-b border-gray-200 px-4 py-3";
@@ -104,33 +102,7 @@ export default function AdminTransactionDetailPage({
   params: Promise<{ transactionId: string }>;
 }) {
   const { transactionId } = use(params);
-  const token = useAdminAuthStore((s) => s.token);
-  const [txData, setTxData] = useState<Record<string, unknown> | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    getTransaction(token, transactionId)
-      .then((res) => setTxData(res.transaction as unknown as Record<string, unknown>))
-      .catch((err) => console.error("Failed to fetch transaction:", err));
-  }, [token, transactionId]);
-
-  const t = {
-    ...MOCK_TRANSACTION,
-    ...(txData
-      ? {
-          id: (txData.transaction_ref as string) ?? MOCK_TRANSACTION.id,
-          currency: (txData.currency as string) ?? MOCK_TRANSACTION.currency,
-          transactionStatus:
-            (txData.transaction_status as string) ?? MOCK_TRANSACTION.transactionStatus,
-          transactionType:
-            (txData.transaction_type as string) ?? MOCK_TRANSACTION.transactionType,
-          paymentType: (txData.payment_type as string) ?? MOCK_TRANSACTION.paymentType,
-          createdAt: txData.created_at
-            ? new Date(txData.created_at as string).toLocaleString("en-GB")
-            : MOCK_TRANSACTION.createdAt,
-        }
-      : {}),
-  };
+  const t = MOCK_TRANSACTION;
 
   return (
     <div className="view-transaction-detail-page w-full space-y-6">

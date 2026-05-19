@@ -1,9 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
+import { usePayrollEmployees, useFundingStatus, useRunPayroll } from "@/hooks/employer/useUserPanel";
+
+// Tax/cost rates (mirror backend so summary matches what the server will compute on submit)
+const RATE_INCOME_TAX = 0.20;
+const RATE_SOCIAL = 0.08;
+const RATE_HEALTH = 0.02;
+const RATE_EMPLOYER_SOCIAL = 0.115;
+const RATE_EMPLOYER_BENEFITS = 0.05;
+
+const AVATAR_PALETTE = ["#F97316", "#3B82F6", "#8B5CF6", "#EC4899", "#14B8A6", "#6366F1", "#22C55E", "#F59E0B"];
+
+function downloadBlob(content: string, filename: string, mime = "text/csv") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvLine(...values: (string | number)[]): string {
+  return values
+    .map((v) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    })
+    .join(",");
+}
 
 // ── Step definitions ───────────────────────────────────────────
 const STEPS = [
@@ -33,33 +64,7 @@ type ReviewEmployee = {
   deductions?: { incomeTax: number; socialInsurance: number; gesy: number };
 };
 
-// ── Mock data ─────────────────────────────────────────────────
-const STEP1_EMPLOYEES: Employee[] = [
-  { id: "E001", name: "Andreas", dept: "Finance",    avatar: "A", avatarColor: "#F97316", salary: 3500, overtime: 0, bonuses: 0, commissions: 0, expenses: 0, unpaidDays: 0 },
-  { id: "E002", name: "Lucy",    dept: "Accountant", avatar: "L", avatarColor: "#3B82F6", salary: 3500, overtime: 0, bonuses: 0, commissions: 0, expenses: 0, unpaidDays: 0 },
-  { id: "E003", name: "John",    dept: "HR",         avatar: "J", avatarColor: "#8B5CF6", salary: 3500, overtime: 0, bonuses: 0, commissions: 0, expenses: 0, unpaidDays: 0 },
-];
-
-const CALC_EMPLOYEES: CalcEmployee[] = [
-  { id: "E001", name: "John Doe",       dept: "HR",         avatar: "JD", avatarColor: "#F97316", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004, highNow: true },
-  { id: "E002", name: "Lucy",           dept: "Finance",    avatar: "L",  avatarColor: "#3B82F6", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004 },
-  { id: "E003", name: "Alexa",          dept: "Accountant", avatar: "A",  avatarColor: "#8B5CF6", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004 },
-  { id: "E004", name: "Jane Smith",     dept: "HR",         avatar: "JS", avatarColor: "#EC4899", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004 },
-  { id: "E005", name: "Emily Brown",    dept: "Finance",    avatar: "EB", avatarColor: "#14B8A6", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004 },
-  { id: "E006", name: "Sarah Williams", dept: "Accountant", avatar: "SW", avatarColor: "#6366F1", gross: 3500, deductions: -725.36, employerContrib: 504, netSalary: 2700, employerCost: 4004 },
-];
-
-const REVIEW_EMPLOYEES: ReviewEmployee[] = [
-  {
-    id: "E001", name: "Andreas Christou", role: "Senior Developer", avatar: "A", avatarColor: "#22C55E",
-    total: 2774.64, changePct: "+2.4%", changePositive: true,
-    earnings: { baseSalary: 3500, overtime: 0, bonuses: 0 },
-    deductions: { incomeTax: -342.11, socialInsurance: -280.50, gesy: -93.75 },
-  },
-  { id: "E002", name: "Elena Georgiou",      role: "Product Manager", avatar: "E", avatarColor: "#3B82F6", total: 3672.69, changePct: "+8.0%", changePositive: true },
-  { id: "E003", name: "Maria Ioannou",       role: "UI Designer",     avatar: "M", avatarColor: "#8B5CF6", total: 2360.29, changePct: "+7.9%", changePositive: true },
-  { id: "E004", name: "Costas Constantinou", role: "Sales Lead",      avatar: "C", avatarColor: "#F97316", total: 3074.64, changePct: "+8.5%", changePositive: true },
-];
+// Mock arrays removed — wizard now derives all data from the API.
 
 // ── Sub-components ────────────────────────────────────────────
 function SpinnerInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -130,24 +135,98 @@ function BackNextRow({ onBack, onNext, nextLabel = "Next", nextDisabled = false 
 export default function PayrollWizard() {
   const [step, setStep] = useState(1);
 
-  // Step 1
-  const [employees, setEmployees] = useState<Employee[]>(STEP1_EMPLOYEES);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(STEP1_EMPLOYEES.map((e) => e.id)));
+  // Live employees from backend
+  const { data: empData, isLoading: empLoading } = usePayrollEmployees();
 
-  // Step 2
+  // Step 1: editable per-employee inputs (keyed by string id from API)
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Initialize from API once loaded
+  if (!hasInitialized && empData?.employees) {
+    const init: Employee[] = empData.employees.map((e, i) => ({
+      id: String(e.id),
+      name: e.name,
+      dept: e.department,
+      avatar: e.name.charAt(0).toUpperCase(),
+      avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+      salary: e.monthlyGross,
+      overtime: 0,
+      bonuses: 0,
+      commissions: 0,
+      expenses: 0,
+      unpaidDays: 0,
+    }));
+    setEmployees(init);
+    setSelectedIds(new Set(init.map((e) => e.id)));
+    setHasInitialized(true);
+  }
+
+  const missingBank = (empData?.employees ?? []).filter((e) => !e.hasBank).length;
+
+  // Step 2 / 3 / 4 computed lines (server will recompute the same way)
+  const calcLines = useMemo(() => {
+    return employees
+      .filter((e) => selectedIds.has(e.id))
+      .map((e) => {
+        const dailyRate = e.salary / 22;
+        const unpaidDeduction = dailyRate * (e.unpaidDays || 0);
+        const gross = Math.max(0, e.salary + e.overtime + e.bonuses + e.commissions + e.expenses - unpaidDeduction);
+        const incomeTax = gross * RATE_INCOME_TAX;
+        const social = gross * RATE_SOCIAL;
+        const health = gross * RATE_HEALTH;
+        const deductions = incomeTax + social + health;
+        const net = gross - deductions;
+        const employerContrib = gross * (RATE_EMPLOYER_SOCIAL + RATE_EMPLOYER_BENEFITS);
+        const employerCost = gross + employerContrib;
+        return {
+          id: e.id,
+          name: e.name,
+          dept: e.dept,
+          avatar: e.avatar,
+          avatarColor: e.avatarColor,
+          baseSalary: e.salary,
+          overtime: e.overtime,
+          bonuses: e.bonuses,
+          gross,
+          deductions,
+          incomeTax,
+          social,
+          health,
+          employerContrib,
+          net,
+          employerCost,
+        };
+      });
+  }, [employees, selectedIds]);
+
+  const totals = useMemo(() => ({
+    gross: calcLines.reduce((s, l) => s + l.gross, 0),
+    deductions: calcLines.reduce((s, l) => s + l.deductions, 0),
+    employerContrib: calcLines.reduce((s, l) => s + l.employerContrib, 0),
+    net: calcLines.reduce((s, l) => s + l.net, 0),
+    employerCost: calcLines.reduce((s, l) => s + l.employerCost, 0),
+  }), [calcLines]);
+
+  // Step 2: explicit "Calculate" trigger (client-side; values are already memo-computed,
+  // but we gate the table render on this flag so the user clicks through)
   const [calculated, setCalculated] = useState(false);
 
   // Step 3
-  const [expandedReview, setExpandedReview] = useState<string | null>("E001");
+  const [expandedReview, setExpandedReview] = useState<string | null>(null);
   const [reviewComments, setReviewComments] = useState("");
   const [showSendReview, setShowSendReview] = useState(false);
 
   // Step 4
-  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [paymentDesc, setPaymentDesc] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [runResult, setRunResult] = useState<{ batchRef: string; totalNet: number; employeeCount: number } | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+
+  const fundingQuery = useFundingStatus(Math.ceil(totals.employerCost), step >= 4);
+  const runMutation = useRunPayroll();
 
   // Step 5
   const [payslipsGenerated, setPayslipsGenerated] = useState(false);
@@ -165,6 +244,77 @@ export default function PayrollWizard() {
 
   const next = () => setStep((s) => Math.min(s + 1, 5));
   const prev = () => setStep((s) => Math.max(s - 1, 1));
+
+  async function handleSubmitPayroll() {
+    setRunError(null);
+    try {
+      const result = await runMutation.mutateAsync({
+        period: paymentDesc || `Payroll ${new Date(paymentDate).toLocaleString("en-US", { month: "long", year: "numeric" })}`,
+        paymentDate,
+        description: paymentDesc,
+        execute: true,
+        employees: employees
+          .filter((e) => selectedIds.has(e.id))
+          .map((e) => ({
+            id: Number(e.id),
+            gross: e.salary,
+            overtime: e.overtime,
+            bonuses: e.bonuses,
+            commissions: e.commissions,
+            expenses: e.expenses,
+            unpaidDays: e.unpaidDays,
+          })),
+      });
+      setRunResult({
+        batchRef: result.batchRef,
+        totalNet: result.summary.totalGross - (result.lines.reduce((s, l) => s + l.deductions, 0)),
+        employeeCount: result.summary.employeeCount,
+      });
+      setShowSendReview(false);
+      setShowSuccess(true);
+    } catch (e) {
+      setRunError((e as Error).message ?? "Payroll execution failed");
+    }
+  }
+
+  function handleDownloadPayslips() {
+    const header = ["paymentRef","employee","department","baseSalary","overtime","bonuses","gross","incomeTax","socialInsurance","healthFund","totalDeductions","netPay"];
+    const rows = calcLines.map((l, i) =>
+      csvLine(`PAY-${i + 1}`, l.name, l.dept, l.baseSalary.toFixed(2), l.overtime, l.bonuses, l.gross.toFixed(2), l.incomeTax.toFixed(2), l.social.toFixed(2), l.health.toFixed(2), l.deductions.toFixed(2), l.net.toFixed(2))
+    );
+    downloadBlob([header.join(","), ...rows].join("\n"), `payslips-${Date.now()}.csv`);
+    setPayslipsGenerated(true);
+  }
+
+  function handleDownloadBankFile() {
+    // Minimal SEPA-style XML for batch transfers
+    const xmlRows = calcLines.map((l, i) => `
+    <CdtTrfTxInf>
+      <PmtId><EndToEndId>PAY-${i + 1}</EndToEndId></PmtId>
+      <Amt><InstdAmt Ccy="USD">${l.net.toFixed(2)}</InstdAmt></Amt>
+      <CdtrAcct><Id><Othr><Id>EMP-${l.id}</Id></Othr></Id></CdtrAcct>
+      <Cdtr><Nm>${l.name}</Nm></Cdtr>
+    </CdtTrfTxInf>`).join("");
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
+  <CstmrCdtTrfInitn>
+    <PmtInf>
+      <PmtMtd>TRF</PmtMtd>
+      <ReqdExctnDt>${paymentDate}</ReqdExctnDt>${xmlRows}
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`;
+    downloadBlob(xml, `bank-transfer-${Date.now()}.xml`, "application/xml");
+    setBankFileGenerated(true);
+  }
+
+  function handleDownloadGov(label: string) {
+    const header = ["employee","gross","incomeTax","socialInsurance","healthFund","totalDeductions","net"];
+    const rows = calcLines.map((l) =>
+      csvLine(l.name, l.gross.toFixed(2), l.incomeTax.toFixed(2), l.social.toFixed(2), l.health.toFixed(2), l.deductions.toFixed(2), l.net.toFixed(2))
+    );
+    downloadBlob([header.join(","), ...rows].join("\n"), `${label.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}.csv`);
+  }
 
   return (
     <div className="min-h-full w-full bg-dash-page" data-dashboard-theme data-page="payroll-create">
@@ -254,15 +404,23 @@ export default function PayrollWizard() {
               }
             />
             {/* Warning */}
-            <div className="payroll-create-warning-banner mx-3 mt-5 flex items-start gap-3 rounded-lg border px-3 py-3 sm:mx-6 sm:px-4">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <div>
-                <p className="text-[13px] font-semibold text-[#92400E]">Missing Information</p>
-                <p className="text-[12px] text-[#78350F]">1 employees are missing bank details. Please update their profiles before execution.</p>
+            {missingBank > 0 && (
+              <div className="payroll-create-warning-banner mx-3 mt-5 flex items-start gap-3 rounded-lg border px-3 py-3 sm:mx-6 sm:px-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <div>
+                  <p className="text-[13px] font-semibold text-[#92400E]">Missing Information</p>
+                  <p className="text-[12px] text-[#78350F]">{missingBank} employee{missingBank === 1 ? "" : "s"} missing bank details. Update their profiles before execution.</p>
+                </div>
               </div>
-            </div>
+            )}
+            {empLoading && employees.length === 0 && (
+              <p className="px-6 py-6 text-sm text-dash-secondary">Loading employees…</p>
+            )}
+            {!empLoading && employees.length === 0 && (
+              <p className="px-6 py-6 text-sm text-dash-secondary">No active employees found.</p>
+            )}
             {/* Employees header */}
             <div className="mt-5 flex items-center gap-2 px-3 sm:px-6">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="payroll-create-section-icon shrink-0">
@@ -353,7 +511,7 @@ export default function PayrollWizard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {CALC_EMPLOYEES.map((emp) => (
+                    {calcLines.map((emp) => (
                       <tr key={emp.id} className="payroll-create-table-row">
                         <td className="py-3 pr-3">
                           <div className="flex items-center gap-2">
@@ -362,25 +520,25 @@ export default function PayrollWizard() {
                               <p className="payroll-create-emp-name text-[13px] font-medium">{emp.name}</p>
                               <div className="flex items-center gap-1.5">
                                 <p className="payroll-create-emp-dept text-[11px]">{emp.dept}</p>
-                                {emp.highNow && <span className="payroll-high-now-badge whitespace-nowrap rounded px-1 py-0.5 text-[7px] font-semibold">High Value</span>}
+                                {emp.gross > 8000 && <span className="payroll-high-now-badge whitespace-nowrap rounded px-1 py-0.5 text-[7px] font-semibold">High Value</span>}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-medium">${emp.gross.toLocaleString()}</span></td>
-                        <td className="py-3 pr-3"><span className="text-[13px] font-medium text-[#DC2626]">-${Math.abs(emp.deductions).toFixed(2)}</span></td>
+                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-medium">${emp.gross.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
+                        <td className="py-3 pr-3"><span className="text-[13px] font-medium text-[#DC2626]">-${emp.deductions.toFixed(2)}</span></td>
                         <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px]">${emp.employerContrib.toFixed(2)}</span></td>
-                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-medium">${emp.netSalary.toLocaleString()}</span></td>
-                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px]">${emp.employerCost.toLocaleString()}</span></td>
+                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-medium">${emp.net.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
+                        <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px]">${emp.employerCost.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
                       </tr>
                     ))}
                     <tr className="payroll-create-totals-row">
                       <td className="py-3 pr-3"><span className="payroll-create-card-title text-[12px] font-bold uppercase tracking-wide">TOTALS</span></td>
-                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${CALC_EMPLOYEES.reduce((s, e) => s + e.gross, 0).toLocaleString()}</span></td>
-                      <td className="py-3 pr-3"><span className="text-[13px] font-bold text-[#DC2626]">-${Math.abs(CALC_EMPLOYEES.reduce((s, e) => s + e.deductions, 0)).toFixed(2)}</span></td>
-                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${CALC_EMPLOYEES.reduce((s, e) => s + e.employerContrib, 0).toFixed(2)}</span></td>
-                      <td className="py-3 pr-3"><span className="text-[13px] font-bold text-[#0F50DB]">${CALC_EMPLOYEES.reduce((s, e) => s + e.netSalary, 0).toLocaleString()}</span></td>
-                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${CALC_EMPLOYEES.reduce((s, e) => s + e.employerCost, 0).toLocaleString()}</span></td>
+                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${totals.gross.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
+                      <td className="py-3 pr-3"><span className="text-[13px] font-bold text-[#DC2626]">-${totals.deductions.toFixed(2)}</span></td>
+                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${totals.employerContrib.toFixed(2)}</span></td>
+                      <td className="py-3 pr-3"><span className="text-[13px] font-bold text-[#0F50DB]">${totals.net.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
+                      <td className="py-3 pr-3"><span className="payroll-create-salary text-[13px] font-bold">${totals.employerCost.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></td>
                     </tr>
                   </tbody>
                 </table>
@@ -398,7 +556,10 @@ export default function PayrollWizard() {
             <CardHeader title="Review & Approval" subtitle="Review employee breakdown and submit for approval" />
             <div className="px-3 py-4 sm:px-6 sm:py-5">
               <div className="payroll-review-row overflow-hidden rounded-xl border">
-                {REVIEW_EMPLOYEES.map((emp, idx) => {
+                {calcLines.length === 0 && (
+                  <p className="px-5 py-8 text-center text-sm text-dash-secondary">No employees selected.</p>
+                )}
+                {calcLines.map((emp, idx) => {
                   const expanded = expandedReview === emp.id;
                   return (
                     <div key={emp.id}>
@@ -409,20 +570,20 @@ export default function PayrollWizard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="payroll-create-emp-name truncate text-[13px] font-semibold">{emp.name}</p>
-                          <p className="payroll-create-emp-dept truncate text-[11px]">{emp.role}</p>
+                          <p className="payroll-create-emp-dept truncate text-[11px]">{emp.dept}</p>
                         </div>
                         <div className="text-right">
-                          <p className="payroll-create-salary text-[14px] font-semibold">${emp.total.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className={cn("text-[11px] font-medium", emp.changePositive ? "text-[#16A34A]" : "text-[#DC2626]")}>{emp.changePct}</p>
+                          <p className="payroll-create-salary text-[14px] font-semibold">${emp.net.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="text-[11px] font-medium text-[#16A34A]">Net</p>
                         </div>
                       </button>
-                      {expanded && emp.earnings && emp.deductions && (
+                      {expanded && (
                         <div className="payroll-review-expand border-t px-5 py-5 payroll-create-card-header-border">
                           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                             <div>
                               <h4 className="payroll-create-section-title mb-3 text-[11px] font-semibold uppercase tracking-wide">Earnings</h4>
                               <div className="space-y-2">
-                                {[["Base Salary", `$${emp.earnings.baseSalary.toLocaleString()}`], ["Overtime", `$${emp.earnings.overtime}`], ["Bonuses", `$${emp.earnings.bonuses}`]].map(([k, v]) => (
+                                {[["Base Salary", `$${emp.baseSalary.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`], ["Overtime", `$${emp.overtime.toFixed(2)}`], ["Bonuses", `$${emp.bonuses.toFixed(2)}`]].map(([k, v]) => (
                                   <div key={k} className="flex justify-between text-[13px]">
                                     <span className="payroll-create-emp-dept">{k}</span>
                                     <span className="payroll-create-salary font-medium">{v}</span>
@@ -433,10 +594,10 @@ export default function PayrollWizard() {
                             <div>
                               <h4 className="payroll-create-section-title mb-3 text-[11px] font-semibold uppercase tracking-wide">Deductions</h4>
                               <div className="space-y-2">
-                                {[["Income Tax", emp.deductions.incomeTax], ["Social Insurance", emp.deductions.socialInsurance], ["GESY", emp.deductions.gesy]].map(([k, v]) => (
+                                {[["Income Tax (20%)", emp.incomeTax], ["Social Insurance (8%)", emp.social], ["Health Fund (2%)", emp.health]].map(([k, v]) => (
                                   <div key={String(k)} className="flex justify-between text-[13px]">
                                     <span className="payroll-create-emp-dept">{k}</span>
-                                    <span className="font-medium text-[#DC2626]">-${Math.abs(Number(v)).toFixed(2)}</span>
+                                    <span className="font-medium text-[#DC2626]">-${Number(v).toFixed(2)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -467,35 +628,37 @@ export default function PayrollWizard() {
             </div>
             <div className="px-4 py-4 sm:px-6 sm:py-6">
               <div className="mx-auto max-w-[520px] space-y-4">
-                {/* Funding Status */}
-                <div className="payroll-exec-funding-card rounded-xl border px-3 py-3 sm:px-5 sm:py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#DCFCE7]">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 3H8l-4 4h16l-4-4Z" />
-                        </svg>
+                {/* Funding Status (live) */}
+                {(() => {
+                  const sufficient = fundingQuery.data?.sufficient ?? false;
+                  return (
+                    <div className="payroll-exec-funding-card rounded-xl border px-3 py-3 sm:px-5 sm:py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", sufficient ? "bg-[#DCFCE7]" : "bg-[#FEE2E2]")}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sufficient ? "#16A34A" : "#DC2626"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 3H8l-4 4h16l-4-4Z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="payroll-create-card-title text-[13px] font-semibold">Funding Status</p>
+                            <p className={cn("mt-0.5 flex items-center gap-1 text-[12px] font-medium", sufficient ? "text-[#16A34A]" : "text-[#DC2626]")}>
+                              {fundingQuery.isLoading ? "Checking…" : sufficient ? "Sufficient Funds" : "Insufficient Funds"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="payroll-create-emp-dept text-[12px]">Required Amount</p>
+                          <p className="payroll-create-salary text-[20px] font-bold">${totals.employerCost.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="payroll-create-card-title text-[13px] font-semibold">Funding Status</p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-[#16A34A]">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" /><polyline points="9 12 11.5 14.5 15 10" />
-                          </svg>
-                          Sufficient Funds
-                        </p>
+                      <div className="mt-3 border-t pt-3 payroll-create-card-header-border">
+                        <p className="payroll-create-emp-dept mb-0.5 text-[12px]">Available Balance</p>
+                        <p className="payroll-create-salary text-[22px] font-bold">${(fundingQuery.data?.available ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="payroll-create-emp-dept text-[12px]">Required Amount</p>
-                      <p className="payroll-create-salary text-[20px] font-bold">$26,965.80</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 border-t pt-3 payroll-create-card-header-border">
-                    <p className="payroll-create-emp-dept mb-0.5 text-[12px]">Available Balance</p>
-                    <p className="payroll-create-salary text-[22px] font-bold">$ 50,000</p>
-                  </div>
-                </div>
+                  );
+                })()}
                 {/* Payment Details */}
                 <div className="rounded-xl border px-3 py-3 sm:px-5 sm:py-4 payroll-create-card-header-border">
                   <h3 className="payroll-create-section-title mb-3 text-[14px] font-semibold [font-family:var(--font-poppins),Poppins,sans-serif]">Payment Details</h3>
@@ -507,7 +670,7 @@ export default function PayrollWizard() {
                     <div>
                       <label className="payroll-create-emp-dept mb-1.5 block text-[12px] font-medium">Total Recipients</label>
                       <div className="payroll-create-comment-input flex items-center rounded-lg border px-4 py-2.5 text-[13px]">
-                        <span className="payroll-create-emp-dept">11 Employees</span>
+                        <span className="payroll-create-emp-dept">{calcLines.length} Employee{calcLines.length === 1 ? "" : "s"}</span>
                       </div>
                     </div>
                   </div>
@@ -545,16 +708,30 @@ export default function PayrollWizard() {
                     CFO or HR will see review your payroll and will take action on your request
                   </p>
                   <div className="space-y-2.5 text-[13px]">
-                    {[["Total Amount:", "$ 43000"], ["Recipients", "11"], ["Date:", "2026-01-31"]].map(([k, v]) => (
+                    {[
+                      ["Total Amount:", `$${totals.employerCost.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
+                      ["Recipients", String(calcLines.length)],
+                      ["Date:", paymentDate],
+                    ].map(([k, v]) => (
                       <div key={k} className="flex justify-between">
                         <span className="payroll-create-emp-dept">{k}</span>
                         <span className="payroll-create-salary font-semibold">{v}</span>
                       </div>
                     ))}
                   </div>
+                  {runError && (
+                    <p className="mt-3 rounded-lg bg-[#fee2e2] px-3 py-2 text-[12px] text-[#991b1b]">{runError}</p>
+                  )}
                   <div className="mt-6 flex gap-3">
                     <button type="button" onClick={() => setShowSendReview(false)} className="payroll-create-back-step-btn flex-1 rounded-lg border px-4 py-2.5 text-[13px] font-medium transition">Cancel</button>
-                    <button type="button" onClick={() => { setShowSendReview(false); setShowSuccess(true); }} className="flex-1 rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90 [font-family:var(--font-poppins),Poppins,sans-serif]">Send</button>
+                    <button
+                      type="button"
+                      onClick={handleSubmitPayroll}
+                      disabled={runMutation.isPending || calcLines.length === 0}
+                      className="flex-1 rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 [font-family:var(--font-poppins),Poppins,sans-serif]"
+                    >
+                      {runMutation.isPending ? "Submitting…" : "Send & Execute"}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -570,7 +747,10 @@ export default function PayrollWizard() {
                     </div>
                   </div>
                   <h3 className="payroll-create-card-title mb-2 text-[18px] font-bold [font-family:var(--font-poppins),Poppins,sans-serif]">Payroll Executed Successfully!</h3>
-                  <p className="payroll-create-emp-dept mb-6 text-[13px]">11 employees have been paid a total of €26,965.795.</p>
+                  <p className="payroll-create-emp-dept mb-2 text-[13px]">
+                    {runResult ? `${runResult.employeeCount} employee${runResult.employeeCount === 1 ? "" : "s"} paid a net total of $${runResult.totalNet.toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.` : ""}
+                  </p>
+                  {runResult && <p className="mb-6 text-[11px] text-dash-secondary">Batch: {runResult.batchRef}</p>}
                   <button type="button" onClick={() => { setShowSuccess(false); next(); }} className="inline-flex items-center gap-2 rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90 whitespace-nowrap [font-family:var(--font-poppins),Poppins,sans-serif]">
                     Proceed to File Generation
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
@@ -610,12 +790,12 @@ export default function PayrollWizard() {
                           </span>
                           Payslips Generated
                         </p>
-                        <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-[#0F50DB] transition hover:bg-[#EFF6FF]">
-                          <DownloadIcon /> Download All (ZIP)
+                        <button type="button" onClick={handleDownloadPayslips} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-[#0F50DB] transition hover:bg-[#EFF6FF]">
+                          <DownloadIcon /> Download CSV
                         </button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => setPayslipsGenerated(true)} className="w-full rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90">
+                      <button type="button" onClick={handleDownloadPayslips} className="w-full rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90">
                         Generate Payslips
                       </button>
                     )}
@@ -641,12 +821,12 @@ export default function PayrollWizard() {
                           </span>
                           XML file is ready to download
                         </p>
-                        <button type="button" className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-[#0F50DB] transition hover:bg-[#EFF6FF]">
+                        <button type="button" onClick={handleDownloadBankFile} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-[#0F50DB] transition hover:bg-[#EFF6FF]">
                           <DownloadIcon /> Download XML
                         </button>
                       </>
                     ) : (
-                      <button type="button" onClick={() => setBankFileGenerated(true)} className="w-full rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90">
+                      <button type="button" onClick={handleDownloadBankFile} className="w-full rounded-lg bg-[#0F50DB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:opacity-90">
                         Generate Bank File
                       </button>
                     )}
@@ -666,7 +846,7 @@ export default function PayrollWizard() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       {["PAYE XML", "DAC4 Report"].map((label) => (
-                        <button key={label} type="button" className="payroll-gov-btn flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-medium transition whitespace-nowrap sm:px-3 sm:text-[12px]">
+                        <button key={label} type="button" onClick={() => handleDownloadGov(label)} className="payroll-gov-btn flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-medium transition whitespace-nowrap sm:px-3 sm:text-[12px]">
                           <DownloadIcon /> {label}
                         </button>
                       ))}
@@ -682,7 +862,7 @@ export default function PayrollWizard() {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       {["YKA 2-002 Form", "SIS XML"].map((label) => (
-                        <button key={label} type="button" className="payroll-gov-btn flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-medium transition whitespace-nowrap sm:px-3 sm:text-[12px]">
+                        <button key={label} type="button" onClick={() => handleDownloadGov(label)} className="payroll-gov-btn flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[11px] font-medium transition whitespace-nowrap sm:px-3 sm:text-[12px]">
                           <DownloadIcon /> {label}
                         </button>
                       ))}

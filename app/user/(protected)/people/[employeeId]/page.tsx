@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import EditPersonalDetailsModal, { type EditPersonalForm } from "@/components/user/people/EditPersonalDetailsModal";
 import EditAddressModal, { type EditAddressForm } from "@/components/user/people/EditAddressModal";
@@ -9,195 +10,57 @@ import EditEmploymentModal from "@/components/user/people/EditEmploymentModal";
 import EditCompensationModal from "@/components/user/people/EditCompensationModal";
 import EditBankWalletModal from "@/components/user/people/EditBankWalletModal";
 import EditNotesModal from "@/components/user/people/EditNotesModal";
+import { usePersonDetail, useUpdatePerson, useDeletePerson } from "@/hooks/employer/useUserPanel";
+import type { PersonDetail } from "@/lib/api/employer/people";
 
-/** Mock data – matches Figma Employee Profile. */
-const MOCK_PROFILE = {
-  firstName: "Carlos",
-  lastName: "Santana",
-  email: "sameer.khan@gamil.com",
-  phone: "+92 300 1234567",
-  gender: "Male",
-  nationality: "Pakistani",
-  dateOfBirth: "22/07/1988",
-  placeOfBirth: "Lahore",
-  maritalStatus: "Married",
-  children: "2",
-  cnicNo: "35201-1234567-1",
-  passportNo: "0987654321",
-  taxId: "12345678",
-  drivingLicense: "N/A",
-  cnicExpiry: "22/07/2026",
-  // Address
-  houseNo: "12",
-  streetNo: "50-A",
-  blockArea: "Block 7",
-  city: "Lahore",
-  stateProvince: "Punjab",
-  country: "Pakistan",
-  postalCode: "54000",
-  // Work
-  joiningDate: "22 April, 2024",
-  jobTitle: "Accountant",
-  department: "Technology",
-  contractType: "Full-Time",
-  schedule: "Standard Work Hours (9-5)",
-  reportingTo: "Zeeshan Akram",
-  workLocation: "Office",
-  employmentType: "Permanent",
-  workStatus: "Active",
-  shiftTiming: "9AM - 5PM",
-  company: "Kalopay",
-  branch: "Head Office",
-  role: "Employee",
-  leavePolicy: "Standard",
-  overtimeEligible: "Yes",
-  probationPeriod: "3 Months",
-  // Compensation
-  monthlySalary: "PKR 150,000",
-  paymentMethod: "Bank Transfer",
-  currency: "PKR",
-  paymentFrequency: "Monthly",
-  taxApplicable: "Yes",
-  bonusStructure: "Standard",
-  allowance: "PKR 10,000",
-  deductions: "N/A",
-  benefits: "Health Insurance",
-  // Bank
-  bankName: "HBL Bank",
-  accountNumber: "1234-5678-9012-3456",
-  iban: "PK36 HBL 0000 0000 0000 0000",
-  accountTitle: "Sameer Khan",
-  branchCode: "0123",
-  // Header (nav ke niche wala card)
-  onboardingStatus: "ONBOARDING OVERDUE" as const,
-  // Personal Details card (image layout)
-  employeeNo: "EMP-121",
-  personalEmail: "email@example.com",
-  workEmail: "email@example.com",
-  fullName: "John Doe",
-  nationalIdNumber: "123 456 789",
-  primaryContactNo: "+32 123 456 7890",
-  emergencyContactNo: "+32 123 456 7890",
-  nationalInsuranceNo: "123 456 789",
-  tic: "123 456",
-  dependants: "-",
-  workPermitVisa: "-",
-  residencePermitExpiry: "Oct 1st 2025",
-  dateOfBirthDisplay: "Oct 1st 2025",
-  // Address (image 1)
-  streetName: "Paxton street",
-  streetNumber: "181",
-  flatApartmentNumber: "141",
-  floor: "4th",
-  postalCode: "12345",
-  city: "Las Vegas",
-  provinceRegionState: "California",
-  countryAddress: "USA",
-  // Employment & Role Details (image 2)
-  legalEntity: "Aperture Science, LLC",
-  scopeOfWork: "Develop mobile applications",
-  departmentRole: "Module Lead - Payments",
-  contractStartDate: "01/04/2024",
-  contractEndDate: "31/03/2027",
-  employeeIdEmp: "EMP-1234",
-  groupOptional: "Product Engineering",
-  seniorityLevel: "L5 (Senior)",
-  departmentTech: "Technology & Innovation",
-  directManagerEmail: "jane.doe@example.com",
-  partTimePercentage: "60%",
-  statusDash: "-",
-  employmentTypeDisplay: "Full-Time Permanent",
-  workLocationCountry: "Los Angeles",
-  // Compensation & Payment (image 2)
-  paymentPreference: "-",
-  compensationType: "Salary + Bonus",
-  shiftSchedule: "-",
-  probationPeriodComp: "12 months",
-  grossAnnualSalary: "95,000",
-  workingHours: "-",
-  workingDaysPerWeek: "-",
-  noticePeriod: "15 Days",
-  // Bank & Wallet (image 3)
-  swiftBic: "GBCBUS33",
-  defaultPaymentMethodFiatCrypto: "Fiat",
-  digitalWalletAddress: "0x2d3CID076722dC7039089A1264F7c518A7E0831A",
-  bankAddress: "123 Financial Ave, London, SWIA DAA",
-  ibanBank: "GBB20BCB12345698765432",
-  currencyPreference: "-",
-  // Notes
-  internalNotes: "",
-};
+const dash = (v: string | number | null | undefined) =>
+  v === null || v === undefined || v === "" ? "—" : String(v);
 
-const KYC_MOCK_FILES = [
-  { id: "1", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-  { id: "2", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-  { id: "3", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-  { id: "4", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-  { id: "5", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-  { id: "6", name: "Personal Note", format: "PNG", size: "12MB", progress: 100 },
-];
+function fmtDate(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+}
 
-/** Map profile to Edit Personal Details form initial values. */
-function profileToEditPersonalInitial(p: typeof MOCK_PROFILE): Partial<EditPersonalForm> {
-  const parseCode = (s: string) => {
-    const match = s?.match(/^\s*(\+\d+)\s*(.*)$/);
-    return match ? [match[1], match[2].trim()] : ["+977", s?.replace(/\D/g, "") ?? ""];
-  };
-  const [primaryCode, primaryNum] = parseCode(p.primaryContactNo ?? "");
-  const [emergencyCode, emergencyNum] = parseCode(p.emergencyContactNo ?? "");
-  const fullName = (p.fullName || `${p.firstName} ${p.lastName}`).trim();
-  const parts = fullName.split(/\s+/);
-  const name = parts[0] ?? "";
-  const surname = parts.length > 1 ? parts[parts.length - 1]! : "";
-  const middleName = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
+function profileToEditPersonalInitial(p: PersonDetail): Partial<EditPersonalForm> {
   return {
-    name,
-    middleName,
-    surname,
+    name: p.firstName ?? "",
+    middleName: p.middleName ?? "",
+    surname: p.lastName ?? "",
     personalEmail: p.personalEmail ?? "",
-    workEmail: p.workEmail ?? "",
-    nationality: (p.nationality === "Pakistani" ? "PK" : p.nationality) ?? "",
-    dateOfBirth: p.dateOfBirth ? toDateInputValue(p.dateOfBirth) : "",
+    workEmail: p.workEmail ?? p.email ?? "",
+    nationality: p.nationality ?? "",
+    dateOfBirth: p.dateOfBirth ?? "",
     gender: (p.gender ?? "").toLowerCase(),
     maritalStatus: (p.maritalStatus ?? "").toLowerCase(),
     nationalIdNumber: p.nationalIdNumber ?? "",
-    passportNumber: p.passportNo ?? "",
-    primaryCountryCode: primaryCode,
-    primaryContact: primaryNum,
-    emergencyCountryCode: emergencyCode,
-    emergencyContact: emergencyNum,
+    passportNumber: p.passportNumber ?? "",
+    primaryCountryCode: p.primaryCountryCode ?? "+1",
+    primaryContact: p.primaryPhone ?? p.phone ?? "",
+    emergencyCountryCode: p.emergencyCountryCode ?? "+1",
+    emergencyContact: p.emergencyPhone ?? "",
     nationalInsuranceNo: p.nationalInsuranceNo ?? "",
     tic: p.tic ?? "",
     dependants: p.dependants ?? "",
     workPermitVisa: p.workPermitVisa ?? "",
-    residencePermitExpiry: p.residencePermitExpiry ? toDateInputValue(p.residencePermitExpiry) : "",
+    residencePermitExpiry: p.residencePermitExpiry ?? "",
   };
 }
 
-function toDateInputValue(display: string): string {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(display)) return display;
-  const ddmmyy = display.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (ddmmyy) return `${ddmmyy[3]}-${ddmmyy[2]!.padStart(2, "0")}-${ddmmyy[1]!.padStart(2, "0")}`;
-  const months: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
-  const m = display.toLowerCase().match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\s*(\d{4})/);
-  if (m) return `${m[3]}-${months[m[1]!] ?? "01"}-${(m[2] ?? "01").padStart(2, "0")}`;
-  return "";
-}
-
-function profileToEditAddressInitial(p: typeof MOCK_PROFILE): Partial<EditAddressForm> {
+function profileToEditAddressInitial(p: PersonDetail): Partial<EditAddressForm> {
   return {
     streetName: p.streetName ?? "",
-    streetNumber: p.streetNumber ?? "",
-    flatApartmentNumber: p.flatApartmentNumber ?? "",
+    streetNumber: p.streetNo ?? "",
+    flatApartmentNumber: p.flatApartmentNo ?? "",
     floor: p.floor ?? "",
     postalCode: p.postalCode ?? "",
     city: p.city ?? "",
-    provinceRegionState: p.provinceRegionState ?? "",
-    country: p.countryAddress ?? "",
+    provinceRegionState: p.province ?? "",
+    country: p.country ?? "",
   };
 }
 
-/** Alag section card – light blue header + Edit, white content, rounded, gap ke liye standalone. */
 function SectionCard({
   title,
   onEdit,
@@ -215,8 +78,8 @@ function SectionCard({
         </h2>
         {onEdit && (
           <button type="button" onClick={onEdit} className="shrink-0 text-sm font-medium text-[var(--color-dash-accent)] hover:underline">
-          Edit
-        </button>
+            Edit
+          </button>
         )}
       </div>
       <div className="emp-profile-section-body bg-[#f7f7fa] px-4 py-4 sm:px-6 sm:py-5">{children}</div>
@@ -237,23 +100,22 @@ function DetailGrid({ items }: { items: [string, string][] }) {
   );
 }
 
-/** Personal Details content – two columns 50-50 (used inside SectionCard). */
-function PersonalDetailsContent({ p }: { p: typeof MOCK_PROFILE }) {
+function PersonalDetailsContent({ p }: { p: PersonDetail }) {
   return (
     <div className="grid w-full grid-cols-1 gap-x-16 gap-y-5 sm:grid-cols-2">
       <div className="min-w-0 space-y-5">
         {[
-          ["Employee no", p.employeeNo],
-          ["Personal email", p.personalEmail],
-          ["Nationality", p.nationality],
-          ["Gender", p.gender],
-          ["National ID Number", p.nationalIdNumber],
-          ["Primary contact no", p.primaryContactNo],
-          ["National insurance no", p.nationalInsuranceNo],
-          ["Dependants", p.dependants],
-          ["Residence Permit Expiry", p.residencePermitExpiry],
+          ["Employee no", dash(p.employeeNo)],
+          ["Personal email", dash(p.personalEmail)],
+          ["Nationality", dash(p.nationality)],
+          ["Gender", dash(p.gender)],
+          ["National ID Number", dash(p.nationalIdNumber)],
+          ["Primary contact no", dash(p.primaryPhone ?? p.phone)],
+          ["National insurance no", dash(p.nationalInsuranceNo)],
+          ["Dependants", dash(p.dependants)],
+          ["Residence Permit Expiry", fmtDate(p.residencePermitExpiry)],
         ].map(([label, value]) => (
-          <div key={String(label)}>
+          <div key={label as string}>
             <span className="block text-sm text-[#6b7280]">{label}</span>
             <p className="mt-1 text-sm font-medium text-[#1f2937]">{value}</p>
           </div>
@@ -261,16 +123,16 @@ function PersonalDetailsContent({ p }: { p: typeof MOCK_PROFILE }) {
       </div>
       <div className="min-w-0 space-y-5">
         {[
-          ["Full name", p.fullName],
-          ["Work email", p.workEmail],
-          ["Date of birth", p.dateOfBirthDisplay],
-          ["Marital Status", p.maritalStatus],
-          ["Passport Number", p.passportNo],
-          ["Emergency contact no", p.emergencyContactNo],
-          ["TIC (Tax Identification code)", p.tic],
-          ["Work permit/Visa", p.workPermitVisa],
+          ["Full name", `${p.firstName} ${p.middleName ? p.middleName + " " : ""}${p.lastName}`],
+          ["Work email", dash(p.workEmail ?? p.email)],
+          ["Date of birth", fmtDate(p.dateOfBirth)],
+          ["Marital Status", dash(p.maritalStatus)],
+          ["Passport Number", dash(p.passportNumber)],
+          ["Emergency contact no", dash(p.emergencyPhone)],
+          ["TIC (Tax Identification code)", dash(p.tic)],
+          ["Work permit/Visa", dash(p.workPermitVisa)],
         ].map(([label, value]) => (
-          <div key={String(label)}>
+          <div key={label as string}>
             <span className="block text-sm text-[#6b7280]">{label}</span>
             <p className="mt-1 text-sm font-medium text-[#1f2937]">{value}</p>
           </div>
@@ -280,14 +142,18 @@ function PersonalDetailsContent({ p }: { p: typeof MOCK_PROFILE }) {
   );
 }
 
-/** Employee Profile screen – Figma Payroll (Profile / Employee / Name). Same as design. */
 export default function EmployeeProfilePage({
   params,
 }: {
-  params: { employeeId: string };
+  params: Promise<{ employeeId: string }>;
 }) {
-  const p = MOCK_PROFILE;
-  const [kycFiles, setKycFiles] = useState(KYC_MOCK_FILES);
+  const { employeeId } = use(params);
+  const id = Number(employeeId);
+  const router = useRouter();
+
+  const { data, isLoading, error } = usePersonDetail(Number.isFinite(id) ? id : null);
+  const updateMutation = useUpdatePerson(id);
+  const deleteMutation = useDeletePerson();
   const [editPersonalOpen, setEditPersonalOpen] = useState(false);
   const [editAddressOpen, setEditAddressOpen] = useState(false);
   const [editEmploymentOpen, setEditEmploymentOpen] = useState(false);
@@ -295,14 +161,129 @@ export default function EmployeeProfilePage({
   const [editBankWalletOpen, setEditBankWalletOpen] = useState(false);
   const [editNotesOpen, setEditNotesOpen] = useState(false);
 
-  function removeKycFile(id: string) {
-    setKycFiles((prev) => prev.filter((f) => f.id !== id));
+  if (isLoading) {
+    return (
+      <div className="min-h-full w-full bg-dash-page p-8 text-dash-secondary" data-dashboard-theme>
+        Loading employee…
+      </div>
+    );
+  }
+
+  if (error || !data?.person) {
+    return (
+      <div className="min-h-full w-full bg-dash-page p-8 text-dash-secondary" data-dashboard-theme>
+        <Link href={DASHBOARD_ROUTES.people} className="text-[var(--color-dash-accent)] hover:underline">
+          ← Back to People
+        </Link>
+        <p className="mt-4">Employee not found.</p>
+      </div>
+    );
+  }
+
+  const p = data.person;
+
+  async function handleSavePersonal(values: EditPersonalForm) {
+    await updateMutation.mutateAsync({
+      firstName: values.name,
+      middleName: values.middleName || null,
+      lastName: values.surname,
+      personalEmail: values.personalEmail || null,
+      workEmail: values.workEmail || null,
+      nationality: values.nationality || null,
+      dateOfBirth: values.dateOfBirth || null,
+      gender: values.gender || null,
+      maritalStatus: values.maritalStatus || null,
+      nationalIdNumber: values.nationalIdNumber || null,
+      passportNumber: values.passportNumber || null,
+      primaryCountryCode: values.primaryCountryCode || null,
+      primaryPhone: values.primaryContact || null,
+      emergencyCountryCode: values.emergencyCountryCode || null,
+      emergencyPhone: values.emergencyContact || null,
+      nationalInsuranceNo: values.nationalInsuranceNo || null,
+      tic: values.tic || null,
+      dependants: values.dependants || null,
+      workPermitVisa: values.workPermitVisa || null,
+      residencePermitExpiry: values.residencePermitExpiry || null,
+    });
+    setEditPersonalOpen(false);
+  }
+
+  async function handleSaveAddress(values: EditAddressForm) {
+    await updateMutation.mutateAsync({
+      streetName: values.streetName || null,
+      streetNo: values.streetNumber || null,
+      flatApartmentNo: values.flatApartmentNumber || null,
+      floor: values.floor || null,
+      postalCode: values.postalCode || null,
+      city: values.city || null,
+      province: values.provinceRegionState || null,
+      country: values.country || null,
+    });
+    setEditAddressOpen(false);
+  }
+
+  async function handleSaveEmployment(values: Record<string, string>) {
+    await updateMutation.mutateAsync({
+      jobTitle: values.jobTitle || null,
+      groupName: values.group || null,
+      department: values.department || null,
+      lineManagerEmail: values.lineManagerEmail || null,
+      contractStart: values.startDate || null,
+      employmentType: values.employmentType || null,
+      employeeStatus: values.status || "active",
+      employeeIdExternal: values.employeeId || null,
+      seniorityLevel: values.seniorityLevel || null,
+      departmentRole: values.departmentRole || null,
+      workLocationCountry: values.workLocationCountry || null,
+      contractEnd: values.terminationDate || null,
+      partTimePercentage: values.partTimePercentage || null,
+    });
+    setEditEmploymentOpen(false);
+  }
+
+  async function handleSaveCompensation(values: Record<string, string>) {
+    await updateMutation.mutateAsync({
+      paymentMethod: values.paymentMethod || null,
+      paymentCurrencyCode: values.paymentCurrencyCode || null,
+      paymentPreference: values.paymentPreference || null,
+      grossAnnualSalary: values.grossAnnualSalary ? Number(values.grossAnnualSalary) : null,
+      compensationType: values.compensationType || null,
+      workingHours: values.workingHours || null,
+      shiftSchedule: values.shiftSchedule || null,
+      workingDaysPerWeek: values.workingDaysPerWeek || null,
+      probationPeriod: values.probationPeriod || null,
+      noticePeriod: values.noticePeriod || null,
+    });
+    setEditCompensationOpen(false);
+  }
+
+  async function handleSaveBankWallet(values: Record<string, string>) {
+    await updateMutation.mutateAsync({
+      bankName: values.bankName || null,
+      bankAddress: values.bankAddress || null,
+      swiftBic: values.swiftBic || null,
+      iban: values.iban || null,
+      defaultPaymentMethod: values.defaultPaymentMethod || null,
+      currencyPreference: values.currencyPreference || null,
+      digitalWalletAddress: values.digitalWalletAddress || null,
+    });
+    setEditBankWalletOpen(false);
+  }
+
+  async function handleSaveNotes(values: { notes: string }) {
+    await updateMutation.mutateAsync({ internalNotes: values.notes || null });
+    setEditNotesOpen(false);
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Remove ${p.firstName} ${p.lastName}? This soft-deletes the record.`)) return;
+    await deleteMutation.mutateAsync(id);
+    router.push(DASHBOARD_ROUTES.people);
   }
 
   return (
     <div className="min-h-full w-full bg-dash-page" data-dashboard-theme data-page="employee-profile">
       <div className="dash-shell w-full py-6">
-        {/* Employee header card – back, avatar + name barabar, role + status neeche */}
         <div className="emp-profile-header-card mb-6 flex flex-col gap-4 rounded-xl border border-[#e5e7eb] bg-[#f7f7fa] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
             <Link
@@ -327,325 +308,188 @@ export default function EmployeeProfilePage({
                 {p.firstName} {p.lastName}
               </h1>
               <div className="mt-1 flex items-center gap-2">
-                <span className="truncate text-[11px] font-normal text-[#6B7280] sm:text-sm">{p.jobTitle}</span>
-                {p.onboardingStatus && (
-                  <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-[#FEF2F2] px-1 py-0.5 align-middle text-[7px] font-medium leading-tight tracking-normal text-[#DC2626] [font-family:var(--font-poppins),Poppins,sans-serif] sm:gap-1 sm:px-1.5 sm:text-[11px]">
-                    <span className="h-1 w-1 shrink-0 rounded-full bg-[#DC2626] sm:h-1.5 sm:w-1.5" aria-hidden />
-                    <span className="whitespace-nowrap uppercase">ONBOARDING OVERDUE</span>
-                  </span>
-                )}
+                <span className="truncate text-[11px] font-normal text-[#6B7280] sm:text-sm">{dash(p.jobTitle)}</span>
+                <span className={`inline-flex shrink-0 items-center gap-0.5 rounded-md px-1 py-0.5 align-middle text-[7px] font-medium leading-tight tracking-normal [font-family:var(--font-poppins),Poppins,sans-serif] sm:gap-1 sm:px-1.5 sm:text-[11px] ${
+                  p.employeeStatus === "active" ? "bg-[#DCFCE7] text-[#166534]" : "bg-[#FEF2F2] text-[#DC2626]"
+                }`}>
+                  <span className={`h-1 w-1 shrink-0 rounded-full sm:h-1.5 sm:w-1.5 ${p.employeeStatus === "active" ? "bg-[#166534]" : "bg-[#DC2626]"}`} aria-hidden />
+                  <span className="whitespace-nowrap uppercase">{p.employeeStatus}</span>
+                </span>
               </div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-lg border border-[#d1d5db] bg-[#f7f7fa] px-3 py-2 align-middle text-[13px] font-medium leading-[100%] tracking-normal text-[#6B7280] transition hover:bg-[#ededf2] [font-family:var(--font-poppins),Poppins,sans-serif] sm:px-4 sm:text-[14px]"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="inline-flex items-center justify-center rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-[13px] font-medium text-[#b91c1c] transition hover:bg-[#fee2e2] disabled:opacity-50 sm:px-4 sm:text-[14px]"
             >
-              View in org chart
-            </button>
-            <button
-              type="button"
-              className="box-border inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#DFDFDF] bg-[#f7f7fa] p-0 text-center transition hover:bg-[#ededf2]"
-              aria-label="More actions"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0" aria-hidden>
-                <circle cx="12" cy="6" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="18" r="1.5" />
-              </svg>
+              {deleteMutation.isPending ? "Removing…" : "Remove"}
             </button>
           </div>
         </div>
 
-        {/* Main div – isi ke andar saari cards */}
         <div className="emp-profile-main-card rounded-xl border border-[#e5e7eb] bg-[#f7f7fa] p-3 sm:p-6">
           <div className="flex flex-col gap-4">
             <SectionCard title="Personal Details" onEdit={() => setEditPersonalOpen(true)}>
-            <PersonalDetailsContent p={p} />
-          </SectionCard>
+              <PersonalDetailsContent p={p} />
+            </SectionCard>
 
-          <SectionCard title="Address" onEdit={() => setEditAddressOpen(true)}>
+            <SectionCard title="Address" onEdit={() => setEditAddressOpen(true)}>
               <DetailGrid
-              items={[
-                ["Street name", p.streetName],
-                ["Street number", p.streetNumber],
-                ["Flat/Appartment number", p.flatApartmentNumber],
-                ["Floor", p.floor],
-                ["Postal code", p.postalCode],
-                ["City", p.city],
-                ["Province/region/state", p.provinceRegionState],
-                ["Country", p.countryAddress],
-              ]}
-            />
-          </SectionCard>
+                items={[
+                  ["Street name", dash(p.streetName)],
+                  ["Street number", dash(p.streetNo)],
+                  ["Flat/Apartment number", dash(p.flatApartmentNo)],
+                  ["Floor", dash(p.floor)],
+                  ["Postal code", dash(p.postalCode)],
+                  ["City", dash(p.city)],
+                  ["Province/region/state", dash(p.province)],
+                  ["Country", dash(p.country)],
+                ]}
+              />
+            </SectionCard>
 
-          <SectionCard title="Employment & Role Details" onEdit={() => setEditEmploymentOpen(true)}>
-            <DetailGrid
-              items={[
-                ["Legal entity", p.legalEntity],
-                ["Employee ID", p.employeeIdEmp],
-                ["Job title", p.jobTitle],
-                ["Group (optional)", p.groupOptional],
-                ["Scope of work", p.scopeOfWork],
-                ["Seniority level", p.seniorityLevel],
-                ["Department role", p.departmentRole],
-                ["Department", p.departmentTech],
-                ["Contract start date", p.contractStartDate],
-                ["Direct manager email", p.directManagerEmail],
-                ["Contract end date", p.contractEndDate],
-                ["Employment type", p.employmentTypeDisplay],
-                ["Part time percentage", p.partTimePercentage],
-                ["Work Location/Country", p.workLocationCountry],
-                ["Status", p.statusDash],
-                ["Employee Status", p.workStatus],
-              ]}
-            />
-          </SectionCard>
+            <SectionCard title="Employment & Role Details" onEdit={() => setEditEmploymentOpen(true)}>
+              <DetailGrid
+                items={[
+                  ["Legal entity", dash(p.legalEntity)],
+                  ["Employee ID", dash(p.employeeIdExternal ?? p.employeeNo)],
+                  ["Job title", dash(p.jobTitle)],
+                  ["Group", dash(p.groupName)],
+                  ["Scope of work", dash(p.scopeOfWork)],
+                  ["Seniority level", dash(p.seniorityLevel)],
+                  ["Department role", dash(p.departmentRole)],
+                  ["Department", dash(p.department)],
+                  ["Contract start date", fmtDate(p.contractStart)],
+                  ["Direct manager email", dash(p.lineManagerEmail)],
+                  ["Contract end date", fmtDate(p.contractEnd)],
+                  ["Employment type", dash(p.employmentType)],
+                  ["Part-time percentage", dash(p.partTimePercentage)],
+                  ["Work location/country", dash(p.workLocationCountry)],
+                  ["Termination date", fmtDate(p.terminationDate)],
+                  ["Status", dash(p.employeeStatus)],
+                ]}
+              />
+            </SectionCard>
 
-          <SectionCard title="Compensation & Payment" onEdit={() => setEditCompensationOpen(true)}>
-            <DetailGrid
-              items={[
-                ["Payment method", p.paymentMethod],
-                ["Payment currency code", p.currency],
-                ["Payment Preference", p.paymentPreference],
-                ["Gross annual salary", p.grossAnnualSalary],
-                ["Compensation type", p.compensationType],
-                ["Working Hours", p.workingHours],
-                ["Shift Schedule", p.shiftSchedule],
-                ["Working days per week", p.workingDaysPerWeek],
-                ["Probation Period", p.probationPeriodComp],
-                ["Notice Period", p.noticePeriod],
-              ]}
-            />
-          </SectionCard>
+            <SectionCard title="Compensation & Payment" onEdit={() => setEditCompensationOpen(true)}>
+              <DetailGrid
+                items={[
+                  ["Payment method", dash(p.paymentMethod)],
+                  ["Payment currency code", dash(p.paymentCurrencyCode)],
+                  ["Payment preference", dash(p.paymentPreference)],
+                  ["Gross annual salary", p.grossAnnualSalary != null ? p.grossAnnualSalary.toLocaleString("en-US") : "—"],
+                  ["Compensation type", dash(p.compensationType)],
+                  ["Working hours", dash(p.workingHours)],
+                  ["Shift schedule", dash(p.shiftSchedule)],
+                  ["Working days per week", dash(p.workingDaysPerWeek)],
+                  ["Probation period", dash(p.probationPeriod)],
+                  ["Notice period", dash(p.noticePeriod)],
+                ]}
+              />
+            </SectionCard>
 
-          <SectionCard title="Bank & Wallet Details" onEdit={() => setEditBankWalletOpen(true)}>
-            <DetailGrid
-              items={[
-                ["Bank name", p.bankName],
-                ["Bank address", p.bankAddress],
-                ["SWIFT/BIC", p.swiftBic],
-                ["IBAN", p.ibanBank],
-                ["Default payment method (fiat or crypto)", p.defaultPaymentMethodFiatCrypto],
-                ["Currency Preference", p.currencyPreference],
-                ["Digital wallet address (if crypto)", p.digitalWalletAddress],
-              ]}
-            />
-          </SectionCard>
+            <SectionCard title="Bank & Wallet Details" onEdit={() => setEditBankWalletOpen(true)}>
+              <DetailGrid
+                items={[
+                  ["Bank name", dash(p.bankName)],
+                  ["Bank address", dash(p.bankAddress)],
+                  ["SWIFT/BIC", dash(p.swiftBic)],
+                  ["IBAN", dash(p.iban)],
+                  ["Default payment method", dash(p.defaultPaymentMethod)],
+                  ["Currency preference", dash(p.currencyPreference)],
+                  ["Digital wallet address", dash(p.digitalWalletAddress)],
+                ]}
+              />
+            </SectionCard>
 
-          <SectionCard title="Notes" onEdit={() => setEditNotesOpen(true)}>
-            <div className="flex items-start gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#9ca3af] text-xs font-semibold text-white" aria-hidden>!</span>
-              <p className="notes-section-text">
-                This space is for internal notes. It&apos;s visible to your organization&apos;s managers only.
-              </p>
-            </div>
-          </SectionCard>
+            <SectionCard title="Notes" onEdit={() => setEditNotesOpen(true)}>
+              <div className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#9ca3af] text-xs font-semibold text-white" aria-hidden>!</span>
+                <p className="notes-section-text whitespace-pre-wrap">
+                  {p.internalNotes || "No internal notes."}
+                </p>
+              </div>
+            </SectionCard>
           </div>
         </div>
 
         <EditPersonalDetailsModal
           open={editPersonalOpen}
           onClose={() => setEditPersonalOpen(false)}
-          onSave={() => { /* optional: update local state or refetch */ }}
+          initialValues={profileToEditPersonalInitial(p)}
+          onSave={handleSavePersonal}
         />
 
         <EditAddressModal
           open={editAddressOpen}
           onClose={() => setEditAddressOpen(false)}
-          onSave={() => { /* optional */ }}
+          initialValues={profileToEditAddressInitial(p)}
+          onSave={handleSaveAddress}
         />
 
         <EditEmploymentModal
           open={editEmploymentOpen}
           onClose={() => setEditEmploymentOpen(false)}
-          onSave={() => { /* optional */ }}
+          initialValues={{
+            jobTitle: p.jobTitle ?? "",
+            group: p.groupName ?? "",
+            department: p.department ?? "",
+            lineManagerEmail: p.lineManagerEmail ?? "",
+            startDate: p.contractStart ?? "",
+            employmentType: p.employmentType ?? "",
+            status: p.employeeStatus,
+            employeeId: p.employeeIdExternal ?? "",
+            seniorityLevel: p.seniorityLevel ?? "",
+            departmentRole: p.departmentRole ?? "",
+            workLocationCountry: p.workLocationCountry ?? "",
+            terminationDate: p.contractEnd ?? "",
+            partTimePercentage: p.partTimePercentage ?? "",
+          }}
+          onSave={handleSaveEmployment}
         />
 
         <EditCompensationModal
           open={editCompensationOpen}
           onClose={() => setEditCompensationOpen(false)}
           initialValues={{
-            paymentMethod: p.paymentMethod,
-            paymentCurrencyCode: p.currency,
-            paymentPreference: p.paymentPreference,
-            grossAnnualSalary: p.grossAnnualSalary,
-            compensationType: p.compensationType,
-            workingHours: p.workingHours,
-            shiftSchedule: p.shiftSchedule,
-            workingDaysPerWeek: p.workingDaysPerWeek,
-            probationPeriod: p.probationPeriodComp,
-            noticePeriod: p.noticePeriod,
+            paymentMethod: p.paymentMethod ?? "",
+            paymentCurrencyCode: p.paymentCurrencyCode ?? "",
+            paymentPreference: p.paymentPreference ?? "",
+            grossAnnualSalary: p.grossAnnualSalary != null ? String(p.grossAnnualSalary) : "",
+            compensationType: p.compensationType ?? "",
+            workingHours: p.workingHours ?? "",
+            shiftSchedule: p.shiftSchedule ?? "",
+            workingDaysPerWeek: p.workingDaysPerWeek ?? "",
+            probationPeriod: p.probationPeriod ?? "",
+            noticePeriod: p.noticePeriod ?? "",
           }}
-          onSave={() => { /* optional */ }}
+          onSave={handleSaveCompensation}
         />
 
         <EditBankWalletModal
           open={editBankWalletOpen}
           onClose={() => setEditBankWalletOpen(false)}
           initialValues={{
-            bankName: p.bankName,
-            bankAddress: p.bankAddress,
-            swiftBic: p.swiftBic,
-            iban: p.ibanBank,
-            defaultPaymentMethod: p.defaultPaymentMethodFiatCrypto,
-            currencyPreference: p.currencyPreference,
-            digitalWalletAddress: p.digitalWalletAddress,
+            bankName: p.bankName ?? "",
+            bankAddress: p.bankAddress ?? "",
+            swiftBic: p.swiftBic ?? "",
+            iban: p.iban ?? "",
+            defaultPaymentMethod: p.defaultPaymentMethod ?? "",
+            currencyPreference: p.currencyPreference ?? "",
+            digitalWalletAddress: p.digitalWalletAddress ?? "",
           }}
-          onSave={() => { /* optional */ }}
+          onSave={handleSaveBankWallet}
         />
 
         <EditNotesModal
           open={editNotesOpen}
           onClose={() => setEditNotesOpen(false)}
-          initialValues={{ notes: p.internalNotes }}
-          onSave={() => { /* optional */ }}
+          initialValues={{ notes: p.internalNotes ?? "" }}
+          onSave={handleSaveNotes}
         />
-
-        {/* KYC Documents – main div ke bahar, page bg par alag card */}
-        <div className="emp-profile-kyc-card mt-6 overflow-hidden rounded-xl border border-[#e5e7eb] bg-[#f7f7fa]">
-          <div className="emp-profile-kyc-header bg-[#f7f7fa] px-6 py-4">
-            <h2 className="emp-profile-kyc-title align-middle text-[20px] font-semibold leading-[32px] tracking-normal text-[#000000] [font-family:var(--font-poppins),Poppins,sans-serif]">
-              KYC Documents
-            </h2>
-          </div>
-          <div className="p-6">
-          <div
-            className="mx-auto box-border flex w-full max-w-[1232px] min-h-[147px] flex-col items-center justify-center gap-3 rounded-[8px] border-[3px] border-dashed border-[#E5E7EB] bg-gradient-to-r from-white to-[#E5F0FF] px-4 py-8 text-center sm:px-12 sm:py-12 lg:px-[308px] lg:py-[61px]"
-            role="button"
-            tabIndex={0}
-          >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-[#0F4FDB]">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-semibold text-[#1f2937]">Upload or drag your files here</p>
-              <p className="text-xs text-[#6B7280]">Maximum File Size is 20MB</p>
-              <p className="text-xs text-[#6B7280]">Supported File Types are .png, .jpeg, .pdf, .csv</p>
-            </div>
-          </div>
-          <h3 className="mt-6 mb-3 text-base font-bold text-[#1f2937]">Uploaded files</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {kycFiles.map((file, index) => (
-              <div
-                key={file.id}
-                className="emp-profile-kyc-file overflow-hidden rounded-lg border border-[#EAECF0] bg-[#fcfcfc] p-4"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-dash-accent)] text-white">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[#1f2937]">{file.name}</p>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-4 text-[12px] font-medium leading-[14px] tracking-[-0.05em] text-[#9CA3AF] [font-family:var(--font-inter),Inter,sans-serif]">
-                      <span>File Format: {file.format}</span>
-                      <span>File Size: {file.size}</span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeKycFile(file.id)}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E5E7EB] bg-[#f7f7fa] text-[#6B7280] hover:bg-[#ededf2]"
-                    aria-label={`Remove ${file.name}`}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="15" y1="9" x2="9" y2="15" />
-                      <line x1="9" y1="9" x2="15" y2="15" />
-                    </svg>
-                  </button>
-                </div>
-                {/* Blue line: pehli chaar cards par; aakhri do par nahi */}
-                {index < kycFiles.length - 2 ? (
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#E1EFFE]">
-                    <div
-                      className="h-full w-1/2 rounded-full bg-[var(--color-dash-accent)]"
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          </div>
-        </div>
-
-        {/* Last div – isi ke andar saare inputs (4 cards) – bg/border upper divs jaisa */}
-        <div className="emp-profile-links-card mt-6 rounded-xl border border-[#e5e7eb] bg-[#f7f7fa] p-4">
-          <div className="flex flex-col gap-4">
-            <a
-            href="#"
-            className="emp-profile-link-item flex items-center gap-4 rounded-lg border border-[#DFDFDF] bg-transparent px-6 py-4 transition hover:bg-[#f9fafb]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[#6B7280]" aria-hidden>
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity={1}>
-                <rect x="0.5" y="0.5" width="14" height="14" rx="2" />
-                <line x1="2" y1="4" x2="13" y2="4" />
-                <line x1="2" y1="7" x2="8" y2="7" />
-                <line x1="2" y1="9.5" x2="8" y2="9.5" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <p className="text-[#1f2937] font-normal text-[16px] leading-[20px]" style={{ fontFamily: 'var(--font-poppins)' }}>Payments, expenses & work submissions</p>
-              <p className="text-sm text-[#6b7280]">Review their submitted invoices and manage any payments</p>
-            </div>
-          </a>
-          <a
-            href="#"
-            className="emp-profile-link-item flex items-center gap-4 rounded-lg border border-[#DFDFDF] bg-transparent px-6 py-4 transition hover:bg-[#f9fafb]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[#6B7280]" aria-hidden>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <p className="text-[#1f2937] font-normal text-[16px] leading-[20px]" style={{ fontFamily: 'var(--font-poppins)' }}>Personal information</p>
-              <p className="text-sm text-[#6b7280]">Check their contact info and other personal details</p>
-            </div>
-          </a>
-          <a
-            href="#"
-            className="emp-profile-link-item flex items-center gap-4 rounded-lg border border-[#DFDFDF] bg-transparent px-6 py-4 transition hover:bg-[#f9fafb]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[#6B7280]" aria-hidden>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <p className="text-[#1f2937] font-normal text-[16px] leading-[20px]" style={{ fontFamily: 'var(--font-poppins)' }}>Time off</p>
-              <p className="text-sm text-[#6b7280]">Review and manage time off information</p>
-            </div>
-          </a>
-          <a
-            href="#"
-            className="emp-profile-link-item flex items-center gap-4 rounded-lg border border-[#DFDFDF] bg-transparent px-6 py-4 transition hover:bg-[#f9fafb]"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[#6B7280]" aria-hidden>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <line x1="10" y1="9" x2="8" y2="9" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1 flex flex-col gap-1">
-              <p className="text-[#1f2937] font-normal text-[16px] leading-[20px]" style={{ fontFamily: 'var(--font-poppins)' }}>Payslips</p>
-              <p className="text-sm text-[#6b7280]">Open and review payslips history</p>
-            </div>
-          </a>
-          </div>
-        </div>
       </div>
     </div>
   );

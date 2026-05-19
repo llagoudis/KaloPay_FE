@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import { ROUTES } from "@/lib/constants/routes";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getAccount } from "@/lib/api/admin/accounts";
 
 const SECTION_HEADER_STYLE =
-  "border-b border-gray-200 px-4 py-3 flex items-center justify-between rounded-t-[16px]";
+  "border-b border-gray-200 px-4 py-3 flex items-center justify-between";
 const SECTION_HEADER_BG = "#DEEEFF";
 const SECTION_HEADING_STYLE: React.CSSProperties = {
   fontFamily: "var(--font-poppins), Poppins, sans-serif",
@@ -76,42 +74,8 @@ export default function AdminAccountDetailPage({
   params: Promise<{ accountId: string }>;
 }) {
   const { accountId } = use(params);
-  const token = useAdminAuthStore((s) => s.token);
   const [showMicroTransaction, setShowMicroTransaction] = useState(false);
-  const [accountData, setAccountData] = useState<Record<string, unknown> | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    getAccount(token, accountId)
-      .then((res) => setAccountData(res.account as unknown as Record<string, unknown>))
-      .catch((err) => console.error("Failed to fetch account:", err));
-  }, [token, accountId]);
-
-  const a = {
-    ...MOCK_ACCOUNT,
-    ...(accountData
-      ? {
-          client: (accountData.holder as string) ?? MOCK_ACCOUNT.client,
-          number: (accountData.number as string) ?? MOCK_ACCOUNT.number,
-          type: (accountData.type as string) ?? MOCK_ACCOUNT.type,
-          status: (accountData.status as string) ?? MOCK_ACCOUNT.status,
-          createdAt: accountData.created_at
-            ? new Date(accountData.created_at as string).toLocaleString("en-GB")
-            : MOCK_ACCOUNT.createdAt,
-          holder: (accountData.holder as string) ?? MOCK_ACCOUNT.holder,
-          providerName: (accountData.provider_name as string) ?? MOCK_ACCOUNT.providerName,
-          accountNumber:
-            (accountData.iban as string) ?? (accountData.wallet_address as string) ?? MOCK_ACCOUNT.accountNumber,
-          bic: (accountData.swift_bic as string) ?? MOCK_ACCOUNT.bic,
-          currency: (accountData.provider_currency as string) ?? MOCK_ACCOUNT.currency,
-          balances: {
-            ...MOCK_ACCOUNT.balances,
-            currency: (accountData.provider_currency as string) ?? MOCK_ACCOUNT.balances.currency,
-            current: String(accountData.current_balance ?? MOCK_ACCOUNT.balances.current),
-          },
-        }
-      : {}),
-  };
+  const a = MOCK_ACCOUNT;
 
   const transactionColumns = [
     { key: "id" as const, header: "ID", render: (v: unknown) => String(v) },
@@ -129,7 +93,7 @@ export default function AdminAccountDetailPage({
   return (
     <div className="view-account-detail-page w-full space-y-6">
       {/* View Accounts — title row (light: white card; dark: navy strip via globals) */}
-      <div className="view-account-page-title-card rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
+      <div className="view-account-page-title-card rounded-[10px] bg-white px-4 py-4 sm:px-6 sm:py-5">
         <h1
           className="admin-page-heading font-semibold text-gray-900"
           style={{
@@ -156,7 +120,7 @@ export default function AdminAccountDetailPage({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_auto] lg:gap-6">
           {/* Details */}
         <div
-          className="view-account-details-section overflow-hidden bg-white shadow-sm"
+          className="view-account-details-section overflow-hidden bg-white"
           style={{ borderRadius: "16px", border: SECTION_BORDER }}
         >
           <div
@@ -198,7 +162,7 @@ export default function AdminAccountDetailPage({
         {/* Right column: Provider account number + Balances */}
         <div className="flex min-w-0 w-full max-w-none flex-col gap-8 lg:min-w-[280px] lg:max-w-[360px] lg:w-[320px] lg:gap-6">
           <div
-            className="view-account-details-section overflow-hidden bg-white shadow-sm"
+            className="view-account-details-section overflow-hidden bg-white"
             style={{ borderRadius: "16px", border: SECTION_BORDER }}
           >
             <div
@@ -228,7 +192,7 @@ export default function AdminAccountDetailPage({
           </div>
 
           <div
-            className="view-account-details-section overflow-hidden bg-white shadow-sm"
+            className="view-account-details-section overflow-hidden bg-white"
             style={{ borderRadius: "16px", border: SECTION_BORDER }}
           >
             <div
@@ -282,15 +246,14 @@ export default function AdminAccountDetailPage({
               Show micro transaction
             </label>
           </div>
-          <div className="view-account-section-body view-account-transactions-table-wrap overflow-hidden rounded-lg p-5 sm:p-6">
-            <Table<TransactionRow>
-              columns={transactionColumns}
-              data={MOCK_TRANSACTIONS}
-              emptyMessage="No transactions found."
-              bordered={false}
-              className="view-account-transactions-table"
-            />
-          </div>
+          <Table<TransactionRow>
+            columns={transactionColumns}
+            data={MOCK_TRANSACTIONS}
+            emptyMessage="No transactions found."
+            bordered={false}
+            rowDividers
+            className="view-account-transactions-table"
+          />
         </div>
         </div>
       </div>

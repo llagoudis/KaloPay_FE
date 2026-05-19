@@ -46,11 +46,9 @@ export default function SignupForm({
     setLoading(true);
     try {
       await onSignup({ name, email, password });
-      router.push(loginUrl);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
+      router.push(`${verifyEmailUrl}?email=${encodeURIComponent(email)}`);
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }

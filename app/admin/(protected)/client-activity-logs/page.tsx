@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getClientActivityLogs, type ClientActivityLog } from "@/lib/api/admin/activityLogs";
+import { useState } from "react";
 
 type ClientActivityLogRow = {
-  id: number;
   createdAt: string;
   initiator: string;
   ipAddress: string;
@@ -13,38 +10,18 @@ type ClientActivityLogRow = {
   action: string;
 };
 
+const mockClientActivityLogs: ClientActivityLogRow[] = Array.from({ length: 7 }, () => ({
+  createdAt: "23-09-2015 12:19:04 PM",
+  initiator: "Shivraj_NET",
+  ipAddress: "12.12.146.51",
+  description: "Shivraj_NET Logged in",
+  action: "Google Authentication",
+}));
+
 export default function AdminClientActivityLogsPage() {
-  const token = useAdminAuthStore((s) => s.token);
   const [search, setSearch] = useState("");
-  const [logs, setLogs] = useState<ClientActivityLogRow[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchLogs = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getClientActivityLogs(token, { limit: "100" });
-      const rows: ClientActivityLogRow[] = (res.data ?? []).map((l: ClientActivityLog) => ({
-        id: l.id,
-        createdAt: l.created_at
-          ? new Date(l.created_at).toLocaleString("en-GB", { hour12: true })
-          : "",
-        initiator: l.initiator ?? "Unknown",
-        ipAddress: l.ip_address ?? "—",
-        description: l.description ?? "",
-        action: l.action ?? "",
-      }));
-      setLogs(rows);
-    } catch (err) {
-      console.error("Failed to fetch client activity logs:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
-
-  const filtered = logs.filter(
+  const filtered = mockClientActivityLogs.filter(
     (row) =>
       row.initiator.toLowerCase().includes(search.toLowerCase()) ||
       row.description.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,7 +32,7 @@ export default function AdminClientActivityLogsPage() {
 
   return (
     <div className="admin-activity-log-page w-full space-y-6">
-      <div className="admin-page-title-strip w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
+      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
           style={{
@@ -71,7 +48,7 @@ export default function AdminClientActivityLogsPage() {
         </h1>
       </div>
 
-      <div className="admin-page-panel w-full rounded-[10px] bg-white p-6">
+      <div className="w-full rounded-xl bg-white p-6 shadow-sm">
         <label className="relative block">
           <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,6 +66,7 @@ export default function AdminClientActivityLogsPage() {
 
         <div className="mt-6 overflow-x-auto rounded-lg">
           <div className="min-w-[820px] px-2">
+            {/* Header — spacing set, neeche line */}
             <div
               className="admin-activity-log-header grid gap-x-6 py-3 text-xs font-medium text-gray-500"
               style={{ gridTemplateColumns: "1.2fr 1fr 1fr 2fr 1fr" }}
@@ -99,19 +77,16 @@ export default function AdminClientActivityLogsPage() {
               <span className="pl-3">Description</span>
               <span className="whitespace-nowrap pl-3">Action</span>
             </div>
+            {/* Data — sab columns same left padding se align */}
             <div className="admin-activity-log-rows">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-                </div>
-              ) : filtered.length === 0 ? (
+              {filtered.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-400">
                   No client activity log entries found.
                 </div>
               ) : (
-                filtered.map((row) => (
+                filtered.map((row, i) => (
                   <div
-                    key={row.id}
+                    key={i}
                     className="grid gap-x-6 py-4 text-sm text-gray-700"
                     style={{ gridTemplateColumns: "1.2fr 1fr 1fr 2fr 1fr" }}
                   >

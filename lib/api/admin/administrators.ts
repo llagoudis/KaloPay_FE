@@ -1,45 +1,35 @@
-import { apiClient } from "@/lib/api/client";
+import { API_BASE_URL } from "@/lib/constants/config";
 
-export interface Administrator {
-  id: number;
-  name: string;
-  email: string;
-  avatar: string | null;
-  two_factor_enabled?: boolean;
-  is_email_verified?: boolean;
-  created_at: string;
-  updated_at: string;
+export async function getAdministrators() {
+  const res = await fetch(`${API_BASE_URL}/admin/administrators`);
+  if (!res.ok) throw new Error("Failed to fetch administrators");
+  return res.json();
 }
 
-export function getAdministrators(token: string) {
-  return apiClient<{ data: Administrator[] }>(`/admin/administrators`, { token });
-}
-
-export function getAdministrator(token: string, id: string) {
-  return apiClient<{ administrator: Administrator }>(`/admin/administrators/${id}`, {
-    token,
-  });
-}
-
-export function createAdministrator(token: string, data: Record<string, unknown>) {
-  return apiClient<{ administrator: Administrator }>(`/admin/administrators`, {
+export async function createAdministrator(data: Record<string, unknown>) {
+  const res = await fetch(`${API_BASE_URL}/admin/administrators`, {
     method: "POST",
-    token,
-    body: data,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error("Failed to create administrator");
+  return res.json();
 }
 
-export function updateAdministrator(token: string, id: string, data: Record<string, unknown>) {
-  return apiClient<{ administrator: Administrator }>(`/admin/administrators/${id}`, {
+export async function updateAdministrator(id: string, data: Record<string, unknown>) {
+  const res = await fetch(`${API_BASE_URL}/admin/administrators/${id}`, {
     method: "PUT",
-    token,
-    body: data,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error("Failed to update administrator");
+  return res.json();
 }
 
-export function deleteAdministrator(token: string, id: string) {
-  return apiClient<{ message: string }>(`/admin/administrators/${id}`, {
+export async function deleteAdministrator(id: string) {
+  const res = await fetch(`${API_BASE_URL}/admin/administrators/${id}`, {
     method: "DELETE",
-    token,
   });
+  if (!res.ok) throw new Error("Failed to delete administrator");
+  return res.json();
 }

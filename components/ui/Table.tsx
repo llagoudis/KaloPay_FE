@@ -16,11 +16,11 @@ interface TableProps<T> {
   className?: string;
   /** Applied to the inner <table> so full table can force horizontal scroll */
   tableClassName?: string;
-  /** If false, no outer border on the scroll wrapper; body rows use transparent bg (for dark dashboards). */
+  /** If false, no border/lines on wrapper or rows */
   bordered?: boolean;
   /**
-   * When true, rule under header + horizontal dividers between body rows (admin-table-row-dividers).
-   * Default false: no row lines (clean layout like Documents tab).
+   * Horizontal lines between body rows (and under header). Uses transparent row backgrounds
+   * so dark theme does not paint each row as a separate card surface.
    */
   rowDividers?: boolean;
   /** When false, body rows do not change background on hover (overrides dashboard table hover CSS). */
@@ -38,28 +38,22 @@ export default function Table<T extends Record<string, unknown>>({
   rowDividers = false,
   rowHover = true,
 }: TableProps<T>) {
+  const showRowRules = bordered || rowDividers;
   const bodyRowClass = rowDividers
-    ? cn(
-        "bg-transparent transition-colors",
-        rowHover && "hover:bg-gray-50/90 table-dark-row-hover"
-      )
-    : cn(
-        "transition-colors",
-        bordered ? "bg-white table-dark-row" : "bg-transparent table-dark-row",
-        rowHover && (bordered ? "hover:bg-gray-50 table-dark-row-hover" : "hover:bg-white/[0.06] table-dark-row-hover")
-      );
+    ? cn("bg-transparent transition-colors", rowHover && "hover:bg-gray-50/90")
+    : cn("bg-white transition-colors", rowHover && "hover:bg-gray-50");
 
   return (
     <div
       className={cn(
         "overflow-x-auto rounded-lg",
-        bordered && "border border-gray-200 table-dark-container",
+        bordered && "border border-gray-200",
         className
       )}
     >
       <table className={cn("w-full min-w-max border-collapse text-sm text-left text-gray-700", tableClassName)}>
         <thead className="bg-transparent text-xs font-medium text-gray-500">
-          <tr className={cn(rowDividers && "border-b border-gray-200")}>
+          <tr className={cn(showRowRules && "border-b border-gray-200")}>
             {columns.map((col) => (
               <th
                 key={String(col.key)}
@@ -85,7 +79,13 @@ export default function Table<T extends Record<string, unknown>>({
             </tr>
           ) : (
             data.map((row, i) => (
-              <tr key={i} className={bodyRowClass}>
+              <tr
+                key={i}
+                className={cn(
+                  bodyRowClass,
+                  showRowRules && !rowDividers && "border-b border-gray-200"
+                )}
+              >
                 {columns.map((col) => (
                   <td key={String(col.key)} className={cn("px-4 py-3", col.className)}>
                     {col.render

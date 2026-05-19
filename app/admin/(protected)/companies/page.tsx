@@ -1,17 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getCompanies, deleteCompany, type Company } from "@/lib/api/admin/companies";
 
 type CompanyRow = {
   clientId: string;
-  id: number;
   name: string;
   owner: string;
   verificationStatus: string;
@@ -21,59 +18,63 @@ type CompanyRow = {
   businessType: string;
 };
 
-function statusVariant(status: string): "success" | "warning" | "danger" | "info" {
-  const s = (status ?? "").toLowerCase();
-  if (s === "approved" || s === "active") return "success";
-  if (s === "pending") return "warning";
-  if (s === "rejected" || s === "frozen" || s === "inactive") return "danger";
-  return "info";
-}
+const mockCompanies: CompanyRow[] = [
+  {
+    clientId: "2983",
+    name: "Test Entity 0",
+    owner: "Amar Hegde",
+    verificationStatus: "Approved",
+    accountStatus: "Active",
+    email: "abc@gmail.com",
+    country: "Cyprus",
+    businessType: "SaaS",
+  },
+  {
+    clientId: "2983",
+    name: "Test Entity 0",
+    owner: "Amar Hegde",
+    verificationStatus: "Approved",
+    accountStatus: "Active",
+    email: "abc@gmail.com",
+    country: "Cyprus",
+    businessType: "SaaS",
+  },
+  {
+    clientId: "2983",
+    name: "Test Entity 0",
+    owner: "Amar Hegde",
+    verificationStatus: "Approved",
+    accountStatus: "Active",
+    email: "abc@gmail.com",
+    country: "Cyprus",
+    businessType: "SaaS",
+  },
+  {
+    clientId: "2983",
+    name: "Test Entity 0",
+    owner: "Amar Hegde",
+    verificationStatus: "Approved",
+    accountStatus: "Active",
+    email: "abc@gmail.com",
+    country: "Cyprus",
+    businessType: "SaaS",
+  },
+  {
+    clientId: "2983",
+    name: "Test Entity 0",
+    owner: "Amar Hegde",
+    verificationStatus: "Approved",
+    accountStatus: "Active",
+    email: "abc@gmail.com",
+    country: "Cyprus",
+    businessType: "SaaS",
+  },
+];
 
 export default function AdminCompaniesPage() {
-  const token = useAdminAuthStore((s) => s.token);
   const [search, setSearch] = useState("");
-  const [companies, setCompanies] = useState<CompanyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getCompanies(token, { limit: "100" });
-      const rows: CompanyRow[] = (res.data ?? []).map((c: Company) => ({
-        clientId: String(c.id),
-        id: c.id,
-        name: c.name ?? "",
-        owner: c.ownerName ?? c.owner_name ?? "",
-        verificationStatus: c.verificationStatus ?? c.verification_status ?? "pending",
-        accountStatus: c.accountStatus ?? c.account_status ?? "active",
-        email: c.email ?? "",
-        country: c.country ?? "",
-        businessType: c.businessType ?? c.business_type ?? "",
-      }));
-      setCompanies(rows);
-    } catch (err) {
-      console.error("Failed to fetch companies:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleDelete = async (id: number) => {
-    if (!token) return;
-    if (!confirm("Delete this company? This action soft-deletes the record.")) return;
-    try {
-      await deleteCompany(token, String(id));
-      await fetchData();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete company");
-    }
-  };
-
-  const filtered = companies.filter(
+  const filtered = mockCompanies.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.owner.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,19 +97,27 @@ export default function AdminCompaniesPage() {
         </Link>
       ),
     },
-    { key: "owner" as const, header: "Owner" },
+    {
+      key: "owner" as const,
+      header: "Owner",
+      render: (value: unknown) => (
+        <Link href="#" className="font-medium text-blue-600 hover:underline">
+          {String(value)}
+        </Link>
+      ),
+    },
     {
       key: "verificationStatus" as const,
       header: "Verification Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant={statusVariant(String(value))} />
+        <Badge label={String(value)} variant="success" />
       ),
     },
     {
       key: "accountStatus" as const,
       header: "Account Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant={statusVariant(String(value))} />
+        <Badge label={String(value)} variant="success" />
       ),
     },
     { key: "email" as const, header: "Email" },
@@ -117,37 +126,16 @@ export default function AdminCompaniesPage() {
     {
       key: "actions" as const,
       header: "",
-      render: (_: unknown, row: CompanyRow) => (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Actions"
-          >
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
-          {openMenuId === row.id && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-              <Link
-                href={ROUTES.admin.companyDetail(row.clientId)}
-                className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setOpenMenuId(null)}
-              >
-                View / Edit
-              </Link>
-              <button
-                type="button"
-                onClick={() => { setOpenMenuId(null); handleDelete(row.id); }}
-                className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-100"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
+      render: () => (
+        <button
+          type="button"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Actions"
+        >
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
+        </button>
       ),
     },
   ];
@@ -156,7 +144,7 @@ export default function AdminCompaniesPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="admin-page-title-strip w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
+      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
           style={{
@@ -173,7 +161,7 @@ export default function AdminCompaniesPage() {
         </h1>
       </div>
 
-      <div className="admin-page-panel w-full rounded-[10px] bg-white p-6">
+      <div className="w-full rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <label className="relative min-w-0 flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
@@ -195,21 +183,12 @@ export default function AdminCompaniesPage() {
             </Button>
           </Link>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          </div>
-        ) : (
-          <Table<CompanyRow & { actions: null }>
-            columns={columns}
-            data={tableData}
-            emptyMessage="No companies found."
-            className="admin-list-table mt-6 border-0 border-gray-100"
-            bordered={false}
-            rowDividers
-            rowHover={false}
-          />
-        )}
+        <Table<CompanyRow & { actions: null }>
+          columns={columns}
+          data={tableData}
+          emptyMessage="No companies found."
+          className="admin-list-table mt-6 border-0 border-gray-100"
+        />
       </div>
     </div>
   );

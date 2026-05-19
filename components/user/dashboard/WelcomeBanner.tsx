@@ -4,7 +4,7 @@ import { useEmployerAuthStore } from "@/store/employerAuthStore";
 
 export default function WelcomeBanner() {
   const { user } = useEmployerAuthStore();
-  const companyName = (user as { companyName?: string })?.companyName ?? "Loukas LTD";
+  const companyName = user?.companyName ?? user?.name ?? "—";
 
   return (
     <section className="mb-10">

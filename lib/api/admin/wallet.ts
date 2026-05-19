@@ -1,13 +1,7 @@
-import { apiClient } from "@/lib/api/client";
+import { API_BASE_URL } from "@/lib/constants/config";
 
-export interface CommissionWalletRow {
-  id: number;
-  currency: string;
-  address: string;
-  balance: string;
-  [key: string]: unknown;
-}
-
-export function getWalletSummary(token: string) {
-  return apiClient<{ wallets: CommissionWalletRow[] }>(`/admin/wallet`, { token });
+export async function getWalletSummary() {
+  const res = await fetch(`${API_BASE_URL}/admin/wallet`);
+  if (!res.ok) throw new Error("Failed to fetch wallet summary");
+  return res.json();
 }

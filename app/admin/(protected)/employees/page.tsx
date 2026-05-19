@@ -1,80 +1,77 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getEmployees, deleteEmployee, type Employee } from "@/lib/api/admin/employees";
 
 type EmployeeRow = {
-  id: number;
   clientId: string;
   name: string;
-  email: string;
-  jobTitle: string;
-  department: string;
-  status: string;
+  emails: string;
+  verificationStatus1: string;
+  verificationStatus2: string;
+  country: string;
   createdAt: string;
 };
 
-function statusVariant(status: string): "success" | "warning" | "danger" | "info" {
-  const s = (status ?? "").toLowerCase();
-  if (s === "active" || s === "approved") return "success";
-  if (s === "pending") return "warning";
-  if (s === "terminated" || s === "inactive" || s === "rejected") return "danger";
-  return "info";
-}
+const mockEmployees: EmployeeRow[] = [
+  {
+    clientId: "2983",
+    name: "John Doe",
+    emails: "abc@gmail.com",
+    verificationStatus1: "Approved",
+    verificationStatus2: "Approved",
+    country: "Crypto",
+    createdAt: "13-08-20025",
+  },
+  {
+    clientId: "2984",
+    name: "Jane Smith",
+    emails: "jane@example.com",
+    verificationStatus1: "Approved",
+    verificationStatus2: "Pending",
+    country: "Crypto",
+    createdAt: "14-08-20025",
+  },
+  {
+    clientId: "2985",
+    name: "Bob Wilson",
+    emails: "bob@example.com",
+    verificationStatus1: "Approved",
+    verificationStatus2: "Approved",
+    country: "Crypto",
+    createdAt: "15-08-20025",
+  },
+  {
+    clientId: "2986",
+    name: "Alice Brown",
+    emails: "alice@example.com",
+    verificationStatus1: "Approved",
+    verificationStatus2: "Approved",
+    country: "Crypto",
+    createdAt: "16-08-20025",
+  },
+  {
+    clientId: "2987",
+    name: "Charlie Davis",
+    emails: "charlie@example.com",
+    verificationStatus1: "Approved",
+    verificationStatus2: "Approved",
+    country: "Crypto",
+    createdAt: "17-08-20025",
+  },
+];
 
 export default function AdminEmployeesPage() {
-  const token = useAdminAuthStore((s) => s.token);
   const [search, setSearch] = useState("");
-  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getEmployees(token, { limit: "100" });
-      const rows: EmployeeRow[] = (res.data ?? []).map((e: Employee) => ({
-        id: e.id,
-        clientId: String(e.id),
-        name: `${e.first_name ?? ""} ${e.last_name ?? ""}`.trim() || "—",
-        email: e.email ?? "",
-        jobTitle: e.job_title ?? "",
-        department: e.department ?? "",
-        status: e.status ?? "active",
-        createdAt: e.created_at ? new Date(e.created_at).toLocaleDateString("en-GB") : "",
-      }));
-      setEmployees(rows);
-    } catch (err) {
-      console.error("Failed to fetch employees:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const handleDelete = async (id: number) => {
-    if (!token) return;
-    if (!confirm("Delete this employee?")) return;
-    try {
-      await deleteEmployee(token, String(id));
-      await fetchData();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete employee");
-    }
-  };
-
-  const filtered = employees.filter(
+  const filtered = mockEmployees.filter(
     (e) =>
       e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.email.toLowerCase().includes(search.toLowerCase()) ||
+      e.emails.toLowerCase().includes(search.toLowerCase()) ||
       e.clientId.includes(search)
   );
 
@@ -92,51 +89,36 @@ export default function AdminEmployeesPage() {
         </Link>
       ),
     },
-    { key: "email" as const, header: "Email" },
-    { key: "jobTitle" as const, header: "Job Title" },
-    { key: "department" as const, header: "Department" },
+    { key: "emails" as const, header: "Emails" },
     {
-      key: "status" as const,
-      header: "Status",
+      key: "verificationStatus1" as const,
+      header: "Verification Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant={statusVariant(String(value))} />
+        <Badge label={String(value)} variant="success" />
       ),
     },
+    {
+      key: "verificationStatus2" as const,
+      header: "Verification Status",
+      render: (value: unknown) => (
+        <Badge label={String(value)} variant="success" />
+      ),
+    },
+    { key: "country" as const, header: "Country" },
     { key: "createdAt" as const, header: "Created At" },
     {
       key: "actions" as const,
       header: "",
       render: (_: unknown, row: EmployeeRow) => (
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Actions"
-          >
-            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
-          {openMenuId === row.id && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-              <Link
-                href={ROUTES.admin.employeeDetail(row.clientId)}
-                className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setOpenMenuId(null)}
-              >
-                View / Edit
-              </Link>
-              <button
-                type="button"
-                onClick={() => { setOpenMenuId(null); handleDelete(row.id); }}
-                className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-gray-100"
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Actions"
+        >
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          </svg>
+        </button>
       ),
     },
   ];
@@ -145,7 +127,8 @@ export default function AdminEmployeesPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="admin-page-title-strip w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
+      {/* Employees - alag horizontal div/card */}
+      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
           style={{
@@ -162,7 +145,8 @@ export default function AdminEmployeesPage() {
         </h1>
       </div>
 
-      <div className="admin-page-panel w-full rounded-[10px] bg-white p-6">
+      {/* Search + Add new + Table - neeche wala card */}
+      <div className="w-full rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <label className="relative min-w-0 flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
@@ -184,21 +168,12 @@ export default function AdminEmployeesPage() {
             </Button>
           </Link>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          </div>
-        ) : (
-          <Table<EmployeeRow & { actions: null }>
-            columns={columns}
-            data={tableData}
-            emptyMessage="No employees found."
-            className="admin-list-table mt-6 border-0 border-gray-100"
-            bordered={false}
-            rowDividers
-            rowHover={false}
-          />
-        )}
+        <Table<EmployeeRow & { actions: null }>
+          columns={columns}
+          data={tableData}
+          emptyMessage="No employees found."
+          className="admin-list-table mt-6 border-0 border-gray-100"
+        />
       </div>
     </div>
   );

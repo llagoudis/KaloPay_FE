@@ -35,10 +35,8 @@ export default function VerifyEmailForm({
     try {
       await onVerify(code, email);
       setSuccess(true);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Invalid verification code. Please try again."
-      );
+    } catch {
+      setError("Invalid verification code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -51,10 +49,8 @@ export default function VerifyEmailForm({
     try {
       await onResend(email);
       setResendSuccess(true);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not resend code. Try again later."
-      );
+    } catch {
+      setError("Could not resend code. Try again later.");
     } finally {
       setResending(false);
     }

@@ -10,14 +10,12 @@ interface ForgotPasswordFormProps {
   role: "admin" | "employer" | "employee";
   onSubmit: (email: string) => Promise<unknown>;
   loginUrl: string;
-  resetPasswordUrl: string;
 }
 
 export default function ForgotPasswordForm({
   role,
   onSubmit,
   loginUrl,
-  resetPasswordUrl,
 }: ForgotPasswordFormProps) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,10 +35,8 @@ export default function ForgotPasswordForm({
     try {
       await onSubmit(email);
       setSent(true);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to send reset link. Please try again."
-      );
+    } catch {
+      setError("Unable to send reset link. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -74,15 +70,6 @@ export default function ForgotPasswordForm({
           </div>
 
           <div className="space-y-3">
-            <Link
-              href={`${resetPasswordUrl}?email=${encodeURIComponent(email)}`}
-              className="block"
-            >
-              <Button type="button" className="w-full" size="lg">
-                I have my code
-              </Button>
-            </Link>
-
             <Button
               type="button"
               variant="outline"

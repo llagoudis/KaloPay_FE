@@ -1,67 +1,34 @@
-import { apiClient } from "@/lib/api/client";
+import { API_BASE_URL } from "@/lib/constants/config";
 
-export interface Company {
-  id: number;
-  name: string;
-  owner_name: string;
-  email: string;
-  phone: string;
-  country: string;
-  industry: string;
-  business_type: string;
-  verification_status: string;
-  account_status: string;
-  verification_level: string;
-  registration_number: string;
-  tax_id: string;
-  incorporation_date: string;
-  created_at: string;
-  updated_at: string;
-  clientId: string;
-  ownerName: string;
-  businessType: string;
-  verificationStatus: string;
-  accountStatus: string;
-}
-
-export interface CompanyListResponse {
-  data: Company[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export function getCompanies(token: string, params?: Record<string, string>) {
+export async function getCompanies(params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  return apiClient<CompanyListResponse>(`/admin/companies${query}`, { token });
+  const res = await fetch(`${API_BASE_URL}/admin/companies${query}`);
+  if (!res.ok) throw new Error("Failed to fetch companies");
+  return res.json();
 }
 
-export function getCompany(token: string, id: string) {
-  return apiClient<{ company: Company; accounts: unknown[]; documents: unknown[] }>(
-    `/admin/companies/${id}`,
-    { token }
-  );
+export async function getCompany(id: string) {
+  const res = await fetch(`${API_BASE_URL}/admin/companies/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch company");
+  return res.json();
 }
 
-export function createCompany(token: string, data: Record<string, unknown>) {
-  return apiClient<{ company: Company }>(`/admin/companies`, {
+export async function createCompany(data: Record<string, unknown>) {
+  const res = await fetch(`${API_BASE_URL}/admin/companies`, {
     method: "POST",
-    token,
-    body: data,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
+  if (!res.ok) throw new Error("Failed to create company");
+  return res.json();
 }
 
-export function updateCompany(token: string, id: string, data: Record<string, unknown>) {
-  return apiClient<{ company: Company }>(`/admin/companies/${id}`, {
+export async function updateCompany(id: string, data: Record<string, unknown>) {
+  const res = await fetch(`${API_BASE_URL}/admin/companies/${id}`, {
     method: "PUT",
-    token,
-    body: data,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
-}
-
-export function deleteCompany(token: string, id: string) {
-  return apiClient<{ message: string }>(`/admin/companies/${id}`, {
-    method: "DELETE",
-    token,
-  });
+  if (!res.ok) throw new Error("Failed to update company");
+  return res.json();
 }

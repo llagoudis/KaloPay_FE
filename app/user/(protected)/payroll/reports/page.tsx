@@ -4,9 +4,31 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
+import {
+  usePayrollSummary,
+  useTaxBreakdown,
+  useEmployerCost,
+  useAuditLogs,
+  useRegulatory,
+} from "@/hooks/employer/useReports";
 
 type ReportMainTab = "payroll" | "regulatory";
 type ReportSubTab = "summary" | "breakdown" | "tax" | "employer" | "audit";
+
+function fmtMoneyC(n: number, currency = "USD") {
+  return n.toLocaleString("en-US", { style: "currency", currency, maximumFractionDigits: 2 });
+}
+function statusBadge(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+function fmtDate(iso: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+}
+function currentPeriod() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 const poppins = { fontFamily: "var(--font-poppins)" as const };
 const labelStyle: React.CSSProperties = {
@@ -113,53 +135,32 @@ function PayrollReportsSecondaryNav() {
   );
 }
 
-const METRIC_CARDS = [
-  { title: "Total Payroll", value: "$142,384.00", icon: "dollar", change: "12% vs last month" },
-  { title: "Active Employees of selected Period", value: "48", icon: "people", change: "12% vs last month" },
-  { title: "Total Taxes", value: "$32,450.20", icon: "doc", change: "12% vs last month" },
-  { title: "Employer Cost", value: "$18,240.50", icon: "bolt", change: "12% vs last month" },
-];
-
-const PAYSHEET_ROWS = [
-  { name: "John Doe", role: "Senior Dev", department: "Accountant", grossPay: "$5361.27", taxDeductions: "$1174.01", netPay: "$5090.82", status: "PENDING" as const },
-  { name: "Lucy", role: "Junior Specialist", department: "HR", grossPay: "$3363.27", taxDeductions: "$1174.90", netPay: "$5993.82", status: "PAID" as const },
-  { name: "Alexa", role: "Senior Specialist", department: "HR", grossPay: "$5363.27", taxDeductions: "$104.90", netPay: "$5903.82", status: "PENDING" as const },
-];
-
-const BREAKDOWN_BY_DEPARTMENT = [
-  { name: "Engineering", amount: "$40,000", employees: 12 },
-  { name: "Sales", amount: "$40,000", employees: 12 },
-  { name: "Marketing", amount: "$40,000", employees: 12 },
-  { name: "HR", amount: "$40,000", employees: 12 },
-];
-
-const TAX_CONTRIBUTIONS_ROWS = [
-  { name: "John Doe", role: "Senior Dev", department: "HR", grossPay: "$5,361.27", socialInsurance: "$420.00", healthFund: "$180.00", incomeTax: "$574.01", totalDeductions: "$1,174.01" },
-  { name: "Lucy", role: "Junior Specialist", department: "HR", grossPay: "$3,363.27", socialInsurance: "$265.00", healthFund: "$112.00", incomeTax: "$797.90", totalDeductions: "$1,174.90" },
-  { name: "Alena", role: "Senior Specialist", department: "HR", grossPay: "$5,363.27", socialInsurance: "$420.00", healthFund: "$180.00", incomeTax: "$104.90", totalDeductions: "$704.90" },
-];
-
-const EMPLOYER_COST_ROWS = [
-  { department: "Engineering", grossPay: "$5,363.27", employerSocialIns: "$124.50", benefitsBonuses: "$85.20", totalCost: "$49,700.00" },
-  { department: "Sales", grossPay: "$5,363.27", employerSocialIns: "$124.50", benefitsBonuses: "$85.20", totalCost: "$49,700.00" },
-  { department: "Marketing", grossPay: "$5,363.27", employerSocialIns: "$124.50", benefitsBonuses: "$85.20", totalCost: "$49,700.00" },
-];
-
-const AUDIT_LOGS_ROWS = [
-  { timestamp: "2023-10-25 12:30 AM", name: "John Doe", role: "Admin user", action: "Payroll Run", details: "Executed monthly payroll batch" },
-  { timestamp: "2023-10-28 09:15 AM", name: "Lucy", role: "Finance Manager", action: "Tax export", details: "Downloaded 80 form" },
-  { timestamp: "2023-10-27 02:45 PM", name: "Alex", role: "HR specialist", action: "Employee update", details: "Updated salary for Employee 12" },
-];
-
-const REGULATORY_FORMS_ROWS = [
-  { form: "R7", description: "Employer's Return", period: "2023", dueDate: "2024-04-30", status: "Pending" as const },
-  { form: "R83", description: "Employee Certificate", period: "2023", dueDate: "2024-02-28", status: "Submitted" as const },
-  { form: "R59", description: "Deduction Certificate", period: "Oct 2024", dueDate: "2023-8-30", status: "Overdue" as const },
-];
-
 export default function PayrollReportsPage() {
   const [mainTab, setMainTab] = useState<ReportMainTab>("payroll");
   const [subTab, setSubTab] = useState<ReportSubTab>("summary");
+  const [period, setPeriod] = useState<string>(currentPeriod());
+
+  const { data: summary } = usePayrollSummary(period);
+  const { data: tax } = useTaxBreakdown(period);
+  const { data: cost } = useEmployerCost(period);
+  const { data: audit } = useAuditLogs(50);
+  const { data: regulatory } = useRegulatory();
+
+  const metricCards = [
+    { title: "Total Payroll", value: fmtMoneyC(summary?.metrics.totalPayroll ?? 0), icon: "dollar", change: summary?.period ?? "" },
+    { title: "Active Employees of selected Period", value: String(summary?.metrics.activeEmployees ?? 0), icon: "people", change: summary?.period ?? "" },
+    { title: "Total Taxes", value: fmtMoneyC(summary?.metrics.totalTaxes ?? 0), icon: "doc", change: summary?.period ?? "" },
+    { title: "Employer Cost", value: fmtMoneyC(summary?.metrics.employerCost ?? 0), icon: "bolt", change: summary?.period ?? "" },
+  ];
+
+  const breakdownRows = (cost?.rows ?? []).map((r) => ({
+    name: r.department,
+    amount: fmtMoneyC(r.totalCost),
+    employees: r.employees,
+  }));
+
+  const payeForm = regulatory?.monthly.find((m) => m.formType === "PAYE");
+  const siForm = regulatory?.monthly.find((m) => m.formType === "SI");
 
   return (
     <div className="min-h-screen w-full bg-dash-page" data-dashboard-theme data-page="payroll-reports">
@@ -172,17 +173,12 @@ export default function PayrollReportsPage() {
             <div className="flex flex-wrap items-center gap-4">
               <div className="relative">
                 <input
-                  type="text"
-                  readOnly
-                  value="Select Date"
-                  className="payroll-select-date h-11 min-w-[160px] rounded-lg border border-[#e5e7eb] bg-white pl-3 pr-10 text-sm text-[#6b7280]"
+                  type="month"
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="payroll-select-date h-11 min-w-[160px] rounded-lg border border-[#e5e7eb] bg-white pl-3 pr-10 text-sm text-[#1f2937]"
                   style={poppins}
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </span>
               </div>
               <div className="inline-flex rounded-full border border-gray-200 bg-[#f3f4f6] p-1">
                 <button
@@ -243,7 +239,7 @@ export default function PayrollReportsPage() {
           {/* Metric cards - hidden on Audit Logs */}
           {subTab !== "audit" && (
           <div className="grid grid-cols-1 gap-4 px-6 py-6 sm:grid-cols-2 lg:grid-cols-4 md:px-8">
-            {METRIC_CARDS.map((card) => (
+            {metricCards.map((card) => (
               <div
                 key={card.title}
                 className="payroll-metric-card min-w-0 rounded-xl border bg-white p-5 text-left"
@@ -341,38 +337,43 @@ export default function PayrollReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {PAYSHEET_ROWS.map((row) => (
-                    <tr key={row.name} className="payroll-table-row">
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F4FDB] text-white">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                            </svg>
+                  {(summary?.rows ?? []).length === 0 && (
+                    <tr><td colSpan={7} className="py-6 text-center text-[#9ca3af]" style={tableCellTextStyle}>No payroll for this period.</td></tr>
+                  )}
+                  {(summary?.rows ?? []).map((row) => {
+                    const status = statusBadge(row.status);
+                    const isPaid = status === "Completed";
+                    return (
+                      <tr key={row.paymentRef} className="payroll-table-row">
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F4FDB] text-white">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                              </svg>
+                            </span>
+                            <span className="payroll-table-cell" style={employeeNameStyle}>{row.employee}</span>
+                          </div>
+                        </td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.role}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.department}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.grossPay, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.taxDeductions, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.netPay, row.currency)}</td>
+                        <td className="py-3 align-middle">
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase leading-tight tracking-wide text-white",
+                              isPaid ? "bg-[#16A34A]" : "bg-[#F59E0B]"
+                            )}
+                            style={{ ...poppins, fontSize: "11px", lineHeight: "14px" }}
+                          >
+                            {isPaid ? "PAID" : status.toUpperCase()}
                           </span>
-                          <span className="payroll-table-cell" style={employeeNameStyle}>{row.name}</span>
-                        </div>
-                      </td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.role}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.department}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.grossPay}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.taxDeductions}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.netPay}</td>
-                      <td className="py-3 align-middle">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase leading-tight tracking-wide text-white",
-                            row.status === "PAID"
-                              ? "bg-[#16A34A]"
-                              : "bg-[#F59E0B]"
-                          )}
-                          style={{ ...poppins, fontSize: "11px", lineHeight: "14px" }}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -435,7 +436,10 @@ export default function PayrollReportsPage() {
                   Detailed Stats
                 </p>
                 <ul className="flex flex-col gap-2 p-3">
-                  {BREAKDOWN_BY_DEPARTMENT.map((row) => (
+                  {breakdownRows.length === 0 && (
+                    <li className="px-5 py-4 text-center text-sm text-[#9ca3af]" style={poppins}>No data for this period.</li>
+                  )}
+                  {breakdownRows.map((row) => (
                     <li
                       key={row.name}
                       className="payroll-breakdown-item flex items-center justify-between gap-4 rounded-lg px-5 py-4"
@@ -478,25 +482,31 @@ export default function PayrollReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {TAX_CONTRIBUTIONS_ROWS.map((row) => (
-                    <tr key={row.name} className="payroll-table-row">
-                      <td className="py-3 pr-4">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0F4FDB] text-white">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                          </span>
-                          <span className="payroll-table-cell" style={employeeNameStyle}>{row.name}</span>
-                        </div>
-                      </td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.role}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.department}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.grossPay}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.socialInsurance}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.healthFund}</td>
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.incomeTax}</td>
-                      <td className="payroll-table-cell py-3 align-middle" style={tableCellTextStyle}>{row.totalDeductions}</td>
-                    </tr>
-                  ))}
+                  {(tax?.rows ?? []).length === 0 && (
+                    <tr><td colSpan={8} className="py-6 text-center text-[#9ca3af]" style={tableCellTextStyle}>No tax data for this period.</td></tr>
+                  )}
+                  {(tax?.rows ?? []).map((row) => {
+                    const grossFromSummary = summary?.rows.find((s) => s.paymentRef === row.paymentRef);
+                    return (
+                      <tr key={row.paymentRef} className="payroll-table-row">
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0F4FDB] text-white">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                            </span>
+                            <span className="payroll-table-cell" style={employeeNameStyle}>{row.employee}</span>
+                          </div>
+                        </td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{grossFromSummary?.role ?? "—"}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.department}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(grossFromSummary?.grossPay ?? 0, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.socialInsurance, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.healthFund, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.incomeTax, row.currency)}</td>
+                        <td className="payroll-table-cell py-3 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.totalDeductions, row.currency)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -525,13 +535,16 @@ export default function PayrollReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {EMPLOYER_COST_ROWS.map((row) => (
+                  {(cost?.rows ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="py-6 text-center text-[#9ca3af]" style={tableCellTextStyle}>No data for this period.</td></tr>
+                  )}
+                  {(cost?.rows ?? []).map((row) => (
                     <tr key={row.department} className="payroll-table-row">
                       <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{row.department}</td>
-                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{row.grossPay}</td>
-                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{row.employerSocialIns}</td>
-                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{row.benefitsBonuses}</td>
-                      <td className="payroll-table-cell py-4 align-middle" style={tableCellTextStyle}>{row.totalCost}</td>
+                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.grossPayroll)}</td>
+                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.employerSocialInsurance)}</td>
+                      <td className="payroll-table-cell py-4 pr-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.benefitsAndBonuses)}</td>
+                      <td className="payroll-table-cell py-4 align-middle" style={tableCellTextStyle}>{fmtMoneyC(row.totalCost)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,9 +575,12 @@ export default function PayrollReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {AUDIT_LOGS_ROWS.map((row) => (
-                    <tr key={`${row.timestamp}-${row.name}`} className="payroll-table-row">
-                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.timestamp}</td>
+                  {(audit?.rows ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="py-6 text-center text-[#9ca3af]" style={tableCellTextStyle}>No audit logs.</td></tr>
+                  )}
+                  {(audit?.rows ?? []).map((row) => (
+                    <tr key={row.id} className="payroll-table-row">
+                      <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{new Date(row.timestamp).toLocaleString("en-US")}</td>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-3">
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0F4FDB] text-white">
@@ -595,25 +611,36 @@ export default function PayrollReportsPage() {
                 <div className="reg-inner-card rounded-lg p-4 sm:p-6 md:p-8">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="reg-card-title text-[13px] sm:text-[17px]" style={{ ...poppins, fontWeight: 600 }}>PAYE Form</h4>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#FDE68A] bg-[#FEF9C3] px-1.5 py-0.5 text-[9px] font-medium text-[#854D0E] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs" style={poppins}>
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#EAB308]" aria-hidden /> Pending
-                      </span>
+                      <h4 className="reg-card-title text-[13px] sm:text-[17px]" style={{ ...poppins, fontWeight: 600 }}>{payeForm?.formName ?? "PAYE Form"}</h4>
+                      {payeForm && (
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs",
+                            payeForm.status === "submitted" && "border-[#86efac] bg-[#DCFCE7] text-[#166534]",
+                            payeForm.status === "pending" && "border-[#FDE68A] bg-[#FEF9C3] text-[#854D0E]",
+                            payeForm.status === "overdue" && "border-[#fecaca] bg-[#FEE2E2] text-[#b91c1c]"
+                          )}
+                          style={poppins}
+                        >
+                          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", payeForm.status === "submitted" && "bg-[#166534]", payeForm.status === "pending" && "bg-[#EAB308]", payeForm.status === "overdue" && "bg-[#b91c1c]")} aria-hidden />
+                          {statusBadge(payeForm.status)}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-1 reg-card-subtitle text-[12px] sm:text-[14px]" style={poppins}>Monthly Income Tax Report</p>
+                    <p className="mt-1 reg-card-subtitle text-[12px] sm:text-[14px]" style={poppins}>{payeForm?.description ?? "Monthly Income Tax Report"}</p>
                   </div>
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Income Tax</span>
-                      <span className="tabular-nums">$12,450.00</span>
+                      <span className="tabular-nums">{payeForm?.amount != null ? fmtMoneyC(payeForm.amount, payeForm.currency ?? "USD") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employees</span>
-                      <span className="tabular-nums">48</span>
+                      <span className="tabular-nums">{payeForm?.employeeCount ?? "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Due Date</span>
-                      <span className="tabular-nums text-[#EF4444]">Oct 30, 2023</span>
+                      <span className={cn("tabular-nums", payeForm?.status === "overdue" && "text-[#EF4444]")}>{payeForm ? fmtDate(payeForm.dueDate) : "—"}</span>
                     </div>
                   </div>
                   <div className="mt-8">
@@ -626,25 +653,38 @@ export default function PayrollReportsPage() {
                 <div className="reg-inner-card rounded-lg p-4 sm:p-6 md:p-8">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="reg-card-title text-[13px] sm:text-[17px]" style={{ ...poppins, fontWeight: 600 }}>Social Insurance Contributions</h4>
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[#86efac] bg-[#DCFCE7] px-1.5 py-0.5 text-[9px] font-medium text-[#166534] sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs" style={poppins}>
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#166534]" /> Submitted
-                      </span>
+                      <h4 className="reg-card-title text-[13px] sm:text-[17px]" style={{ ...poppins, fontWeight: 600 }}>{siForm?.formName ?? "Social Insurance Contributions"}</h4>
+                      {siForm && (
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-medium sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs",
+                            siForm.status === "submitted" && "border-[#86efac] bg-[#DCFCE7] text-[#166534]",
+                            siForm.status === "pending" && "border-[#FDE68A] bg-[#FEF9C3] text-[#854D0E]",
+                            siForm.status === "overdue" && "border-[#fecaca] bg-[#FEE2E2] text-[#b91c1c]"
+                          )}
+                          style={poppins}
+                        >
+                          <span className={cn("h-1.5 w-1.5 rounded-full", siForm.status === "submitted" && "bg-[#166534]", siForm.status === "pending" && "bg-[#EAB308]", siForm.status === "overdue" && "bg-[#b91c1c]")} />
+                          {statusBadge(siForm.status)}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-1 reg-card-subtitle text-[12px] sm:text-[14px]" style={poppins}>Contributions Report</p>
+                    <p className="mt-1 reg-card-subtitle text-[12px] sm:text-[14px]" style={poppins}>{siForm?.description ?? "Contributions Report"}</p>
                   </div>
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Contributions</span>
-                      <span className="tabular-nums">$8,240.50</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount, siForm.currency ?? "USD") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employer Share</span>
-                      <span className="tabular-nums">$4,120.25</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount / 2, siForm.currency ?? "USD") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
-                      <span>Submitted On</span>
-                      <span className="tabular-nums text-[#16a34a]">Oct 25, 2023</span>
+                      <span>{siForm?.submittedDate ? "Submitted On" : "Due Date"}</span>
+                      <span className={cn("tabular-nums", siForm?.status === "submitted" && "text-[#16a34a]")}>
+                        {siForm ? fmtDate(siForm.submittedDate ?? siForm.dueDate) : "—"}
+                      </span>
                     </div>
                   </div>
                   <div className="mt-8">
@@ -669,33 +709,39 @@ export default function PayrollReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {REGULATORY_FORMS_ROWS.map((row) => (
-                      <tr key={row.form} className="payroll-table-row">
-                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>
-                          <span className="inline-flex items-center gap-2">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-                            {row.form}
-                          </span>
-                        </td>
-                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.description}</td>
-                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.period}</td>
-                        <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.dueDate}</td>
-                        <td className="py-3 align-middle">
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium",
-                              row.status === "Submitted" && "border-[#86efac] bg-[#DCFCE7] text-[#166534]",
-                              row.status === "Pending" && "border-[#FDE68A] bg-[#FEF9C3] text-[#854D0E]",
-                              row.status === "Overdue" && "border-[#fecaca] bg-[#FEE2E2] text-[#b91c1c]"
-                            )}
-                            style={poppins}
-                          >
-                            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", row.status === "Submitted" && "bg-[#166534]", row.status === "Pending" && "bg-[#EAB308]", row.status === "Overdue" && "bg-[#b91c1c]")} />
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {(regulatory?.declarations ?? []).length === 0 && (
+                      <tr><td colSpan={5} className="py-6 text-center text-[#9ca3af]" style={tableCellTextStyle}>No declarations yet.</td></tr>
+                    )}
+                    {(regulatory?.declarations ?? []).map((row) => {
+                      const status = statusBadge(row.status);
+                      return (
+                        <tr key={row.id} className="payroll-table-row">
+                          <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>
+                            <span className="inline-flex items-center gap-2">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                              {row.formType}
+                            </span>
+                          </td>
+                          <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.description ?? row.formName}</td>
+                          <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{row.period}</td>
+                          <td className="payroll-table-cell py-3 pr-4 align-middle" style={tableCellTextStyle}>{fmtDate(row.dueDate)}</td>
+                          <td className="py-3 align-middle">
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium",
+                                status === "Submitted" && "border-[#86efac] bg-[#DCFCE7] text-[#166534]",
+                                status === "Pending" && "border-[#FDE68A] bg-[#FEF9C3] text-[#854D0E]",
+                                status === "Overdue" && "border-[#fecaca] bg-[#FEE2E2] text-[#b91c1c]"
+                              )}
+                              style={poppins}
+                            >
+                              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", status === "Submitted" && "bg-[#166534]", status === "Pending" && "bg-[#EAB308]", status === "Overdue" && "bg-[#b91c1c]")} />
+                              {status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { getTransactions, type AdminTransaction } from "@/lib/api/admin/transactions";
 
 type TransactionRow = {
   createdOn: string;
@@ -101,43 +99,10 @@ const mockTransactions: TransactionRow[] = [
 ];
 
 export default function AdminTransactionsPage() {
-  const token = useAdminAuthStore((s) => s.token);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Pending");
-  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const res = await getTransactions(token, { limit: "100" });
-      const rows: TransactionRow[] = (res.data ?? []).map((t: AdminTransaction) => ({
-        createdOn: t.created_at
-          ? new Date(t.created_at).toLocaleString("en-GB", { hour12: true })
-          : "",
-        sender: "External",
-        beneficiary: "—",
-        amount: String(t.amount ?? ""),
-        currency: t.currency ?? "",
-        transactionType: t.transaction_type ?? "",
-        transactionId: t.transaction_ref ?? String(t.id),
-        account: String(t.account_id ?? ""),
-        transactionStatus: t.transaction_status ?? "",
-        paymentType: t.payment_type ?? "",
-      }));
-      setTransactions(rows.length > 0 ? rows : mockTransactions);
-    } catch (err) {
-      console.error("Failed to fetch transactions:", err);
-      setTransactions(mockTransactions);
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const filtered = transactions.filter(
+  const filtered = mockTransactions.filter(
     (t) =>
       t.beneficiary.toLowerCase().includes(search.toLowerCase()) ||
       t.sender.toLowerCase().includes(search.toLowerCase()) ||
@@ -259,7 +224,7 @@ export default function AdminTransactionsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="admin-page-title-strip w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
+      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
           style={{
@@ -275,7 +240,7 @@ export default function AdminTransactionsPage() {
         </h1>
       </div>
 
-      <div className="admin-page-panel w-full rounded-[10px] bg-white p-6">
+      <div className="w-full rounded-[10px] bg-white p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Search: mobile par full width, desktop par flex-1 */}
           <label className="relative w-full sm:min-w-0 sm:flex-1">
@@ -312,22 +277,14 @@ export default function AdminTransactionsPage() {
         </div>
 
         {/* Full table with horizontal scroll — table min-w-max se scrollbar dikhega */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-          </div>
-        ) : (
-          <Table<TransactionRow & { actions: null }>
-            columns={columns}
-            data={tableData}
-            emptyMessage="No transactions found."
-            className="admin-list-table mt-6 border-0 border-gray-100"
-            tableClassName="min-w-max"
-            bordered={false}
-            rowDividers
-            rowHover={false}
-          />
-        )}
+        <Table<TransactionRow & { actions: null }>
+          columns={columns}
+          data={tableData}
+          emptyMessage="No transactions found."
+          className="mt-6"
+          tableClassName="min-w-max"
+          bordered={false}
+        />
       </div>
     </div>
   );

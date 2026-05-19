@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import AddPeoplePopup from "@/components/user/people/AddPeoplePopup";
 import MassImportPopup from "@/components/user/people/MassImportPopup";
+<<<<<<< HEAD
+import { usePeople } from "@/hooks/employer/useUserPanel";
+=======
 
 const mockPeople = [
-  { id: "E001", name: "John Doe", role: "Accountant", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-07-01" },
-  { id: "E002", name: "Alice Johnson", role: "Senior Dev", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-06-15" },
-  { id: "E003", name: "Bob Smith", role: "Manager", country: "UK", workerType: "Contractor", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-05-01" },
-  { id: "E004", name: "Carol White", role: "Analyst", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-04-10" },
-  { id: "E005", name: "Eva Green", role: "Junior Dev", country: "Germany", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-07-01" },
-  { id: "E006", name: "Frank Miller", role: "Designer", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-03-20" },
-  { id: "E007", name: "Grace Lee", role: "HR Specialist", country: "UK", workerType: "EOR Employee", workerStatus: "Active" as "Active" | "Inactive", startDate: "2024-02-01" },
+  { id: "E001", name: "John Doe", role: "Accountant", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-07-01" },
+  { id: "E002", name: "Alice Johnson", role: "Senior Dev", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-06-15" },
+  { id: "E003", name: "Bob Smith", role: "Manager", country: "UK", workerType: "Contractor", workerStatus: "Active" as const, startDate: "2024-05-01" },
+  { id: "E004", name: "Carol White", role: "Analyst", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-04-10" },
+  { id: "E005", name: "Eva Green", role: "Junior Dev", country: "Germany", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-07-01" },
+  { id: "E006", name: "Frank Miller", role: "Designer", country: "Cyprus", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-03-20" },
+  { id: "E007", name: "Grace Lee", role: "HR Specialist", country: "UK", workerType: "EOR Employee", workerStatus: "Active" as const, startDate: "2024-02-01" },
 ];
+>>>>>>> a32072efce53ac2e9806955cc3e4970231ab5427
 
 const peopleFilterSelectClass =
   "people-select box-border h-[30px] min-h-[30px] min-w-0 max-w-full appearance-none rounded-lg border border-[#DFDFDF] bg-[#f7f7fa] py-[4px] pl-4 pr-9 text-[14px] font-normal leading-[20px] tracking-normal text-[#878787] [font-family:var(--font-poppins),Poppins,sans-serif] shadow-none focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)] [color-scheme:light]";
@@ -48,15 +51,31 @@ export default function UserPeopleScreen() {
   const [massImportOpen, setMassImportOpen] = useState(false);
   const router = useRouter();
 
-  const filtered = mockPeople.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.role.toLowerCase().includes(search.toLowerCase()) ||
-      p.country.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data, isLoading } = usePeople({ search: search || undefined });
+  const filtered = data?.people ?? [];
 
   function handleExport() {
-    // TODO: wire to export API
+    if (filtered.length === 0) return;
+    const header = ["id", "name", "email", "jobTitle", "department", "country", "employmentType", "status", "startDate"];
+    const escape = (v: string | number | null | undefined) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = filtered.map((p) =>
+      [p.id, p.name, p.email, p.jobTitle, p.department, p.country, p.employmentType, p.status, p.startDate ?? ""]
+        .map(escape)
+        .join(",")
+    );
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `people-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -157,57 +176,66 @@ export default function UserPeopleScreen() {
                   </tr>
                 </thead>
                 <tbody className="people-table-body">
-                  {filtered.length === 0 ? (
+                  {isLoading ? (
+                    <tr><td colSpan={6} className="people-table-empty px-6 py-10 text-center text-[#6b7280]">Loading…</td></tr>
+                  ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="people-table-empty px-6 py-10 text-center text-[#6b7280]">
                         No people found.
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((person) => (
-                      <tr key={person.id} className="people-table-row hover:bg-[#f9fafb]">
-                        <td className="align-middle px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-dash-accent)] text-sm font-semibold text-white">
-                              {person.name.split(" ").map((n) => n[0]).join("")}
-                            </span>
-                            <div>
-                              <p className="people-row-name font-semibold text-[#1f2937]">{person.name}</p>
-                              <p className="people-row-role text-[#6b7280]">{person.role}</p>
+                    filtered.map((person) => {
+                      const isActive = person.status === "active";
+                      return (
+                        <tr
+                          key={person.id}
+                          className="people-table-row hover:bg-[#f9fafb] cursor-pointer"
+                          onClick={() => router.push(`${DASHBOARD_ROUTES.people}/${person.id}`)}
+                        >
+                          <td className="align-middle px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-dash-accent)] text-sm font-semibold text-white">
+                                {person.name.split(" ").map((n) => n[0]).join("")}
+                              </span>
+                              <div>
+                                <p className="people-row-name font-semibold text-[#1f2937]">{person.name}</p>
+                                <p className="people-row-role text-[#6b7280]">{person.jobTitle}</p>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="people-row-cell align-middle px-6 py-5 text-[#374151]">{person.country}</td>
-                        <td className="people-row-cell align-middle px-6 py-5 text-[#374151]">{person.workerType}</td>
-                        <td className="align-middle px-6 py-5 text-center">
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full px-2.5 py-1 text-xs font-medium people-status",
-                              person.workerStatus === "Active" && "bg-[#dcfce7] text-[#166534]",
-                              person.workerStatus === "Inactive" && "bg-[#fee2e2] text-[#991b1b]"
-                            )}
-                          >
-                            {person.workerStatus}
-                          </span>
-                        </td>
-                        <td className="people-row-cell align-middle whitespace-nowrap px-6 py-5 text-[#374151]">
-                          {person.startDate}
-                        </td>
-                        <td className="align-middle px-6 py-5 text-center">
-                          <button
-                            type="button"
-                            className="people-row-actions inline-flex h-9 w-9 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
-                            aria-label="Actions"
-                          >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                              <circle cx="12" cy="6" r="1.75" stroke="currentColor" strokeWidth="1.5" />
-                              <circle cx="12" cy="12" r="1.75" stroke="currentColor" strokeWidth="1.5" />
-                              <circle cx="12" cy="18" r="1.75" stroke="currentColor" strokeWidth="1.5" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="people-row-cell align-middle px-6 py-5 text-[#374151]">{person.country}</td>
+                          <td className="people-row-cell align-middle px-6 py-5 text-[#374151]">{person.employmentType}</td>
+                          <td className="align-middle px-6 py-5 text-center">
+                            <span
+                              className={cn(
+                                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium people-status",
+                                isActive && "bg-[#dcfce7] text-[#166534]",
+                                !isActive && "bg-[#fee2e2] text-[#991b1b]"
+                              )}
+                            >
+                              {isActive ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td className="people-row-cell align-middle whitespace-nowrap px-6 py-5 text-[#374151]">
+                            {person.startDate ?? "—"}
+                          </td>
+                          <td className="align-middle px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="people-row-actions inline-flex h-9 w-9 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
+                              aria-label="Actions"
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <circle cx="12" cy="6" r="1.75" stroke="currentColor" strokeWidth="1.5" />
+                                <circle cx="12" cy="12" r="1.75" stroke="currentColor" strokeWidth="1.5" />
+                                <circle cx="12" cy="18" r="1.75" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

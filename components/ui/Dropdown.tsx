@@ -15,9 +15,7 @@ interface DropdownProps {
   items: DropdownItem[];
   onSelect: (value: string) => void;
   className?: string;
-  menuClassName?: string;
   align?: "left" | "right";
-  placement?: "top" | "bottom";
 }
 
 export default function Dropdown({
@@ -25,9 +23,7 @@ export default function Dropdown({
   items,
   onSelect,
   className,
-  menuClassName,
   align = "left",
-  placement = "bottom",
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -48,9 +44,7 @@ export default function Dropdown({
       {open && (
         <div
           className={cn(
-            "absolute z-10 min-w-[160px] overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg",
-            placement === "top" ? "bottom-full mb-1" : "mt-1",
-            menuClassName ?? "max-h-[50vh]",
+            "absolute z-10 mt-1 min-w-[160px] rounded-lg border border-gray-200 bg-white py-1 shadow-lg",
             align === "right" ? "right-0" : "left-0"
           )}
         >

@@ -6,6 +6,8 @@ export interface AuthUser {
   name: string;
   role: Role;
   avatar?: string;
+  companyId?: number | null;
+  companyName?: string | null;
 }
 
 export interface LoginCredentials {

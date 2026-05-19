@@ -78,8 +78,8 @@ export default function Header({ role, onMenuClick, theme: externalTheme, onThem
           type="button"
           className={
             isLight
-              ? "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#E6E6E6] bg-transparent text-gray-400 sm:hidden"
-              : "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#334155] bg-transparent text-gray-400 sm:hidden"
+              ? "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#E6E6E6] bg-[#F5F6FA] text-gray-400 sm:hidden"
+              : "inline-flex h-[38px] w-[38px] items-center justify-center rounded-[16px] border border-[#334155] bg-[#1e293b] text-gray-400 sm:hidden"
           }
           aria-label="Search"
         >

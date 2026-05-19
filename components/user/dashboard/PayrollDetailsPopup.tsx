@@ -2,33 +2,20 @@
 
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { useBatchDetails } from "@/hooks/employer/useDashboard";
 
-export type BatchRow = {
-  batchId: string;
-  payPeriod: string;
-  totalAmount: string;
-  paymentDate: string;
-  status: string;
-  employees: number;
-};
+function formatAmount(amount: number, currency: string) {
+  return amount.toLocaleString("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+    maximumFractionDigits: 2,
+  });
+}
 
-const MOCK_PAYMENTS: Record<string, { paymentId: string; employee: string; amount: string; status: string; date: string }[]> = {
-  "PAYBATCH-JUL24-001": [
-    { paymentId: "PAY-001", employee: "John Smith", amount: "$3,200", status: "Completed", date: "2024-07-01" },
-    { paymentId: "PAY-002", employee: "Sarah Johnson", amount: "$2,800", status: "Completed", date: "2024-07-01" },
-    { paymentId: "PAY-003", employee: "Mike Davis", amount: "$3,500", status: "Processing", date: "2024-07-01" },
-  ],
-  "PAYBATCH-JUN24-002": [
-    { paymentId: "PAY-004", employee: "John Smith", amount: "$3,200", status: "Completed", date: "2024-06-28" },
-    { paymentId: "PAY-005", employee: "Sarah Johnson", amount: "$2,800", status: "Completed", date: "2024-06-28" },
-    { paymentId: "PAY-006", employee: "Mike Davis", amount: "$3,100", status: "Completed", date: "2024-06-28" },
-  ],
-  "PAYBATCH-JUN24-001": [
-    { paymentId: "PAY-007", employee: "John Smith", amount: "$2,633", status: "Completed", date: "2024-06-14" },
-    { paymentId: "PAY-008", employee: "Sarah Johnson", amount: "$2,634", status: "Completed", date: "2024-06-14" },
-    { paymentId: "PAY-009", employee: "Mike Davis", amount: "$2,633", status: "Processing", date: "2024-06-14" },
-  ],
-};
+function statusLabel(status: string) {
+  if (!status) return status;
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
 
 /** Payments table column headers — Poppins 14 / 400 / #6B7280 / lh 16 */
 const payrollPaymentsThClass =
@@ -47,15 +34,16 @@ const payrollDetailsTitleClass =
   "min-w-0 flex-1 pr-4 text-2xl font-semibold leading-8 tracking-normal text-dash-primary [font-family:var(--font-poppins),Poppins,sans-serif]";
 
 interface PayrollDetailsPopupProps {
-  batch: BatchRow | null;
+  batchId: number | null;
   onClose: () => void;
 }
 
 const exportMenuItems = ["CSV", "PDF", "Excel"] as const;
 
-export default function PayrollDetailsPopup({ batch, onClose }: PayrollDetailsPopupProps) {
+export default function PayrollDetailsPopup({ batchId, onClose }: PayrollDetailsPopupProps) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportSplitRef = useRef<HTMLDivElement>(null);
+  const { data, isLoading } = useBatchDetails(batchId);
 
   useEffect(() => {
     if (!exportMenuOpen) return;
@@ -68,36 +56,39 @@ export default function PayrollDetailsPopup({ batch, onClose }: PayrollDetailsPo
     return () => document.removeEventListener("mousedown", handleDown);
   }, [exportMenuOpen]);
 
-  if (!batch) return null;
+  if (batchId === null) return null;
 
-  const payments = MOCK_PAYMENTS[batch.batchId] ?? [];
-  const displayStatus = batch.status === "Executed" ? "Completed" : batch.status;
+  const batch = data?.batch ?? null;
+  const payments = data?.payments ?? [];
+  const displayStatus = batch ? statusLabel(batch.status) : "";
 
   function handleExportChoice(_format: (typeof exportMenuItems)[number]) {
     setExportMenuOpen(false);
     // Wire to real export when API exists
   }
 
-  const summarySections: { label: string; content: ReactNode }[] = [
-    { label: "Batch ID", content: batch.batchId },
-    { label: "Pay Period", content: batch.payPeriod },
-    { label: "Total Amount", content: batch.totalAmount },
-    { label: "Payment Date", content: batch.paymentDate },
-    {
-      label: "Batch Status",
-      content: (
-        <span
-          className={cn(
-            "inline-flex rounded-full px-3 py-1 text-xs font-medium [font-family:var(--font-inter),Inter,sans-serif]",
-            (displayStatus === "Completed" || displayStatus === "Executed") && "status-pill-completed",
-            displayStatus === "Processing" && "status-pill-processing"
-          )}
-        >
-          {displayStatus}
-        </span>
-      ),
-    },
-  ];
+  const summarySections: { label: string; content: ReactNode }[] = batch
+    ? [
+        { label: "Batch ID", content: batch.batchRef },
+        { label: "Pay Period", content: batch.payPeriod },
+        { label: "Total Amount", content: formatAmount(batch.totalAmount, batch.currency) },
+        { label: "Payment Date", content: batch.paymentDate },
+        {
+          label: "Batch Status",
+          content: (
+            <span
+              className={cn(
+                "inline-flex rounded-full px-3 py-1 text-xs font-medium [font-family:var(--font-inter),Inter,sans-serif]",
+                displayStatus === "Completed" && "status-pill-completed",
+                displayStatus === "Processing" && "status-pill-processing"
+              )}
+            >
+              {displayStatus}
+            </span>
+          ),
+        },
+      ]
+    : [];
 
   return (
     <>
@@ -127,7 +118,7 @@ export default function PayrollDetailsPopup({ batch, onClose }: PayrollDetailsPo
             className="min-w-0 break-words text-[16px] font-semibold leading-[24px] tracking-normal text-dash-primary [font-family:var(--font-poppins),Poppins,sans-serif] sm:text-2xl sm:leading-8"
             style={{ color: "var(--payroll-details-modal-title)" }}
           >
-            Details for: {batch.payPeriod} ({batch.batchId})
+            {batch ? `Details for: ${batch.payPeriod} (${batch.batchRef})` : "Loading…"}
           </h2>
           <div className="flex shrink-0 items-center gap-2">
             <div ref={exportSplitRef} className="relative inline-flex">
@@ -281,34 +272,43 @@ export default function PayrollDetailsPopup({ batch, onClose }: PayrollDetailsPo
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((p, i) => (
-                    <Fragment key={p.paymentId}>
-                      <tr>
-                        <td className="px-4 py-3 font-medium text-dash-primary">{p.paymentId}</td>
-                        <td className={payrollPaymentsEmployeeClass}>{p.employee}</td>
-                        <td className="px-4 py-3 font-medium text-dash-primary">{p.amount}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
-                              (p.status === "Completed" || p.status === "Executed") && "status-pill-completed",
-                              p.status === "Processing" && "status-pill-processing"
-                            )}
-                          >
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-[#8c919c]">{p.date}</td>
-                      </tr>
-                      {i < payments.length - 1 && (
-                        <tr aria-hidden>
-                          <td colSpan={5} className="p-0">
-                            <div className="mx-3 h-px sm:mx-4" style={{ backgroundColor: "var(--payroll-details-modal-divider)" }} />
+                  {isLoading && (
+                    <tr><td colSpan={5} className="px-4 py-6 text-center text-dash-secondary">Loading…</td></tr>
+                  )}
+                  {!isLoading && payments.length === 0 && (
+                    <tr><td colSpan={5} className="px-4 py-6 text-center text-dash-secondary">No payments in this batch.</td></tr>
+                  )}
+                  {payments.map((p, i) => {
+                    const pStatus = statusLabel(p.status);
+                    return (
+                      <Fragment key={p.id}>
+                        <tr>
+                          <td className="px-4 py-3 font-medium text-dash-primary">{p.paymentRef}</td>
+                          <td className={payrollPaymentsEmployeeClass}>{p.employee}</td>
+                          <td className="px-4 py-3 font-medium text-dash-primary">{formatAmount(p.amount, p.currency)}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={cn(
+                                "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                pStatus === "Completed" && "status-pill-completed",
+                                pStatus === "Processing" && "status-pill-processing"
+                              )}
+                            >
+                              {pStatus}
+                            </span>
                           </td>
+                          <td className="px-4 py-3 text-[#8c919c]">{p.paymentDate}</td>
                         </tr>
-                      )}
-                    </Fragment>
-                  ))}
+                        {i < payments.length - 1 && (
+                          <tr aria-hidden>
+                            <td colSpan={5} className="p-0">
+                              <div className="mx-3 h-px sm:mx-4" style={{ backgroundColor: "var(--payroll-details-modal-divider)" }} />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

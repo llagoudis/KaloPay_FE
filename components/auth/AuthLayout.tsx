@@ -11,7 +11,7 @@ interface AuthLayoutProps {
 
 const roleLabels = {
   admin: "Admin Portal",
-  employer: "User Portal",
+  employer: "Employer Portal",
   employee: "Employee Portal",
 };
 

@@ -1,18 +1,17 @@
 "use client";
 
 import LoginForm from "@/components/auth/LoginForm";
-import { useAdminLogin } from "@/hooks/auth/useAdminAuth";
+import { adminLogin } from "@/lib/api/admin/auth";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
 import { ROUTES } from "@/lib/constants/routes";
 
 export default function AdminLoginPage() {
   const { setAuth } = useAdminAuthStore();
-  const loginMutation = useAdminLogin();
 
   return (
     <LoginForm
       role="admin"
-      onLogin={(email, password) => loginMutation.mutateAsync({ email, password })}
+      onLogin={adminLogin}
       onSetAuth={setAuth}
       dashboardUrl={ROUTES.admin.dashboard}
       forgotPasswordUrl={ROUTES.admin.forgotPassword}

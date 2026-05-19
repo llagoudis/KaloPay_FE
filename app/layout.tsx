@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Poppins, Inter } from "next/font/google";
-import QueryProvider from "@/providers/QueryProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 const poppins = Poppins({
-  variable: "--font-poppins",
+  weight: ["400", "600"],
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 const inter = Inter({
@@ -38,9 +37,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${inter.variable} antialiased bg-[#F5F6FA] overflow-x-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${inter.variable} antialiased overflow-x-hidden`}
       >
-        <QueryProvider>{children}</QueryProvider>
+        {children}
       </body>
     </html>
   );

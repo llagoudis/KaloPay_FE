@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
+import { useCreatePerson } from "@/hooks/employer/useUserPanel";
 
 const STEPS = [
   { label: "Personal Details", status: (i: number, step: number) => (step === i ? "In-Progress" : i < step ? "Completed" : "Pending") },
@@ -222,13 +223,93 @@ export default function AddEmployeePage() {
     setBankWalletForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  const createMutation = useCreatePerson();
+
   async function handleSubmit() {
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1000));
-      // Navigate to Employee Profile screen (same as Figma)
-      const newEmployeeId = "sameer-khan";
-      router.push(DASHBOARD_ROUTES.personDetail(newEmployeeId));
+      const firstName = personalForm.name.trim();
+      const lastName = personalForm.surname.trim();
+      const email = (personalForm.workEmail || personalForm.personalEmail).trim();
+      if (!firstName || !lastName || !email) {
+        alert("First name, surname, and an email are required");
+        return;
+      }
+      const countryCode = addressForm.country || employmentForm.workLocationCountry;
+      const country = COUNTRIES.find((c) => c.value === countryCode)?.label ?? countryCode ?? null;
+
+      const result = await createMutation.mutateAsync({
+        // Personal
+        firstName,
+        middleName: personalForm.middleName || null,
+        lastName,
+        email,
+        personalEmail: personalForm.personalEmail || null,
+        workEmail: personalForm.workEmail || null,
+        nationality: personalForm.nationality || null,
+        dateOfBirth: personalForm.dateOfBirth || null,
+        gender: personalForm.gender || null,
+        maritalStatus: personalForm.maritalStatus || null,
+        nationalIdNumber: personalForm.nationalIdNumber || null,
+        passportNumber: personalForm.passportNumber || null,
+        primaryCountryCode: personalForm.primaryCountryCode || null,
+        primaryPhone: personalForm.primaryContact || null,
+        emergencyCountryCode: personalForm.emergencyCountryCode || null,
+        emergencyPhone: personalForm.emergencyContact || null,
+        nationalInsuranceNo: personalForm.nationalInsuranceNo || null,
+        tic: personalForm.tic || null,
+        dependants: personalForm.dependants || null,
+        workPermitVisa: personalForm.workPermitVisa || null,
+        residencePermitExpiry: personalForm.residencePermitExpiry || null,
+        // Address
+        streetName: addressForm.streetName || null,
+        streetNo: addressForm.streetNumber || null,
+        flatApartmentNo: addressForm.flatApartmentNumber || null,
+        floor: addressForm.floor || null,
+        postalCode: addressForm.postalCode || null,
+        city: addressForm.city || null,
+        province: addressForm.provinceRegionState || null,
+        country,
+        // Employment
+        employeeIdExternal: employmentForm.employeeId || null,
+        groupName: employmentForm.group || null,
+        seniorityLevel: employmentForm.seniorityLevel || null,
+        departmentRole: employmentForm.departmentRole || null,
+        lineManagerEmail: employmentForm.lineManagerEmail || null,
+        workLocationCountry: employmentForm.workLocationCountry || null,
+        partTimePercentage: employmentForm.partTimePercentage || null,
+        jobTitle: employmentForm.jobTitle || undefined,
+        department: employmentForm.department || undefined,
+        employmentType: employmentForm.employmentType || undefined,
+        employeeStatus: employmentForm.status || "active",
+        contractStart: employmentForm.startDate || undefined,
+        contractEnd: employmentForm.terminationDate || undefined,
+        // Compensation
+        paymentMethod: compensationForm.paymentMethod || null,
+        paymentPreference: compensationForm.paymentPreference || null,
+        compensationType: compensationForm.compensationType || null,
+        shiftSchedule: compensationForm.shiftSchedule || null,
+        probationPeriod: compensationForm.probationPeriod || null,
+        workingHours: compensationForm.workingHours || null,
+        workingDaysPerWeek: compensationForm.workingDaysPerWeek || null,
+        noticePeriod: compensationForm.noticePeriod || null,
+        grossAnnualSalary: compensationForm.grossAnnualSalary
+          ? Number(compensationForm.grossAnnualSalary)
+          : undefined,
+        paymentCurrencyCode: compensationForm.paymentCurrencyCode || undefined,
+        // Bank/Wallet
+        bankName: bankWalletForm.bankName || null,
+        bankAddress: bankWalletForm.bankAddress || null,
+        swiftBic: bankWalletForm.swiftBic || null,
+        iban: bankWalletForm.iban || null,
+        defaultPaymentMethod: bankWalletForm.defaultPaymentMethod || null,
+        currencyPreference: bankWalletForm.currencyPreference || null,
+        digitalWalletAddress: bankWalletForm.digitalWalletAddress || null,
+      });
+
+      router.push(DASHBOARD_ROUTES.personDetail(String(result.id)));
+    } catch (e) {
+      alert((e as Error).message ?? "Failed to create employee");
     } finally {
       setLoading(false);
     }

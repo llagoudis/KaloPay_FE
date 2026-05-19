@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
+import { useBulkPayouts } from "@/hooks/employer/useUserPanel";
 
 type BulkSubTab = "upload" | "history";
 
 type BulkPayoutRow = {
-  id: string;
+  id: number;
   fileName: string;
-  status: "Completed" | "Processing" | "Failed";
+  status: string;
+  statusLabel: "Completed" | "Processing" | "Failed";
   completedCount: number;
   totalCount: number;
   uploadTime: string;
@@ -19,9 +21,19 @@ type BulkPayoutRow = {
     slNo: number;
     asset: string;
     address: string;
-    status: "COMPLETED" | "PENDING" | "FAILED";
+    status: "COMPLETED" | "PENDING" | "FAILED" | "PROCESSING";
   }[];
 };
+
+function statusToLabel(s: string): "Completed" | "Processing" | "Failed" {
+  if (s === "completed") return "Completed";
+  if (s === "failed") return "Failed";
+  return "Processing";
+}
+
+function itemStatusToLabel(s: string): "COMPLETED" | "PENDING" | "FAILED" | "PROCESSING" {
+  return s.toUpperCase() as "COMPLETED" | "PENDING" | "FAILED" | "PROCESSING";
+}
 
 const TABLE_HEADER_STYLE: React.CSSProperties = {
   fontFamily: "Poppins, var(--font-poppins)",
@@ -31,21 +43,6 @@ const TABLE_HEADER_STYLE: React.CSSProperties = {
   color: "#6B7280",
 };
 
-const MOCK_ACTIVITY: BulkPayoutRow[] = [
-  {
-    id: "1",
-    fileName: "Bulk_Payout_Template_USDC_Pol.csv",
-    status: "Completed",
-    completedCount: 3,
-    totalCount: 3,
-    uploadTime: "30-09-2024 2:35 PM",
-    payouts: [
-      { slNo: 1, asset: "USDC_POLYGON", address: "0x072fed956279944ec103e8463e1f5d9a008784190", status: "COMPLETED" },
-      { slNo: 2, asset: "USDC_POLYGON", address: "0xff316812Ce9aa56868e0B4a58c0606345e8863a9d", status: "COMPLETED" },
-      { slNo: 3, asset: "USDC_POLYGON", address: "0x08Daa7AF3027525042d9e972fb851b88570BD0B", status: "COMPLETED" },
-    ],
-  },
-];
 
 function SecondaryNav() {
   return (
@@ -103,9 +100,31 @@ function SecondaryNav() {
 function BulkPayoutsContent() {
   const searchParams = useSearchParams();
   const [bulkSubTab, setBulkSubTab] = useState<BulkSubTab>("history");
-  const [expandedId, setExpandedId] = useState<string | null>(MOCK_ACTIVITY[0]?.id ?? null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data, isLoading } = useBulkPayouts();
+  const activity: BulkPayoutRow[] = (data?.batches ?? []).map((b) => ({
+    id: b.id,
+    fileName: b.fileName,
+    status: b.status,
+    statusLabel: statusToLabel(b.status),
+    completedCount: b.completedCount,
+    totalCount: b.totalCount,
+    uploadTime: new Date(b.uploadTime).toLocaleString("en-US"),
+    payouts: b.items.map((it) => ({
+      slNo: it.slNo,
+      asset: it.asset,
+      address: it.address,
+      status: itemStatusToLabel(it.status),
+    })),
+  }));
+
+  // auto-expand first row when data first arrives
+  useEffect(() => {
+    if (expandedId === null && activity.length > 0) setExpandedId(activity[0].id);
+  }, [activity, expandedId]);
 
   // Sync tab with URL so Upload CSV / Payment History screen matches link
   useEffect(() => {
@@ -264,7 +283,13 @@ function BulkPayoutsContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {MOCK_ACTIVITY.map((row) => (
+                    {isLoading && (
+                      <tr><td colSpan={4} className="py-8 text-center text-[#6b7280]">Loading…</td></tr>
+                    )}
+                    {!isLoading && activity.length === 0 && (
+                      <tr><td colSpan={4} className="py-8 text-center text-[#6b7280]">No bulk payouts yet.</td></tr>
+                    )}
+                    {activity.map((row) => (
                       <React.Fragment key={row.id}>
                         <tr className="bulk-payout-activity-data-row border-t border-[#e5e7eb] bg-white hover:bg-[#f9fafb]">
                           <td className="bulk-payout-activity-cell-text py-3 pl-4 pr-4" style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -283,11 +308,11 @@ function BulkPayoutsContent() {
                             <span
                               className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium leading-none"
                               style={{
-                                backgroundColor: row.status === "Completed" ? "#E6FAE6" : row.status === "Failed" ? "#FEE2E2" : "#FEF3C7",
-                                color: row.status === "Completed" ? "#16A34A" : row.status === "Failed" ? "#DC2626" : "#D97706",
+                                backgroundColor: row.statusLabel === "Completed" ? "#E6FAE6" : row.statusLabel === "Failed" ? "#FEE2E2" : "#FEF3C7",
+                                color: row.statusLabel === "Completed" ? "#16A34A" : row.statusLabel === "Failed" ? "#DC2626" : "#D97706",
                               }}
                             >
-                              {row.status} - {row.completedCount}/{row.totalCount}
+                              {row.statusLabel} - {row.completedCount}/{row.totalCount}
                             </span>
                           </td>
                           <td className="bulk-payout-activity-cell-text py-3 pl-4 pr-4" style={{ fontSize: "14px", color: "#1f2937" }}>

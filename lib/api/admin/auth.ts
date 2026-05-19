@@ -1,27 +1,19 @@
 import { API_BASE_URL } from "@/lib/constants/config";
-import { apiClient } from "@/lib/api/client";
-import type { AuthUser } from "@/types/auth";
 import {
   withMockFallback,
+  mockLogin,
+  mockSignup,
   mockForgotPassword,
   mockVerify2FA,
   mockVerifyEmail,
   mockResendVerification,
 } from "@/lib/api/mockAuth";
 
-interface MessageResponse {
-  message: string;
-}
-
 export async function adminLogin(email: string, password: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error || "Login failed");
-  return data;
+  // TEMP: bypass auth for demo/testing.
+  void email;
+  void password;
+  return mockLogin("admin");
 }
 
 export async function adminLogout() {
@@ -55,14 +47,9 @@ export async function adminVerify2FA(code: string) {
 }
 
 export async function adminSignup(data: { name: string; email: string; password: string }) {
-  const res = await fetch(`${API_BASE_URL}/admin/auth/signup`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error || "Signup failed");
-  return json;
+  // TEMP: bypass signup backend for demo/testing.
+  void data;
+  return mockSignup();
 }
 
 export async function adminVerifyEmail(code: string, email: string) {
@@ -87,18 +74,4 @@ export async function adminResendVerification(email: string) {
     if (!res.ok) throw new Error("Resend failed");
     return res.json();
   }, () => mockResendVerification());
-}
-
-export function adminResetPassword(code: string, email: string, newPassword: string) {
-  return apiClient<MessageResponse>("/admin/auth/reset-password", {
-    method: "POST",
-    body: { code, email, newPassword },
-  });
-}
-
-export function adminGetMe(token: string) {
-  return apiClient<{ user: AuthUser }>("/admin/auth/me", {
-    method: "GET",
-    token,
-  });
 }

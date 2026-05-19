@@ -96,7 +96,6 @@ const adminNavSections = [
       { label: "Client Activity Log", href: ROUTES.admin.clientActivityLogs, Icon: IconDocument },
       { label: "Administrators", href: ROUTES.admin.administrators, Icon: IconShield },
       { label: "Wallet Summary", href: ROUTES.admin.wallet, Icon: IconWallet },
-      { label: "Crypto Transactions", href: ROUTES.admin.cryptoTransactions, Icon: IconTransaction },
       { label: "Admin Wallet", href: ROUTES.admin.adminWallet, Icon: IconWallet },
       { label: "Settings", href: ROUTES.admin.settings, Icon: IconSettings },
     ],

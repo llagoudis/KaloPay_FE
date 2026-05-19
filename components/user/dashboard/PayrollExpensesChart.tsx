@@ -2,22 +2,21 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { usePayrollExpenses } from "@/hooks/employer/useDashboard";
+import type { Period } from "@/lib/api/employer/dashboard";
 
-const periods = ["This month", "Last month", "This year", "Last year"];
+const periods: { label: string; value: Period }[] = [
+  { label: "This month", value: "thisMonth" },
+  { label: "Last month", value: "lastMonth" },
+  { label: "This year", value: "thisYear" },
+  { label: "Last year", value: "lastYear" },
+];
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// Approximate values 0–6000 per image: Jan ~4800, Feb ~3000, Apr peak ~5800, June ~4200, Jul ~1400, Nov ~5700, Dec ~5000
-const dataValues = [4800, 3000, 4000, 5800, 5000, 4200, 1400, 2500, 4000, 5000, 5700, 5000];
-const maxY = 6000;
-const highlightIndex = 5; // June – marker on curve
 
 const CHART_LINE = "#2862DE";
 const CHART_FILL_VAR = "var(--chart-payroll-fill)";
-/** Lighter than #E2E6EE so dashed grid boxes stay subtle on white */
-// Subtle grid for dark charts (lower contrast)
 const GRID_STROKE = "rgba(148, 163, 184, 0.22)";
 
-/** Smooth cubic curve through points (Catmull-Rom–style control points) */
 function buildSmoothLinePath(points: { x: number; y: number }[]): string {
   if (points.length < 2) return "";
   let d = `M ${points[0].x} ${points[0].y}`;
@@ -35,30 +34,41 @@ function buildSmoothLinePath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-function buildPath(): { line: string; area: string; highlightX: number; highlightY: number } {
-  const paddingLeft = 0;
+function buildPath(values: number[], maxY: number) {
   const w = 400;
   const h = 140;
-  const points = dataValues.map((val, i) => ({
-    x: paddingLeft + (i / 11) * w,
-    y: h - (val / maxY) * h,
+  const safeMax = Math.max(maxY, 1);
+  const points = values.map((val, i) => ({
+    x: (i / (values.length - 1 || 1)) * w,
+    y: h - (val / safeMax) * h,
   }));
   const linePath = buildSmoothLinePath(points);
+  if (points.length === 0) return { line: "", area: "", points };
   const last = points[points.length - 1];
   const first = points[0];
   const areaPath = `${linePath} L ${last.x} ${h} L ${first.x} ${h} Z`;
-  return {
-    line: linePath,
-    area: areaPath,
-    highlightX: points[highlightIndex].x,
-    highlightY: points[highlightIndex].y,
-  };
+  return { line: linePath, area: areaPath, points };
 }
 
-const { line, area, highlightX, highlightY } = buildPath();
+function buildYTicks(maxY: number): { val: number; label: string }[] {
+  const step = maxY / 6;
+  return Array.from({ length: 7 }, (_, i) => {
+    const val = Math.round(maxY - i * step);
+    return { val, label: val.toLocaleString("en-US") };
+  });
+}
 
 export default function PayrollExpensesChart() {
-  const [activePeriod, setActivePeriod] = useState(0);
+  const [activePeriod, setActivePeriod] = useState(0); // default "This month" (rolling 12 months)
+  const period = periods[activePeriod].value;
+  const { data, isLoading } = usePayrollExpenses(period);
+
+  const values = data?.dataPoints ?? Array(12).fill(0);
+  const maxY = data?.maxY ?? 1;
+  const { line, area, points } = buildPath(values, maxY);
+  const yTicks = buildYTicks(maxY);
+  const highlightIdx = values.indexOf(Math.max(...values));
+  const highlight = points[highlightIdx];
 
   return (
     <div className="monthly-analytics-surface flex h-full min-h-0 w-full flex-col rounded-xl border border-[var(--color-dash-icon-bg)] bg-[#fcfcfc] py-6 pl-4 pr-6">
@@ -70,9 +80,9 @@ export default function PayrollExpensesChart() {
             role="tablist"
             aria-label="Chart period"
           >
-            {periods.map((label, i) => (
+            {periods.map((p, i) => (
               <button
-                key={label}
+                key={p.value}
                 type="button"
                 role="tab"
                 aria-selected={i === activePeriod}
@@ -84,7 +94,7 @@ export default function PayrollExpensesChart() {
                     : "bg-transparent text-[#9EA6B3]"
                 )}
               >
-                {label}
+                {p.label}
               </button>
             ))}
           </div>
@@ -92,102 +102,75 @@ export default function PayrollExpensesChart() {
       </div>
 
       <div className="overflow-x-auto">
-      <div className="flex min-h-0 min-w-[420px] flex-col gap-2">
-        <div className="flex min-h-0 flex-1 gap-2">
-        {/* Y-axis — all labels absolutely positioned at their chart value */}
-        <div className="relative w-10 shrink-0">
-          {([
-            { val: 6000, label: "6,000" },
-            { val: 5000, label: "5,000" },
-            { val: 4000, label: "4,000" },
-            { val: 3000, label: "3,000" },
-            { val: 2000, label: "2,000" },
-            { val: 1000, label: "1,000" },
-            { val: 0,    label: "0"     },
-          ]).map(({ val, label }) => (
-            <span
-              key={val}
-              className="absolute right-1 text-right text-xs tabular-nums leading-none text-[#94a3b8]"
-              style={{
-                top: `${((6000 - val) / 6000) * 100}%`,
-                transform: "translateY(-50%)",
-              }}
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-        {/* Chart */}
-        <div className="min-h-[300px] min-w-0 flex-1">
-          <svg
-            viewBox="0 0 400 140"
-            className="h-full min-h-[300px] w-full"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient id="payrollLineGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={CHART_FILL_VAR} stopOpacity={0.85} />
-                <stop offset="55%" stopColor={CHART_FILL_VAR} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={CHART_FILL_VAR} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            {/* 5 equally spaced horizontal grid lines */}
-            {[0, 1, 2, 3, 4].map((i) => (
-              <line
-                key={`h-${i}`}
-                x1={0}
-                y1={(i / 4) * 140}
-                x2={400}
-                y2={(i / 4) * 140}
-                stroke={GRID_STROKE}
-                strokeWidth="0.85"
-                strokeDasharray="2 2"
-                strokeLinecap="round"
-              />
+        <div className="flex min-h-0 min-w-[420px] flex-col gap-2">
+          <div className="flex min-h-0 flex-1 gap-2">
+            <div className="relative w-10 shrink-0">
+              {yTicks.map(({ val, label }) => (
+                <span
+                  key={val}
+                  className="absolute right-1 text-right text-xs tabular-nums leading-none text-[#94a3b8]"
+                  style={{
+                    top: `${((maxY - val) / maxY) * 100}%`,
+                    transform: "translateY(-50%)",
+                  }}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <div className="min-h-[300px] min-w-0 flex-1">
+              <svg viewBox="0 0 400 140" className="h-full min-h-[300px] w-full" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="payrollLineGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART_FILL_VAR} stopOpacity={0.85} />
+                    <stop offset="55%" stopColor={CHART_FILL_VAR} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={CHART_FILL_VAR} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <line
+                    key={`h-${i}`}
+                    x1={0}
+                    y1={(i / 4) * 140}
+                    x2={400}
+                    y2={(i / 4) * 140}
+                    stroke={GRID_STROKE}
+                    strokeWidth="0.85"
+                    strokeDasharray="2 2"
+                    strokeLinecap="round"
+                  />
+                ))}
+                {Array.from({ length: 13 }, (_, i) => (
+                  <line
+                    key={`v-${i}`}
+                    x1={(i / 12) * 400}
+                    y1={0}
+                    x2={(i / 12) * 400}
+                    y2={140}
+                    stroke={GRID_STROKE}
+                    strokeWidth="0.85"
+                    strokeDasharray="2 2"
+                    strokeLinecap="round"
+                  />
+                ))}
+                {!isLoading && (
+                  <>
+                    <path fill="url(#payrollLineGrad)" d={area} />
+                    <path d={line} fill="none" stroke={CHART_LINE} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+                    {highlight && (
+                      <circle cx={highlight.x} cy={highlight.y} r={4.25} fill="#fff" stroke={CHART_LINE} strokeWidth={1.35} />
+                    )}
+                  </>
+                )}
+              </svg>
+            </div>
+          </div>
+          <div className="mt-2 grid shrink-0 grid-cols-12 pl-[40px] text-[10px] sm:pl-[48px] sm:text-xs text-[#94a3b8]">
+            {months.map((m) => (
+              <span key={m} className="text-center">{m}</span>
             ))}
-            {Array.from({ length: 13 }, (_, i) => (
-              <line
-                key={`v-${i}`}
-                x1={(i / 12) * 400}
-                y1={0}
-                x2={(i / 12) * 400}
-                y2={140}
-                stroke={GRID_STROKE}
-                strokeWidth="0.85"
-                strokeDasharray="2 2"
-                strokeLinecap="round"
-              />
-            ))}
-            {/* Area fill */}
-            <path fill="url(#payrollLineGrad)" d={area} />
-            {/* Line — thin smooth stroke */}
-            <path
-              d={line}
-              fill="none"
-              stroke={CHART_LINE}
-              strokeWidth="1.25"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Highlight: white fill + blue ring */}
-            <circle
-              cx={highlightX}
-              cy={highlightY}
-              r={4.25}
-              fill="#fff"
-              stroke={CHART_LINE}
-              strokeWidth={1.35}
-            />
-          </svg>
+          </div>
         </div>
-        </div>
-      {/* X-axis */}
-      <div className="mt-2 grid shrink-0 grid-cols-12 pl-[40px] text-[10px] sm:pl-[48px] sm:text-xs text-[#94a3b8]">
-        {months.map((m) => (
-          <span key={m} className="text-center">{m}</span>
-        ))}
-      </div>
-      </div>
       </div>
     </div>
   );

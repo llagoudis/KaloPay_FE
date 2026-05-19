@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
+import { useCreateTransfer } from "@/hooks/employer/useUserPanel";
 
 type AddressType = "whitelisted" | "onetime";
 
@@ -60,6 +61,41 @@ const inputClass =
 const poppins = { fontFamily: "var(--font-poppins)" as const };
 
 function FiatTransfersForm({ onBack }: { onBack: () => void }) {
+  const [currency, setCurrency] = useState("USD");
+  const [amount, setAmount] = useState("");
+  const [accountHolder, setAccountHolder] = useState("");
+  const [iban, setIban] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [reference, setReference] = useState("");
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const createMutation = useCreateTransfer();
+
+  async function handleCreate() {
+    setStatus(null);
+    if (!currency || !accountHolder || !iban || !bankName) {
+      setStatus({ ok: false, text: "Currency, account holder, IBAN and bank name are required" });
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      setStatus({ ok: false, text: "Enter an amount greater than 0" });
+      return;
+    }
+    try {
+      const res = await createMutation.mutateAsync({
+        kind: "fiat",
+        currency,
+        amount: Number(amount),
+        beneficiary: accountHolder,
+        address: iban,
+        description: reference || `Fiat transfer to ${bankName}`,
+      });
+      setStatus({ ok: true, text: `Transfer ${res.ref} created (${res.status})` });
+      setAmount(""); setAccountHolder(""); setIban(""); setBankName(""); setReference("");
+    } catch (e) {
+      setStatus({ ok: false, text: (e as Error).message ?? "Transfer failed" });
+    }
+  }
+
   return (
     <div className="w-full">
       <div className="transfers-outer-card mb-6 rounded-xl bg-[#f7f7fa] px-6 py-5 md:px-8">
@@ -77,7 +113,7 @@ function FiatTransfersForm({ onBack }: { onBack: () => void }) {
           <div>
             <label className={labelClass} style={labelStyle}>Select currency</label>
             <div className="relative">
-              <select className={inputClass + " pr-10 appearance-none"} style={poppins}>
+              <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputClass + " pr-10 appearance-none"} style={poppins}>
                 <option value="">Select currency</option>
                 {FIAT_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -110,8 +146,8 @@ function FiatTransfersForm({ onBack }: { onBack: () => void }) {
           <div className="mb-6">
             <p className="mb-4 text-sm font-medium text-[#374151]" style={poppins}>Customer Info</p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div><label className={labelClass} style={labelStyle}>Account holder name</label><input type="text" placeholder="Enter account holder name" className={inputClass} style={poppins} /></div>
-              <div><label className={labelClass} style={labelStyle}>IBAN<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter IBAN no" className={inputClass} style={poppins} /></div>
+              <div><label className={labelClass} style={labelStyle}>Account holder name<span className="text-[#E22626]">*</span></label><input type="text" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} placeholder="Enter account holder name" className={inputClass} style={poppins} /></div>
+              <div><label className={labelClass} style={labelStyle}>IBAN<span className="text-[#E22626]">*</span></label><input type="text" value={iban} onChange={(e) => setIban(e.target.value)} placeholder="Enter IBAN no" className={inputClass} style={poppins} /></div>
               <div><label className={labelClass} style={labelStyle}>Street name<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter street name" className={inputClass} style={poppins} /></div>
               <div><label className={labelClass} style={labelStyle}>BIC/SWIFT<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter BIC/SWIFT" className={inputClass} style={poppins} /></div>
               <div><label className={labelClass} style={labelStyle}>Flat/Appartment number (if applicable)</label><input type="text" placeholder="Enter flat/appartment number" className={inputClass} style={poppins} /></div>
@@ -135,10 +171,11 @@ function FiatTransfersForm({ onBack }: { onBack: () => void }) {
           <div>
             <p className="mb-4 text-sm font-medium text-[#374151]" style={poppins}>Bank Info</p>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div><label className={labelClass} style={labelStyle}>Bank name<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter bank name" className={inputClass} style={poppins} /></div>
+              <div><label className={labelClass} style={labelStyle}>Bank name<span className="text-[#E22626]">*</span></label><input type="text" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Enter bank name" className={inputClass} style={poppins} /></div>
               <div><label className={labelClass} style={labelStyle}>Bank address<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter bank address" className={inputClass} style={poppins} /></div>
               <div><label className={labelClass} style={labelStyle}>SWIFT/BIC<span className="text-[#E22626]">*</span></label><input type="text" placeholder="Enter SWIFT/BIC" className={inputClass} style={poppins} /></div>
-              <div><label className={labelClass} style={labelStyle}>Reference</label><input type="text" placeholder="Enter reference" className={inputClass} style={poppins} /></div>
+              <div><label className={labelClass} style={labelStyle}>Amount<span className="text-[#E22626]">*</span></label><input type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter amount" className={inputClass} style={poppins} /></div>
+              <div className="md:col-span-2"><label className={labelClass} style={labelStyle}>Reference</label><input type="text" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Enter reference" className={inputClass} style={poppins} /></div>
               <div>
                 <label className={labelClass} style={labelStyle}>Select country<span className="text-[#E22626]">*</span></label>
                 <div className="relative">
@@ -153,9 +190,26 @@ function FiatTransfersForm({ onBack }: { onBack: () => void }) {
           </div>
         </div>
 
+        {status && (
+          <div className={cn(
+            "mt-6 rounded-lg px-4 py-3 text-sm",
+            status.ok ? "bg-[#dcfce7] text-[#166534]" : "bg-[#fee2e2] text-[#991b1b]"
+          )}>
+            {status.text}
+          </div>
+        )}
+
         <div className="mt-8 flex justify-between gap-3">
           <button type="button" onClick={onBack} className="whitespace-nowrap rounded-[8px] border border-[#DFDFDF] bg-white px-4 py-3 text-[#6B7280] transition hover:bg-[#f9fafb] sm:px-6" style={{ ...poppins, fontWeight: 500, fontSize: "14px" }}>Back</button>
-          <button type="button" className="whitespace-nowrap rounded-lg bg-[#0F50DB] px-4 py-3 text-white shadow-sm transition hover:bg-[#0D46C3] sm:px-6" style={{ ...poppins, fontWeight: 500, fontSize: "14px" }}>Create template</button>
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={createMutation.isPending}
+            className="whitespace-nowrap rounded-lg bg-[#0F50DB] px-4 py-3 text-white shadow-sm transition hover:bg-[#0D46C3] disabled:opacity-50 sm:px-6"
+            style={{ ...poppins, fontWeight: 500, fontSize: "14px" }}
+          >
+            {createMutation.isPending ? "Creating…" : "Create Transfer"}
+          </button>
         </div>
       </div>
     </div>
@@ -232,7 +286,15 @@ export default function EmployerTransfersPage() {
   const [twoFACode, setTwoFACode] = useState("");
   const [showFiatScreen, setShowFiatScreen] = useState(false);
 
+  const createTransferMutation = useCreateTransfer();
+  const [transferStatus, setTransferStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
   const handleCreateTransfer = () => {
+    if (!amount || Number(amount) <= 0) {
+      setTransferStatus({ ok: false, text: "Enter an amount greater than 0" });
+      return;
+    }
+    setTransferStatus(null);
     setShowConfirmModal(true);
   };
 
@@ -241,9 +303,24 @@ export default function EmployerTransfersPage() {
     setShow2FAModal(true);
   };
 
-  const handle2FAContinue = () => {
+  const handle2FAContinue = async () => {
     setShow2FAModal(false);
-    setShowFiatScreen(true);
+    try {
+      const res = await createTransferMutation.mutateAsync({
+        kind: "crypto",
+        currency: fromCurrency,
+        amount: Number(amount),
+        address: address || undefined,
+        description: description || undefined,
+      });
+      setTransferStatus({ ok: true, text: `Transfer ${res.ref} submitted` });
+      setAmount("");
+      setAddress("");
+      setDescription("");
+      setTwoFACode("");
+    } catch (e) {
+      setTransferStatus({ ok: false, text: (e as Error).message ?? "Transfer failed" });
+    }
   };
 
   const withdrawalAmount = amount || "0.3434343 871";
@@ -384,11 +461,24 @@ export default function EmployerTransfersPage() {
                 />
               </div>
 
+              {/* Status banner */}
+              {transferStatus && (
+                <div
+                  className={cn(
+                    "rounded-lg px-4 py-3 text-sm",
+                    transferStatus.ok ? "bg-[#dcfce7] text-[#166534]" : "bg-[#fee2e2] text-[#991b1b]"
+                  )}
+                >
+                  {transferStatus.text}
+                </div>
+              )}
+
               {/* Create transfer */}
               <button
                 type="button"
                 onClick={handleCreateTransfer}
-                className="w-full rounded-lg bg-[#0F4FDB] py-3 text-white shadow-sm transition hover:opacity-90"
+                disabled={createTransferMutation.isPending}
+                className="w-full rounded-lg bg-[#0F4FDB] py-3 text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
                 style={{
                   fontFamily: "Poppins, var(--font-poppins)",
                   fontWeight: 500,
