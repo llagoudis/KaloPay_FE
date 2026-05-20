@@ -36,3 +36,26 @@ export function getTransaction(token: string, id: string) {
     token,
   });
 }
+
+export interface CreateTransactionInput {
+  transaction_ref?: string;
+  account_id?: number | null;
+  sender?: string;
+  beneficiary?: string;
+  amount: number | string;
+  currency?: string;
+  fee?: number | string;
+  transaction_type?: string;
+  payment_type?: string;
+  transaction_status?: string;
+  reference?: string;
+  description?: string;
+}
+
+export function createTransaction(token: string, data: CreateTransactionInput) {
+  return apiClient<{ transaction: AdminTransaction }>("/admin/transactions", {
+    method: "POST",
+    token,
+    body: data,
+  });
+}

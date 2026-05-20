@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
+import { useAdminTransactions } from "@/hooks/admin/useTransactions";
+import AddTransactionModal from "@/components/admin/transactions/AddTransactionModal";
+import type { AdminTransaction } from "@/lib/api/admin/transactions";
 
 type TransactionRow = {
   createdOn: string;
@@ -16,115 +19,42 @@ type TransactionRow = {
   transactionType: string;
   transactionId: string;
   account: string;
-  accountBank?: boolean;
-  bankDetails?: string;
-  iban?: string;
-  swiftBic?: string;
-  bankName?: string;
   transactionStatus: string;
   paymentType: string;
 };
 
-const mockTransactions: TransactionRow[] = [
-  {
-    createdOn: "14.12.2023 10:22:19 AM",
-    sender: "External",
-    beneficiary: "Justin Paul",
-    amount: "0.01076679",
-    currency: "BTC_TEST",
-    transactionType: "Outgoing Transfer",
-    transactionId: "b21d80-170-dato-dms-b4d84eb0f2",
-    account: "IgrRehl7HuckpwWkkmYqoH7oxeD0sTU",
-    transactionStatus: "Completed",
-    paymentType: "SEPA SCT",
-  },
-  {
-    createdOn: "14.12.2023 10:22:19 AM",
-    sender: "External",
-    beneficiary: "Justin Paul",
-    amount: "0.01076679",
-    currency: "Euro",
-    transactionType: "Outgoing Transfer",
-    transactionId: "b21d80-170-dato-dms-b4d84eb0f2",
-    account: "",
-    accountBank: true,
-    bankDetails: "General Payments Gate LTD",
-    iban: "GB50TRWI23148510000949",
-    swiftBic: "TRWIGB2LXXX",
-    bankName: "My EU Pay Ltd.",
-    transactionStatus: "Completed",
-    paymentType: "SEPA Instant",
-  },
-  {
-    createdOn: "14.12.2023 10:22:19 AM",
-    sender: "External",
-    beneficiary: "Justin Paul",
-    amount: "0.01076679",
-    currency: "BTC_TEST",
-    transactionType: "Outgoing Transfer",
-    transactionId: "b21d80-170-dato-dms-b4d84eb0f2",
-    account: "IgrRehl7HuckpwWkkmYqoH7oxeD0sTU",
-    transactionStatus: "Completed",
-    paymentType: "SWIFT",
-  },
-  {
-    createdOn: "14.12.2023 10:22:19 AM",
-    sender: "External",
-    beneficiary: "Justin Paul",
-    amount: "0.01076679",
-    currency: "Euro",
-    transactionType: "Outgoing Transfer",
-    transactionId: "b21d80-170-dato-dms-b4d84eb0f2",
-    account: "",
-    accountBank: true,
-    bankDetails: "Payments Gate UK Ltd",
-    iban: "GB82WEST12345698765432",
-    swiftBic: "WESTGB2LXXX",
-    bankName: "Westminster Bank",
-    transactionStatus: "Completed",
-    paymentType: "SEPA SCT",
-  },
-  {
-    createdOn: "14.12.2023 10:22:19 AM",
-    sender: "External",
-    beneficiary: "Justin Paul",
-    amount: "0.01076679",
-    currency: "BTC_TEST",
-    transactionType: "Outgoing Transfer",
-    transactionId: "b21d80-170-dato-dms-b4d84eb0f2",
-    account: "IgrRehl7HuckpwWkkmYqoH7oxeD0sTU",
-    transactionStatus: "Completed",
-    paymentType: "SEPA Instant",
-  },
-];
+function toRow(t: AdminTransaction): TransactionRow {
+  const created = t.created_at ? new Date(t.created_at).toLocaleString() : "—";
+  const extra = t as unknown as Record<string, unknown>;
+  return {
+    createdOn: created,
+    sender: (extra.sender as string) ?? "External",
+    beneficiary: (extra.beneficiary as string) ?? "—",
+    amount: String(t.amount ?? "0"),
+    currency: t.currency ?? "—",
+    transactionType: t.transactionType ?? t.transaction_type ?? "—",
+    transactionId: t.transactionId ?? t.transaction_ref ?? String(t.id),
+    account: t.account_id != null ? String(t.account_id) : "—",
+    transactionStatus: t.transactionStatus ?? t.transaction_status ?? "pending",
+    paymentType: t.paymentType ?? t.payment_type ?? "—",
+  };
+}
 
 export default function AdminTransactionsPage() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Pending");
+  const [statusFilter, setStatusFilter] = useState<"All" | "Pending" | "Completed">("All");
+  const [addOpen, setAddOpen] = useState(false);
 
-  const filtered = mockTransactions.filter(
-    (t) =>
-      t.beneficiary.toLowerCase().includes(search.toLowerCase()) ||
-      t.sender.toLowerCase().includes(search.toLowerCase()) ||
-      t.transactionId.toLowerCase().includes(search.toLowerCase()) ||
-      t.amount.includes(search) ||
-      t.currency.toLowerCase().includes(search.toLowerCase()) ||
-      t.paymentType.toLowerCase().includes(search.toLowerCase())
-  );
+  const params: Record<string, string> = {};
+  if (search) params.search = search;
+  if (statusFilter !== "All") params.status = statusFilter.toLowerCase();
+
+  const { data, isLoading, error } = useAdminTransactions(params);
+  const rows = useMemo(() => (data?.data ?? []).map(toRow), [data]);
 
   const columns = [
-    {
-      key: "createdOn" as const,
-      header: "Created On",
-      headerClassName: "whitespace-nowrap",
-      render: (v: unknown) => String(v),
-    },
-    {
-      key: "sender" as const,
-      header: "Sender",
-      headerClassName: "whitespace-nowrap",
-      render: (v: unknown) => String(v),
-    },
+    { key: "createdOn" as const, header: "Created On", headerClassName: "whitespace-nowrap", render: (v: unknown) => String(v) },
+    { key: "sender" as const, header: "Sender", headerClassName: "whitespace-nowrap", render: (v: unknown) => String(v) },
     {
       key: "beneficiary" as const,
       header: "Beneficiary",
@@ -138,25 +68,9 @@ export default function AdminTransactionsPage() {
         </Link>
       ),
     },
-    {
-      key: "amount" as const,
-      header: "Amount",
-      headerClassName: "whitespace-nowrap",
-      render: (v: unknown) => String(v),
-    },
-    {
-      key: "currency" as const,
-      header: "Currency",
-      headerClassName: "whitespace-nowrap",
-      render: (v: unknown) => String(v),
-    },
-    {
-      key: "transactionType" as const,
-      header: "Transaction Type",
-      headerClassName: "whitespace-nowrap",
-      className: "min-w-[160px]",
-      render: (v: unknown) => String(v),
-    },
+    { key: "amount" as const, header: "Amount", headerClassName: "whitespace-nowrap", render: (v: unknown) => String(v) },
+    { key: "currency" as const, header: "Currency", headerClassName: "whitespace-nowrap", render: (v: unknown) => String(v) },
+    { key: "transactionType" as const, header: "Transaction Type", headerClassName: "whitespace-nowrap", className: "min-w-[160px]", render: (v: unknown) => String(v) },
     {
       key: "transactionId" as const,
       header: "Transaction ID",
@@ -171,56 +85,22 @@ export default function AdminTransactionsPage() {
         </Link>
       ),
     },
-    {
-      key: "account" as const,
-      header: "Account",
-      headerClassName: "whitespace-nowrap",
-      className: "min-w-[200px]",
-      render: (_: unknown, row: TransactionRow) => {
-        if (row.accountBank && (row.bankDetails || row.iban || row.swiftBic || row.bankName)) {
-          return (
-            <div className="text-sm text-gray-700 leading-relaxed">
-              {row.bankDetails && <div>Bank Details: {row.bankDetails}</div>}
-              {row.iban && <div>IBAN: {row.iban}</div>}
-              {row.swiftBic && <div>SWIFT/BIC: {row.swiftBic}</div>}
-              {row.bankName && <div>Bank Name: {row.bankName}</div>}
-            </div>
-          );
-        }
-        return <span className="break-all">{row.account || "—"}</span>;
-      },
-    },
+    { key: "account" as const, header: "Account", headerClassName: "whitespace-nowrap", className: "min-w-[120px]", render: (v: unknown) => <span className="break-all">{String(v)}</span> },
     {
       key: "transactionStatus" as const,
       header: "Transaction Status",
       headerClassName: "whitespace-nowrap",
-      render: (value: unknown) => <Badge label={String(value)} variant="success" />,
+      render: (value: unknown) => {
+        const v = String(value).toLowerCase();
+        const variant: "success" | "warning" | "danger" =
+          v === "completed" ? "success" :
+          v === "failed" || v === "cancelled" ? "danger" :
+          "warning";
+        return <Badge label={String(value)} variant={variant} />;
+      },
     },
-    {
-      key: "paymentType" as const,
-      header: "Payment Type",
-      headerClassName: "whitespace-nowrap",
-      render: (v: unknown) => String(v),
-    },
-    {
-      key: "actions" as const,
-      header: "",
-      className: "w-10",
-      render: () => (
-        <button
-          type="button"
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Actions"
-        >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-          </svg>
-        </button>
-      ),
-    },
+    { key: "paymentType" as const, header: "Payment Type", headerClassName: "whitespace-nowrap", render: (v: unknown) => String(v) },
   ];
-
-  const tableData = filtered.map((t) => ({ ...t, actions: null }));
 
   return (
     <div className="w-full space-y-6">
@@ -242,7 +122,6 @@ export default function AdminTransactionsPage() {
 
       <div className="w-full rounded-[10px] bg-white p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {/* Search: mobile par full width, desktop par flex-1 */}
           <label className="relative w-full sm:min-w-0 sm:flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,35 +136,44 @@ export default function AdminTransactionsPage() {
               className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </label>
-          {/* Buttons: mobile par side-by-side equal width, desktop par inline */}
           <div className="flex w-full gap-2 sm:w-auto sm:flex-none">
-            <button
-              type="button"
-              onClick={() => setStatusFilter(statusFilter === "Pending" ? "All" : "Pending")}
-              className="h-10 flex-1 rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:w-auto"
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="h-10 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:w-auto"
             >
-              {statusFilter}
-            </button>
+              <option value="All">All</option>
+              <option value="Pending">Pending</option>
+              <option value="Completed">Completed</option>
+            </select>
             <Button
               variant="primary"
               size="md"
               className="flex-1 sm:flex-none sm:w-auto"
+              onClick={() => setAddOpen(true)}
             >
               + Add new
             </Button>
           </div>
         </div>
 
-        {/* Full table with horizontal scroll — table min-w-max se scrollbar dikhega */}
-        <Table<TransactionRow & { actions: null }>
+        {error ? (
+          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            Failed to load transactions: {(error as Error).message}
+          </div>
+        ) : null}
+
+        <Table<TransactionRow>
           columns={columns}
-          data={tableData}
-          emptyMessage="No transactions found."
+          data={rows}
+          emptyMessage={isLoading ? "Loading transactions…" : "No transactions found."}
           className="mt-6"
           tableClassName="min-w-max"
           bordered={false}
         />
       </div>
+
+      <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
   );
 }

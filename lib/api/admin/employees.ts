@@ -1,42 +1,63 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getEmployees(params?: Record<string, string>) {
+export interface AdminEmployee {
+  id: number;
+  company_id: number | null;
+  user_id: number | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  position: string | null;
+  department: string | null;
+  salary: string | number | null;
+  status: string;
+  date_of_birth: string | null;
+  contract_start: string | null;
+  contract_end: string | null;
+  nationality: string | null;
+  gender: string | null;
+  marital_status: string | null;
+  dependants: number | null;
+  created_at: string;
+  updated_at: string;
+  [k: string]: unknown;
+}
+
+export interface EmployeeListResponse {
+  data: AdminEmployee[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export function getEmployees(token: string, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/admin/employees${query}`);
-  if (!res.ok) throw new Error("Failed to fetch employees");
-  return res.json();
+  return apiClient<EmployeeListResponse>(`/admin/employees${query}`, { token });
 }
 
-export async function getEmployee(id: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/employees/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch employee");
-  return res.json();
+export function getEmployee(token: string, id: string) {
+  return apiClient<{ employee: AdminEmployee }>(`/admin/employees/${id}`, { token });
 }
 
-export async function createEmployee(data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/admin/employees`, {
+export function createEmployee(token: string, data: Record<string, unknown>) {
+  return apiClient<{ employee: AdminEmployee }>("/admin/employees", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    token,
+    body: data,
   });
-  if (!res.ok) throw new Error("Failed to create employee");
-  return res.json();
 }
 
-export async function updateEmployee(id: string, data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/admin/employees/${id}`, {
+export function updateEmployee(token: string, id: string, data: Record<string, unknown>) {
+  return apiClient<{ employee: AdminEmployee }>(`/admin/employees/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    token,
+    body: data,
   });
-  if (!res.ok) throw new Error("Failed to update employee");
-  return res.json();
 }
 
-export async function deleteEmployee(id: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/employees/${id}`, {
+export function deleteEmployee(token: string, id: string) {
+  return apiClient<{ success: boolean }>(`/admin/employees/${id}`, {
     method: "DELETE",
+    token,
   });
-  if (!res.ok) throw new Error("Failed to delete employee");
-  return res.json();
 }

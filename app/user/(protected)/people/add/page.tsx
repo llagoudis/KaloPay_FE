@@ -316,11 +316,11 @@ export default function AddEmployeePage() {
   }
 
   const inputClass =
-    "w-full rounded-lg border border-[#DFDFDF] bg-transparent px-3 py-2 align-middle text-[16px] font-medium leading-5 tracking-normal text-[#1F2937] placeholder:font-normal placeholder:text-[14px] placeholder:leading-[100%] placeholder:tracking-normal placeholder:text-[color:var(--color-add-employee-date-icon)] placeholder:[font-family:var(--font-poppins),Poppins,sans-serif] [font-family:var(--font-poppins),Poppins,sans-serif] focus:outline-none dark:border-[#DFDFDF] dark:text-[#1F2937] dark:placeholder:font-normal dark:placeholder:text-[14px] dark:placeholder:leading-[100%] dark:placeholder:tracking-normal dark:placeholder:text-[color:var(--color-add-employee-date-icon)] dark:placeholder:[font-family:var(--font-poppins),Poppins,sans-serif]";
+    "w-full rounded-lg border border-[#DFDFDF] bg-white px-3 py-2 align-middle text-[16px] font-medium leading-5 tracking-normal text-[#1F2937] placeholder:font-normal placeholder:text-[14px] placeholder:leading-[100%] placeholder:tracking-normal placeholder:text-[color:var(--color-add-employee-date-icon)] placeholder:[font-family:var(--font-poppins),Poppins,sans-serif] [font-family:var(--font-poppins),Poppins,sans-serif] focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400";
   /** Empty select / date: muted #A8AABC (see globals .add-employee-field-muted) */
   const mutedIfEmpty = (value: string) => (value.trim() === "" ? "add-employee-field-muted" : "");
   const labelClass =
-    "add-employee-label mb-1.5 block align-middle text-[16px] font-medium leading-5 tracking-normal text-[#1F2937] [font-family:var(--font-poppins),Poppins,sans-serif]";
+    "add-employee-label mb-1.5 block align-middle text-[16px] font-medium leading-5 tracking-normal text-[#1F2937] [font-family:var(--font-poppins),Poppins,sans-serif] dark:text-slate-200";
 
   return (
     <div className="min-h-full w-full bg-dash-page" data-dashboard-theme data-page="add-employee">

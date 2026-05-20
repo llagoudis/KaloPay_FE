@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Dropdown from "@/components/ui/Dropdown";
 import { ROUTES } from "@/lib/constants/routes";
+import { useCreateCompany } from "@/hooks/admin/useCompanies";
 
 const COUNTRY_CODE_OPTIONS = [
   "+93 🇦🇫",
@@ -157,6 +159,8 @@ const selectClass = (val: string) =>
   `w-full min-h-[2.75rem] rounded-lg border border-gray-300 px-4 py-2.5 bg-white ${val === "" ? "text-gray-500" : "text-gray-900"}`;
 
 export default function AdminAddCompanyPage() {
+  const router = useRouter();
+  const createMut = useCreateCompany();
   const [companyType, setCompanyType] = useState("");
   const [owner, setOwner] = useState("");
   const [name, setName] = useState("");
@@ -168,10 +172,59 @@ export default function AdminAddCompanyPage() {
   const [verificationLevel, setVerificationLevel] = useState("");
   const [phoneCountryCode, setPhoneCountryCode] = useState("🇳🇵 +977");
   const incorporationDateRef = useRef<HTMLInputElement>(null);
+  const [incorporationDate, setIncorporationDate] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [url, setUrl] = useState("");
   const [sameAsIncorporation, setSameAsIncorporation] = useState(false);
   const [skipTransferPreApproval, setSkipTransferPreApproval] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitError(null);
+    if (!name.trim()) {
+      setSubmitError("Company name is required.");
+      return;
+    }
+    const dialCode = phoneCountryCode.split(" ").pop() ?? "";
+    const fullPhone = phone ? `${dialCode} ${phone}`.trim() : undefined;
+    const address = [addressLine1, addressLine2, city, stateName, postalCode]
+      .filter(Boolean)
+      .join(", ") || undefined;
+    try {
+      await createMut.mutateAsync({
+        name: name.trim(),
+        owner_name: owner || undefined,
+        email: email || undefined,
+        phone: fullPhone,
+        address,
+        country: country || undefined,
+        industry: companyType || undefined,
+        business_type: businessType || undefined,
+        registration_number: registrationNumber || undefined,
+        tax_id: taxId || undefined,
+        incorporation_date: incorporationDate || undefined,
+        verification_status: verificationStatus || undefined,
+        account_status: accountStatus || undefined,
+        verification_level: verificationLevel || undefined,
+      });
+      router.push(ROUTES.admin.companies);
+    } catch (err) {
+      setSubmitError((err as Error).message);
+    }
+    void url; // currently captured but not on backend yet
+  };
 
   return (
     <div className="admin-add-company-page w-full space-y-4 sm:space-y-6">
@@ -190,22 +243,10 @@ export default function AdminAddCompanyPage() {
       </div>
 
       <div className="details overflow-hidden rounded-2xl bg-white">
-        <form className="block" onSubmit={(e) => e.preventDefault()}>
+        <form className="block" onSubmit={handleSubmit}>
         {/* Upload Picture */}
         <SectionBlock title="Upload Picture">
-          <div
-            className="flex cursor-pointer flex-col items-center justify-center gap-2 text-center"
-            style={{
-              width: 104,
-              height: 104,
-              border: "1.5px dashed #C4C4C4",
-              borderRadius: 8,
-              backgroundColor: "#f7f7f7",
-            }}
-          >
-            <span style={{ fontSize: 28, fontWeight: 300, lineHeight: 1, color: "#6B7280" }}>+</span>
-            <p style={{ fontSize: 14, color: "#6B7280" }}>Upload</p>
-          </div>
+          <CompanyLogoUpload />
         </SectionBlock>
 
         {/* Company Details */}
@@ -294,8 +335,18 @@ export default function AdminAddCompanyPage() {
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Incorporation Date</label>
               <div className="relative">
-                <input ref={incorporationDateRef} type="date" className={`${inputClass} pr-10`} style={{ colorScheme: "light" }} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400" onClick={() => incorporationDateRef.current?.showPicker()}>
+                <input
+                  ref={incorporationDateRef}
+                  type="date"
+                  value={incorporationDate}
+                  onChange={(e) => setIncorporationDate(e.target.value)}
+                  className={`${inputClass} kp-date pr-10`}
+                  style={{ colorScheme: "light" }}
+                />
+                <span
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  aria-hidden
+                >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -308,11 +359,23 @@ export default function AdminAddCompanyPage() {
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Tax Identification Number</label>
-              <input type="text" placeholder="Enter" className={inputClass} />
+              <input
+                type="text"
+                placeholder="Enter"
+                value={taxId}
+                onChange={(e) => setTaxId(e.target.value)}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Registration Number</label>
-              <input type="text" placeholder="Enter" className={inputClass} />
+              <input
+                type="text"
+                placeholder="Enter"
+                value={registrationNumber}
+                onChange={(e) => setRegistrationNumber(e.target.value)}
+                className={inputClass}
+              />
             </div>
           </div>
         </SectionBlock>
@@ -322,30 +385,30 @@ export default function AdminAddCompanyPage() {
           <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Country</label>
-              <SelectWithArrow className={selectClass("")}>
+              <SelectWithArrow value={country} onChange={(e) => setCountry(e.target.value)} className={selectClass(country)}>
                 <option value="">Select</option>
                 {["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Brazil","Bulgaria","Cambodia","Cameroon","Canada","Chile","China","Colombia","Croatia","Cuba","Cyprus","Czech Republic","Denmark","Dominican Republic","Ecuador","Egypt","Estonia","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Latvia","Lebanon","Lithuania","Luxembourg","Malaysia","Maldives","Malta","Mexico","Moldova","Mongolia","Morocco","Nepal","Netherlands","New Zealand","Nigeria","Norway","Oman","Pakistan","Panama","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","South Korea","Spain","Sri Lanka","Sweden","Switzerland","Syria","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"].map(c => <option key={c} value={c}>{c}</option>)}
               </SelectWithArrow>
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>City</label>
-              <input type="text" placeholder="Enter city" className={inputClass} />
+              <input type="text" placeholder="Enter city" value={city} onChange={(e) => setCity(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>State</label>
-              <input type="text" placeholder="Enter state" className={inputClass} />
+              <input type="text" placeholder="Enter state" value={stateName} onChange={(e) => setStateName(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Postal Code</label>
-              <input type="text" placeholder="Enter" className={inputClass} />
+              <input type="text" placeholder="Enter" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Address Line 1</label>
-              <input type="text" placeholder="Enter" className={inputClass} />
+              <input type="text" placeholder="Enter" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Address Line 2</label>
-              <input type="text" placeholder="Enter" className={inputClass} />
+              <input type="text" placeholder="Enter" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} className={inputClass} />
             </div>
           </div>
         </SectionBlock>
@@ -473,17 +536,16 @@ export default function AdminAddCompanyPage() {
                       const [dialCode, flag] = value.split(" ");
                       setPhoneCountryCode(`${flag} ${dialCode}`);
                     }}
-                    menuClassName="max-h-[50vh]"
-                    placement="top"
+                    className="max-h-[50vh]"
                   />
                 </div>
-                <input type="tel" placeholder="980-00-000-00" className="flex-1 border-0 bg-transparent px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:ring-0 focus:ring-inset" />
+                <input type="tel" placeholder="980-00-000-00" value={phone} onChange={(e) => setPhone(e.target.value)} className="flex-1 border-0 bg-transparent px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:ring-0 focus:ring-inset" />
               </div>
             </div>
             <div>
               <label className="mb-2 block" style={LABEL_STYLE}>Email</label>
               <div className="relative">
-                <input type="email" placeholder="Enter email" className={`${inputClass} pr-10`} />
+                <input type="email" placeholder="Enter email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputClass} pr-10`} />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <EnvelopeIcon />
                 </span>
@@ -491,27 +553,33 @@ export default function AdminAddCompanyPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="mb-2 block" style={LABEL_STYLE}>URL</label>
-              <input type="text" placeholder="Enter URL" className={inputClass} />
+              <input type="text" placeholder="Enter URL" value={url} onChange={(e) => setUrl(e.target.value)} className={inputClass} />
             </div>
           </div>
         </SectionBlock>
 
         {/* Back & Save — narrow buttons, Back left / Save right */}
-        <div className="add-company-form-footer flex w-full items-center justify-between gap-3 border-t border-gray-200 p-4 sm:p-5">
-          <Link
-            href={ROUTES.admin.companies}
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium hover:bg-gray-50 sm:h-11 sm:px-6"
-            style={{ color: "#6B7280", borderRadius: "8px" }}
-          >
-            Back
-          </Link>
-          <button
-            type="submit"
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg px-6 text-sm font-medium text-white sm:h-11 sm:px-8"
-            style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
-          >
-            Save
-          </button>
+        <div className="add-company-form-footer flex w-full flex-col items-stretch gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          {submitError ? (
+            <div className="flex-1 rounded-md bg-red-50 p-2 text-sm text-red-700">{submitError}</div>
+          ) : <div className="flex-1" />}
+          <div className="flex items-center justify-end gap-3">
+            <Link
+              href={ROUTES.admin.companies}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white px-5 text-sm font-medium hover:bg-gray-50 sm:h-11 sm:px-6"
+              style={{ color: "#6B7280", borderRadius: "8px" }}
+            >
+              Back
+            </Link>
+            <button
+              type="submit"
+              disabled={createMut.isPending}
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg px-6 text-sm font-medium text-white disabled:opacity-60 sm:h-11 sm:px-8"
+              style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
+            >
+              {createMut.isPending ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
       </form>
       </div>
@@ -541,5 +609,68 @@ function EnvelopeIcon() {
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
     </svg>
+  );
+}
+
+function CompanyLogoUpload() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  return (
+    <div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleChange}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="flex cursor-pointer flex-col items-center justify-center gap-2 text-center hover:border-gray-400"
+        style={{
+          width: 104,
+          height: 104,
+          border: "1.5px dashed #C4C4C4",
+          borderRadius: 8,
+          backgroundColor: "#f7f7f7",
+          backgroundImage: preview ? `url(${preview})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+        aria-label="Upload company logo"
+      >
+        {!preview ? (
+          <>
+            <span style={{ fontSize: 28, fontWeight: 300, lineHeight: 1, color: "#6B7280" }}>+</span>
+            <p style={{ fontSize: 14, color: "#6B7280" }}>Upload</p>
+          </>
+        ) : null}
+      </button>
+      {preview ? (
+        <button
+          type="button"
+          className="mt-2 text-xs text-gray-500 underline hover:text-gray-700"
+          onClick={() => {
+            URL.revokeObjectURL(preview);
+            setPreview(null);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        >
+          Remove
+        </button>
+      ) : null}
+      <p className="mt-2 text-xs text-gray-400">
+        Image preview only — full upload coming in next release.
+      </p>
+    </div>
   );
 }

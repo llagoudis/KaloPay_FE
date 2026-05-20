@@ -1,12 +1,48 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import AddPeoplePopup from "@/components/user/people/AddPeoplePopup";
 import MassImportPopup from "@/components/user/people/MassImportPopup";
 import { usePeople } from "@/hooks/employer/useUserPanel";
+
+type PersonRecord = {
+  id: number | string;
+  name: string;
+  email?: string | null;
+  jobTitle?: string | null;
+  department?: string | null;
+  country?: string | null;
+  employmentType?: string | null;
+  status?: string | null;
+  startDate?: string | null;
+};
+
+function exportRowsAsCsv(rows: PersonRecord[], filename: string) {
+  if (rows.length === 0) return;
+  const header = ["id", "name", "email", "jobTitle", "department", "country", "employmentType", "status", "startDate"];
+  const escape = (v: string | number | null | undefined) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = rows.map((p) =>
+    [p.id, p.name, p.email, p.jobTitle, p.department, p.country, p.employmentType, p.status, p.startDate ?? ""]
+      .map(escape)
+      .join(",")
+  );
+  const csv = [header.join(","), ...lines].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 const peopleFilterSelectClass =
   "people-select box-border h-[30px] min-h-[30px] min-w-0 max-w-full appearance-none rounded-lg border border-[#DFDFDF] bg-[#f7f7fa] py-[4px] pl-4 pr-9 text-[14px] font-normal leading-[20px] tracking-normal text-[#878787] [font-family:var(--font-poppins),Poppins,sans-serif] shadow-none focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)] [color-scheme:light]";
@@ -36,33 +72,30 @@ export default function UserPeopleScreen() {
   const [search, setSearch] = useState("");
   const [addPopupOpen, setAddPopupOpen] = useState(false);
   const [massImportOpen, setMassImportOpen] = useState(false);
+  const [menuOpenForId, setMenuOpenForId] = useState<string | null>(null);
   const router = useRouter();
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const { data, isLoading } = usePeople({ search: search || undefined });
-  const filtered = data?.people ?? [];
+  const filtered: PersonRecord[] = (data?.people ?? []) as PersonRecord[];
+
+  useEffect(() => {
+    if (!menuOpenForId) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenForId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpenForId]);
 
   function handleExport() {
-    if (filtered.length === 0) return;
-    const header = ["id", "name", "email", "jobTitle", "department", "country", "employmentType", "status", "startDate"];
-    const escape = (v: string | number | null | undefined) => {
-      const s = String(v ?? "");
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const rows = filtered.map((p) =>
-      [p.id, p.name, p.email, p.jobTitle, p.department, p.country, p.employmentType, p.status, p.startDate ?? ""]
-        .map(escape)
-        .join(",")
-    );
-    const csv = [header.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `people-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportRowsAsCsv(filtered, `people-export-${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  function exportSingle(person: PersonRecord) {
+    exportRowsAsCsv([person], `person-${person.id}-${new Date().toISOString().slice(0, 10)}.csv`);
   }
 
   return (
@@ -207,11 +240,17 @@ export default function UserPeopleScreen() {
                           <td className="people-row-cell align-middle whitespace-nowrap px-6 py-5 text-[#374151]">
                             {person.startDate ?? "—"}
                           </td>
-                          <td className="align-middle px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <td className="relative align-middle px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               className="people-row-actions inline-flex h-9 w-9 items-center justify-center rounded-md text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"
                               aria-label="Actions"
+                              aria-haspopup="menu"
+                              aria-expanded={menuOpenForId === String(person.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpenForId((prev) => (prev === String(person.id) ? null : String(person.id)));
+                              }}
                             >
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                                 <circle cx="12" cy="6" r="1.75" stroke="currentColor" strokeWidth="1.5" />
@@ -219,6 +258,58 @@ export default function UserPeopleScreen() {
                                 <circle cx="12" cy="18" r="1.75" stroke="currentColor" strokeWidth="1.5" />
                               </svg>
                             </button>
+                            {menuOpenForId === String(person.id) ? (
+                              <div
+                                ref={menuRef}
+                                role="menu"
+                                className="people-row-menu absolute right-4 top-12 z-50 w-44 rounded-lg border border-[#e5e7eb] bg-white py-1 text-left text-sm shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                              >
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6] dark:text-slate-200 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setMenuOpenForId(null);
+                                    router.push(`${DASHBOARD_ROUTES.people}/${person.id}`);
+                                  }}
+                                >
+                                  View
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6] dark:text-slate-200 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setMenuOpenForId(null);
+                                    router.push(`${DASHBOARD_ROUTES.people}/${person.id}?edit=1`);
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6] dark:text-slate-200 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setMenuOpenForId(null);
+                                    router.push(`${DASHBOARD_ROUTES.payments}?employee=${person.id}`);
+                                  }}
+                                >
+                                  Pay
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6] dark:text-slate-200 dark:hover:bg-slate-800"
+                                  onClick={() => {
+                                    setMenuOpenForId(null);
+                                    exportSingle(person);
+                                  }}
+                                >
+                                  Export CSV
+                                </button>
+                              </div>
+                            ) : null}
                           </td>
                         </tr>
                       );

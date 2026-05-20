@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
+import { useCompanies, useDeleteCompany } from "@/hooks/admin/useCompanies";
+import type { AdminCompany } from "@/lib/api/admin/companies";
 
 type CompanyRow = {
   clientId: string;
@@ -18,70 +20,34 @@ type CompanyRow = {
   businessType: string;
 };
 
-const mockCompanies: CompanyRow[] = [
-  {
-    clientId: "2983",
-    name: "Test Entity 0",
-    owner: "Amar Hegde",
-    verificationStatus: "Approved",
-    accountStatus: "Active",
-    email: "abc@gmail.com",
-    country: "Cyprus",
-    businessType: "SaaS",
-  },
-  {
-    clientId: "2983",
-    name: "Test Entity 0",
-    owner: "Amar Hegde",
-    verificationStatus: "Approved",
-    accountStatus: "Active",
-    email: "abc@gmail.com",
-    country: "Cyprus",
-    businessType: "SaaS",
-  },
-  {
-    clientId: "2983",
-    name: "Test Entity 0",
-    owner: "Amar Hegde",
-    verificationStatus: "Approved",
-    accountStatus: "Active",
-    email: "abc@gmail.com",
-    country: "Cyprus",
-    businessType: "SaaS",
-  },
-  {
-    clientId: "2983",
-    name: "Test Entity 0",
-    owner: "Amar Hegde",
-    verificationStatus: "Approved",
-    accountStatus: "Active",
-    email: "abc@gmail.com",
-    country: "Cyprus",
-    businessType: "SaaS",
-  },
-  {
-    clientId: "2983",
-    name: "Test Entity 0",
-    owner: "Amar Hegde",
-    verificationStatus: "Approved",
-    accountStatus: "Active",
-    email: "abc@gmail.com",
-    country: "Cyprus",
-    businessType: "SaaS",
-  },
-];
+function toRow(c: AdminCompany): CompanyRow {
+  return {
+    clientId: c.clientId ?? String(c.id),
+    name: c.name,
+    owner: c.ownerName ?? c.owner_name ?? "—",
+    verificationStatus: c.verificationStatus ?? c.verification_status ?? "pending",
+    accountStatus: c.accountStatus ?? c.account_status ?? "active",
+    email: c.email ?? "—",
+    country: c.country ?? "—",
+    businessType: c.businessType ?? c.business_type ?? "—",
+  };
+}
 
 export default function AdminCompaniesPage() {
   const [search, setSearch] = useState("");
+  const { data, isLoading, error } = useCompanies(search ? { search } : undefined);
+  const deleteMut = useDeleteCompany();
 
-  const filtered = mockCompanies.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.owner.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      c.clientId.includes(search) ||
-      c.country.toLowerCase().includes(search.toLowerCase())
-  );
+  const rows = useMemo(() => (data?.data ?? []).map(toRow), [data]);
+
+  const handleDelete = async (clientId: string, name: string) => {
+    if (!confirm(`Delete company "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteMut.mutateAsync(clientId);
+    } catch (e) {
+      alert(`Failed to delete: ${(e as Error).message}`);
+    }
+  };
 
   const columns = [
     { key: "clientId" as const, header: "Client ID" },
@@ -101,23 +67,27 @@ export default function AdminCompaniesPage() {
       key: "owner" as const,
       header: "Owner",
       render: (value: unknown) => (
-        <Link href="#" className="font-medium text-blue-600 hover:underline">
-          {String(value)}
-        </Link>
+        <span className="font-medium text-gray-900">{String(value)}</span>
       ),
     },
     {
       key: "verificationStatus" as const,
       header: "Verification Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant="success" />
+        <Badge
+          label={String(value)}
+          variant={String(value).toLowerCase() === "approved" ? "success" : "warning"}
+        />
       ),
     },
     {
       key: "accountStatus" as const,
       header: "Account Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant="success" />
+        <Badge
+          label={String(value)}
+          variant={String(value).toLowerCase() === "active" ? "success" : "warning"}
+        />
       ),
     },
     { key: "email" as const, header: "Email" },
@@ -126,21 +96,24 @@ export default function AdminCompaniesPage() {
     {
       key: "actions" as const,
       header: "",
-      render: () => (
+      render: (_v: unknown, row: CompanyRow) => (
         <button
           type="button"
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Actions"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:opacity-50"
+          aria-label={`Delete ${row.name}`}
+          title="Delete"
+          onClick={() => handleDelete(row.clientId, row.name)}
+          disabled={deleteMut.isPending}
         >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a2 2 0 012-2h2a2 2 0 012 2v3" />
           </svg>
         </button>
       ),
     },
   ];
 
-  const tableData = filtered.map((c) => ({ ...c, actions: null }));
+  const tableData = rows.map((c) => ({ ...c, actions: null }));
 
   return (
     <div className="w-full space-y-6">
@@ -183,10 +156,15 @@ export default function AdminCompaniesPage() {
             </Button>
           </Link>
         </div>
+        {error ? (
+          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            Failed to load companies: {(error as Error).message}
+          </div>
+        ) : null}
         <Table<CompanyRow & { actions: null }>
           columns={columns}
           data={tableData}
-          emptyMessage="No companies found."
+          emptyMessage={isLoading ? "Loading companies…" : "No companies found."}
           className="admin-list-table mt-6 border-0 border-gray-100"
         />
       </div>

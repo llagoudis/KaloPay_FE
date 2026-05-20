@@ -1,6 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCreateAdminEmployee } from "@/hooks/admin/useEmployees";
+import { ROUTES } from "@/lib/constants/routes";
 import { cn } from "@/lib/utils/cn";
 const LABEL_STYLE: React.CSSProperties = {
   fontFamily: "var(--font-poppins), Poppins, sans-serif",
@@ -80,6 +83,82 @@ export default function AdminAddEmployeePage() {
   const [usdcErcWallet, setUsdcErcWallet] = useState("");
   const [usdcPolyWallet, setUsdcPolyWallet] = useState("");
   const [btcWallet, setBtcWallet] = useState("");
+
+  // Step 1 — Personal Details (newly bound for save)
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
+  const [workEmail, setWorkEmail] = useState("");
+  const [primaryPhone, setPrimaryPhone] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [employeeNo, setEmployeeNo] = useState("");
+
+  // Step 2 — Address (newly bound)
+  const [streetName, setStreetName] = useState("");
+  const [streetNo, setStreetNo] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
+
+  // Step 3 — Employment (newly bound)
+  const [jobTitle, setJobTitle] = useState("");
+  const [contractStart, setContractStart] = useState("");
+  const [contractEnd, setContractEnd] = useState("");
+
+  const router = useRouter();
+  const createMut = useCreateAdminEmployee();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleFinalSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitError(null);
+    if (!firstName.trim() || !lastName.trim() || !personalEmail.trim()) {
+      setSubmitError("First name, last name, and personal email are required.");
+      setCurrentStep(1);
+      return;
+    }
+    try {
+      await createMut.mutateAsync({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: personalEmail.trim(),
+        work_email: workEmail || undefined,
+        phone: primaryPhone ? `${selectedPrimaryCode.split(" ")[0]} ${primaryPhone}`.trim() : undefined,
+        nationality: selectedNationality || undefined,
+        date_of_birth: dateOfBirth || undefined,
+        employee_no: employeeNo || undefined,
+        street_name: streetName || undefined,
+        street_no: streetNo || undefined,
+        postal_code: postalCode || undefined,
+        city: city || undefined,
+        province: province || undefined,
+        country: selectedAddressCountry || undefined,
+        job_title: jobTitle || undefined,
+        department: department || undefined,
+        employment_type: employmentType || undefined,
+        employee_status: employeeStatus || "active",
+        contract_start: contractStart || undefined,
+        contract_end: contractEnd || undefined,
+        payment_currency_code: paymentCurrencyCode || undefined,
+        gross_annual_salary: grossAnnualSalary || undefined,
+        bank_name: bankName || undefined,
+        swift_bic: swiftBic || undefined,
+        iban: iban || undefined,
+        usdt_erc_wallet: usdtErcWallet || undefined,
+        btc_wallet: btcWallet || undefined,
+      });
+      router.push(ROUTES.admin.employees);
+    } catch (err) {
+      setSubmitError((err as Error).message);
+    }
+    void bankAddress; void usdcErcWallet; void usdcPolyWallet;
+    void seniorityLevel; void paymentMethod; void paymentPreference; void compensationType;
+    void varComp1EffectiveDate; void varComp1Frequency; void varComp1Type; void varComp1Title; void varComp1Amount;
+    void primaryCodeOpen; void setPrimaryCodeOpen; void emergencyCodeOpen; void setEmergencyCodeOpen;
+    void selectedEmergencyCode; void setSelectedEmergencyCode;
+    void addressCountryOpen; void setAddressCountryOpen;
+    void contractStartRef; void contractEndRef; void varComp1DateRef;
+  };
 
   return (
     <div className="w-full space-y-6" data-page="add-employee">
@@ -229,7 +308,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter first name"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
               />
             </div>
             <div>
@@ -239,7 +320,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter last name"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
               />
             </div>
             <div>
@@ -250,7 +333,9 @@ export default function AdminAddEmployeePage() {
                 <input
                   type="email"
                   placeholder="Enter your personal email"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500 placeholder-gray-400"
+                  value={personalEmail}
+                  onChange={(e) => setPersonalEmail(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +352,9 @@ export default function AdminAddEmployeePage() {
                 <input
                   type="email"
                   placeholder="Enter your work email"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500 placeholder-gray-400"
+                  value={workEmail}
+                  onChange={(e) => setWorkEmail(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,8 +389,15 @@ export default function AdminAddEmployeePage() {
                 Date of birth <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input ref={dobRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => dobRef.current?.showPicker()}>
+                <input
+                  ref={dobRef}
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  className="kp-date w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
+                  style={{ colorScheme: "light" }}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -573,7 +667,7 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Job title
               </label>
-              <input type="text" placeholder="Enter job title" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="text" placeholder="Enter job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -622,8 +716,8 @@ export default function AdminAddEmployeePage() {
                 Contract start date <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input ref={contractStartRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => contractStartRef.current?.showPicker()}>
+                <input ref={contractStartRef} type="date" value={contractStart} onChange={(e) => setContractStart(e.target.value)} className="kp-date w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600" style={{ colorScheme: "light" }} />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </span>
               </div>
@@ -633,8 +727,8 @@ export default function AdminAddEmployeePage() {
                 Contract end date
               </label>
               <div className="relative">
-                <input ref={contractEndRef} type="date" className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500" style={{ colorScheme: "light" }} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => contractEndRef.current?.showPicker()}>
+                <input ref={contractEndRef} type="date" value={contractEnd} onChange={(e) => setContractEnd(e.target.value)} className="kp-date w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600" style={{ colorScheme: "light" }} />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 </span>
               </div>
@@ -794,10 +888,12 @@ export default function AdminAddEmployeePage() {
                 <input
                   ref={varComp1DateRef}
                   type="date"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-500"
+                  value={varComp1EffectiveDate}
+                  onChange={(e) => setVarComp1EffectiveDate(e.target.value)}
+                  className="kp-date w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                   style={{ colorScheme: "light" }}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 cursor-pointer" onClick={() => varComp1DateRef.current?.showPicker()}>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden>
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
@@ -894,10 +990,7 @@ export default function AdminAddEmployeePage() {
           </h2>
           <form
             className="employee-step-form grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              // TODO: submit all steps data
-            }}
+            onSubmit={handleFinalSubmit}
           >
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -995,22 +1088,28 @@ export default function AdminAddEmployeePage() {
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
               />
             </div>
-            <div className="sm:col-span-2 flex justify-between pt-6">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(4)}
-                className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium hover:bg-gray-50"
-                style={{ color: "#6B7280", borderRadius: "8px" }}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="rounded-lg px-5 py-2.5 text-sm font-medium text-white"
-                style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
-              >
-                Add Employee
-              </button>
+            <div className="sm:col-span-2 flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              {submitError ? (
+                <div className="flex-1 rounded-md bg-red-50 p-2 text-sm text-red-700">{submitError}</div>
+              ) : <div className="flex-1" />}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(4)}
+                  className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium hover:bg-gray-50"
+                  style={{ color: "#6B7280", borderRadius: "8px" }}
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMut.isPending}
+                  className="rounded-lg px-5 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+                  style={{ backgroundColor: "#0F50DB", borderRadius: "8px" }}
+                >
+                  {createMut.isPending ? "Saving…" : "Add Employee"}
+                </button>
+              </div>
             </div>
           </form>
         </div>

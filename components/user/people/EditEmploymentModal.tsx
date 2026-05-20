@@ -107,9 +107,9 @@ export default function EditEmploymentModal({
   }
 
   const inputClass =
-    "w-full rounded-lg border border-[#DFDFDF] px-3 py-2 text-sm focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)]";
+    "w-full rounded-lg border border-[#DFDFDF] bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400";
   const labelClass =
-    "edit-personal-label mb-1.5 block text-base font-medium text-gray-700";
+    "edit-personal-label mb-1.5 block text-base font-medium text-gray-700 dark:text-slate-200";
 
   const SelectField = ({
     label,

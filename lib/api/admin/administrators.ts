@@ -1,35 +1,57 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getAdministrators() {
-  const res = await fetch(`${API_BASE_URL}/admin/administrators`);
-  if (!res.ok) throw new Error("Failed to fetch administrators");
-  return res.json();
+export interface AdminAdministrator {
+  id: number;
+  name: string;
+  email: string;
+  avatar: string | null;
+  two_factor_enabled?: boolean;
+  is_email_verified?: boolean;
+  created_at: string;
+  updated_at?: string;
 }
 
-export async function createAdministrator(data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/admin/administrators`, {
+export function getAdministrators(token: string) {
+  return apiClient<{ administrators: AdminAdministrator[] }>("/admin/administrators", { token });
+}
+
+export interface CreateAdministratorInput {
+  name: string;
+  email: string;
+  password: string;
+  avatar?: string;
+}
+
+export function createAdministrator(token: string, data: CreateAdministratorInput) {
+  return apiClient<{ administrator: AdminAdministrator }>("/admin/administrators", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    token,
+    body: data,
   });
-  if (!res.ok) throw new Error("Failed to create administrator");
-  return res.json();
 }
 
-export async function updateAdministrator(id: string, data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/admin/administrators/${id}`, {
+export interface UpdateAdministratorInput {
+  name?: string;
+  email?: string;
+  password?: string;
+  avatar?: string;
+}
+
+export function updateAdministrator(
+  token: string,
+  id: string,
+  data: UpdateAdministratorInput
+) {
+  return apiClient<{ administrator: AdminAdministrator }>(`/admin/administrators/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    token,
+    body: data,
   });
-  if (!res.ok) throw new Error("Failed to update administrator");
-  return res.json();
 }
 
-export async function deleteAdministrator(id: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/administrators/${id}`, {
+export function deleteAdministrator(token: string, id: string) {
+  return apiClient<{ success: boolean }>(`/admin/administrators/${id}`, {
     method: "DELETE",
+    token,
   });
-  if (!res.ok) throw new Error("Failed to delete administrator");
-  return res.json();
 }

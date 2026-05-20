@@ -564,6 +564,17 @@ html, body {
   cursor: pointer;
 }
 
+/* Hide native calendar indicator on opt-in inputs so only the custom icon shows.
+   Apply `kp-date` class to any <input type="date"> that has a custom calendar icon overlay. */
+input[type="date"].kp-date::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
 /* Hide number spinner / "1" box on tel inputs (Primary & Emergency contact) */
 .edit-personal-details-modal input[type="tel"]::-webkit-outer-spin-button,
 .edit-personal-details-modal input[type="tel"]::-webkit-inner-spin-button {
@@ -1425,6 +1436,26 @@ body {
   padding-bottom: 0.625rem !important;
   min-height: 2.75rem;
   box-sizing: border-box;
+}
+
+/* Add Employee — dark mode: keep inputs + selects readable.
+   Without this, transparent inputs sit on a dark card and only the placeholder
+   tint shows, while values become invisible. */
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] [data-page="add-employee"] input:not([type="checkbox"]):not([type="radio"]),
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] select,
+[data-theme="dark"] [data-page="add-employee"] select {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border-color: #334155 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] input::placeholder,
+[data-theme="dark"] [data-page="add-employee"] input::placeholder {
+  color: #94a3b8 !important;
+}
+[data-dashboard-theme][data-theme="dark"] [data-page="add-employee"] .add-employee-label,
+[data-theme="dark"] [data-page="add-employee"] .add-employee-label {
+  color: #cbd5e1 !important;
 }
 
 /* ========== Employee Profile page – dark mode ========== */

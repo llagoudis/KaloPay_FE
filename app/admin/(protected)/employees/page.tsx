@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
+import { useAdminEmployees, useDeleteAdminEmployee } from "@/hooks/admin/useEmployees";
+import type { AdminEmployee } from "@/lib/api/admin/employees";
 
 type EmployeeRow = {
   clientId: string;
@@ -17,63 +19,35 @@ type EmployeeRow = {
   createdAt: string;
 };
 
-const mockEmployees: EmployeeRow[] = [
-  {
-    clientId: "2983",
-    name: "John Doe",
-    emails: "abc@gmail.com",
-    verificationStatus1: "Approved",
-    verificationStatus2: "Approved",
-    country: "Crypto",
-    createdAt: "13-08-20025",
-  },
-  {
-    clientId: "2984",
-    name: "Jane Smith",
-    emails: "jane@example.com",
-    verificationStatus1: "Approved",
-    verificationStatus2: "Pending",
-    country: "Crypto",
-    createdAt: "14-08-20025",
-  },
-  {
-    clientId: "2985",
-    name: "Bob Wilson",
-    emails: "bob@example.com",
-    verificationStatus1: "Approved",
-    verificationStatus2: "Approved",
-    country: "Crypto",
-    createdAt: "15-08-20025",
-  },
-  {
-    clientId: "2986",
-    name: "Alice Brown",
-    emails: "alice@example.com",
-    verificationStatus1: "Approved",
-    verificationStatus2: "Approved",
-    country: "Crypto",
-    createdAt: "16-08-20025",
-  },
-  {
-    clientId: "2987",
-    name: "Charlie Davis",
-    emails: "charlie@example.com",
-    verificationStatus1: "Approved",
-    verificationStatus2: "Approved",
-    country: "Crypto",
-    createdAt: "17-08-20025",
-  },
-];
+function toRow(e: AdminEmployee): EmployeeRow {
+  const verification = (e.status ?? "active").toLowerCase() === "active" ? "Approved" : "Pending";
+  const created = e.created_at ? new Date(e.created_at).toLocaleDateString() : "—";
+  return {
+    clientId: String(e.id),
+    name: e.name,
+    emails: e.email ?? "—",
+    verificationStatus1: verification,
+    verificationStatus2: verification,
+    country: (e.nationality as string) ?? "—",
+    createdAt: created,
+  };
+}
 
 export default function AdminEmployeesPage() {
   const [search, setSearch] = useState("");
+  const { data, isLoading, error } = useAdminEmployees(search ? { search } : undefined);
+  const deleteMut = useDeleteAdminEmployee();
 
-  const filtered = mockEmployees.filter(
-    (e) =>
-      e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.emails.toLowerCase().includes(search.toLowerCase()) ||
-      e.clientId.includes(search)
-  );
+  const rows = useMemo(() => (data?.data ?? []).map(toRow), [data]);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Delete employee "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteMut.mutateAsync(id);
+    } catch (e) {
+      alert(`Failed to delete: ${(e as Error).message}`);
+    }
+  };
 
   const columns = [
     { key: "clientId" as const, header: "Client ID" },
@@ -94,14 +68,20 @@ export default function AdminEmployeesPage() {
       key: "verificationStatus1" as const,
       header: "Verification Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant="success" />
+        <Badge
+          label={String(value)}
+          variant={String(value) === "Approved" ? "success" : "warning"}
+        />
       ),
     },
     {
       key: "verificationStatus2" as const,
-      header: "Verification Status",
+      header: "Account Status",
       render: (value: unknown) => (
-        <Badge label={String(value)} variant="success" />
+        <Badge
+          label={String(value)}
+          variant={String(value) === "Approved" ? "success" : "warning"}
+        />
       ),
     },
     { key: "country" as const, header: "Country" },
@@ -112,22 +92,24 @@ export default function AdminEmployeesPage() {
       render: (_: unknown, row: EmployeeRow) => (
         <button
           type="button"
-          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Actions"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:opacity-50"
+          aria-label={`Delete ${row.name}`}
+          title="Delete"
+          onClick={() => handleDelete(row.clientId, row.name)}
+          disabled={deleteMut.isPending}
         >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a2 2 0 012-2h2a2 2 0 012 2v3" />
           </svg>
         </button>
       ),
     },
   ];
 
-  const tableData = filtered.map((e) => ({ ...e, actions: null }));
+  const tableData = rows.map((e) => ({ ...e, actions: null }));
 
   return (
     <div className="w-full space-y-6">
-      {/* Employees - alag horizontal div/card */}
       <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
         <h1
           className="admin-page-heading align-middle font-semibold"
@@ -145,7 +127,6 @@ export default function AdminEmployeesPage() {
         </h1>
       </div>
 
-      {/* Search + Add new + Table - neeche wala card */}
       <div className="w-full rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <label className="relative min-w-0 flex-1">
@@ -168,10 +149,15 @@ export default function AdminEmployeesPage() {
             </Button>
           </Link>
         </div>
+        {error ? (
+          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            Failed to load employees: {(error as Error).message}
+          </div>
+        ) : null}
         <Table<EmployeeRow & { actions: null }>
           columns={columns}
           data={tableData}
-          emptyMessage="No employees found."
+          emptyMessage={isLoading ? "Loading employees…" : "No employees found."}
           className="admin-list-table mt-6 border-0 border-gray-100"
         />
       </div>

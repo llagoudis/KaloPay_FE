@@ -62,9 +62,65 @@ export default function PayrollDetailsPopup({ batchId, onClose }: PayrollDetails
   const payments = data?.payments ?? [];
   const displayStatus = batch ? statusLabel(batch.status) : "";
 
-  function handleExportChoice(_format: (typeof exportMenuItems)[number]) {
+  function buildCsv(): string {
+    const header = ["paymentRef", "employee", "amount", "currency", "status", "paymentDate"];
+    const escape = (v: string | number | null | undefined) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = payments.map((p) =>
+      [p.paymentRef, p.employee, p.amount, p.currency, p.status, p.paymentDate]
+        .map(escape)
+        .join(",")
+    );
+    return [header.join(","), ...lines].join("\n");
+  }
+
+  function triggerDownload(filename: string, content: string, mime: string) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExportChoice(format: (typeof exportMenuItems)[number]) {
     setExportMenuOpen(false);
-    // Wire to real export when API exists
+    if (!batch || payments.length === 0) {
+      alert("Nothing to export yet.");
+      return;
+    }
+    const safeRef = batch.batchRef.replace(/[^a-zA-Z0-9-_]/g, "_");
+    if (format === "CSV") {
+      triggerDownload(`payroll-${safeRef}.csv`, buildCsv(), "text/csv");
+    } else if (format === "Excel") {
+      // Excel will happily open a CSV with a .csv extension; this also works for .xls (HTML table) but CSV is simpler.
+      triggerDownload(`payroll-${safeRef}.csv`, buildCsv(), "text/csv");
+    } else if (format === "PDF") {
+      // Open a print-friendly view; user can save as PDF from the print dialog.
+      const win = window.open("", "_blank");
+      if (!win) {
+        alert("Pop-ups are blocked; allow them to export PDF.");
+        return;
+      }
+      const rows = payments
+        .map(
+          (p) =>
+            `<tr><td>${p.paymentRef}</td><td>${p.employee}</td><td>${formatAmount(
+              p.amount,
+              p.currency
+            )}</td><td>${p.status}</td><td>${p.paymentDate}</td></tr>`
+        )
+        .join("");
+      win.document.write(
+        `<html><head><title>Payroll ${safeRef}</title><style>body{font-family:sans-serif;padding:24px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}h1{font-size:18px}</style></head><body><h1>Payroll batch ${batch.batchRef} — ${batch.payPeriod}</h1><table><thead><tr><th>Payment ID</th><th>Employee</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`
+      );
+      win.document.close();
+    }
   }
 
   const summarySections: { label: string; content: ReactNode }[] = batch
@@ -175,7 +231,7 @@ export default function PayrollDetailsPopup({ batchId, onClose }: PayrollDetails
               </div>
               {exportMenuOpen && (
                 <ul
-                  className="absolute right-0 top-full z-20 mt-1 min-w-[11rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  className="absolute right-0 top-full z-20 mt-1 min-w-[11rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
                   role="menu"
                 >
                   {exportMenuItems.map((label) => (
@@ -183,7 +239,7 @@ export default function PayrollDetailsPopup({ batchId, onClose }: PayrollDetails
                       <button
                         type="button"
                         role="menuitem"
-                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 [font-family:var(--font-poppins),Poppins,sans-serif]"
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 [font-family:var(--font-poppins),Poppins,sans-serif] dark:text-slate-100 dark:hover:bg-slate-800"
                         onClick={() => handleExportChoice(label)}
                       >
                         Export as {label}

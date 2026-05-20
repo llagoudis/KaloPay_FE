@@ -12,6 +12,24 @@ import {
   useRegulatory,
 } from "@/hooks/employer/useReports";
 
+function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
+  if (rows.length === 0) return;
+  const escape = (v: string | number | null | undefined) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = rows.map((r) => r.map(escape).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 type ReportMainTab = "payroll" | "regulatory";
 type ReportSubTab = "summary" | "breakdown" | "tax" | "employer" | "audit";
 
@@ -312,6 +330,16 @@ export default function PayrollReportsPage() {
                 type="button"
                 className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[#0F4FDB] px-4 py-2.5 text-white shadow-sm transition hover:opacity-90"
                 style={{ ...poppins, fontWeight: 500, fontSize: "14px" }}
+                onClick={() => {
+                  const rows = summary?.rows ?? [];
+                  downloadCsv(
+                    `payroll-summary-${period || currentPeriod()}.csv`,
+                    [
+                      ["Employee", "Role", "Department", "Gross Pay", "Tax Deductions", "Net Pay", "Status", "Currency"],
+                      ...rows.map((r) => [r.employee, r.role, r.department, r.grossPay, r.taxDeductions, r.netPay, r.status, r.currency]),
+                    ]
+                  );
+                }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -407,6 +435,16 @@ export default function PayrollReportsPage() {
                 type="button"
                 className="inline-flex items-center gap-2 rounded-lg bg-[#0F4FDB] px-4 py-2.5 text-white shadow-sm transition hover:opacity-90"
                 style={{ ...poppins, fontWeight: 500, fontSize: "14px" }}
+                onClick={() => {
+                  const rows = cost?.rows ?? [];
+                  downloadCsv(
+                    `breakdown-${period}.csv`,
+                    [
+                      ["Department", "Employees", "Gross Payroll", "Social Insurance", "Benefits/Bonuses", "Total Cost"],
+                      ...rows.map((r) => [r.department, r.employees, r.grossPayroll, r.employerSocialInsurance, r.benefitsAndBonuses, r.totalCost]),
+                    ]
+                  );
+                }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -462,7 +500,30 @@ export default function PayrollReportsPage() {
           <div className="px-6 py-6 md:px-8">
             <div className="mb-6 flex items-center justify-between gap-2">
               <h3 className="text-[13px] sm:text-[18px]" style={{ fontFamily: "Poppins, var(--font-poppins)", fontWeight: 600, color: "var(--color-dash-text-primary)" }}>Tax Contributions</h3>
-              <button type="button" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]" style={{ ...poppins, fontWeight: 500 }}>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]"
+                style={{ ...poppins, fontWeight: 500 }}
+                onClick={() => {
+                  const rows = (tax?.rows ?? []) as Array<Record<string, unknown>>;
+                  downloadCsv(
+                    `tax-report-${period}.csv`,
+                    [
+                      ["Employee", "Tax ID", "Gross", "Income Tax", "Social Ins.", "Other", "Net", "Currency"],
+                      ...rows.map((r) => [
+                        String(r.employee ?? ""),
+                        String(r.taxId ?? r.tax_id ?? ""),
+                        Number(r.grossPay ?? r.gross_pay ?? 0),
+                        Number(r.incomeTax ?? r.income_tax ?? 0),
+                        Number(r.socialInsurance ?? r.social_insurance ?? 0),
+                        Number(r.otherDeductions ?? r.other_deductions ?? 0),
+                        Number(r.netPay ?? r.net_pay ?? 0),
+                        String(r.currency ?? "USD"),
+                      ]),
+                    ]
+                  );
+                }}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 Download Tax Report
               </button>
@@ -518,7 +579,21 @@ export default function PayrollReportsPage() {
           <div className="px-6 py-6 md:px-8">
             <div className="mb-6 flex items-center justify-between gap-2">
               <h3 className="text-[13px] sm:text-[18px]" style={{ fontFamily: "Poppins, var(--font-poppins)", fontWeight: 600, color: "var(--color-dash-text-primary)" }}>Total Employer Cost</h3>
-              <button type="button" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]" style={{ ...poppins, fontWeight: 500 }}>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]"
+                style={{ ...poppins, fontWeight: 500 }}
+                onClick={() => {
+                  const rows = cost?.rows ?? [];
+                  downloadCsv(
+                    `employer-cost-${period}.csv`,
+                    [
+                      ["Department", "Employees", "Gross Payroll", "Social Insurance", "Benefits/Bonuses", "Total Cost"],
+                      ...rows.map((r) => [r.department, r.employees, r.grossPayroll, r.employerSocialInsurance, r.benefitsAndBonuses, r.totalCost]),
+                    ]
+                  );
+                }}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 Export EXCEL
               </button>
@@ -558,7 +633,21 @@ export default function PayrollReportsPage() {
           <div className="px-6 pt-3 pb-6 md:px-8">
             <div className="mb-6 flex items-center justify-between gap-2">
               <h3 className="text-[13px] sm:text-[18px]" style={{ fontFamily: "Poppins, var(--font-poppins)", fontWeight: 600, color: "var(--color-dash-text-primary)" }}>System Audit Logs</h3>
-              <button type="button" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]" style={{ ...poppins, fontWeight: 500 }}>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0F4FDB] px-2.5 py-2 text-[11px] text-white shadow-sm transition hover:opacity-90 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-[14px]"
+                style={{ ...poppins, fontWeight: 500 }}
+                onClick={() => {
+                  const logs = audit?.rows ?? [];
+                  downloadCsv(
+                    `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`,
+                    [
+                      ["Timestamp", "User", "Role", "Action", "IP", "Details"],
+                      ...logs.map((r) => [r.timestamp, r.name, r.role, r.action, r.ipAddress, r.details]),
+                    ]
+                  );
+                }}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 Export Logs
               </button>
