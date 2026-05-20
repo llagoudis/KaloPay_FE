@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import Table from "@/components/ui/Table";
 import { cn } from "@/lib/utils/cn";
 import { ROUTES } from "@/lib/constants/routes";
+import {
+  getAdminCryptoWallets,
+  getClientCryptoWallets,
+  type CryptoAdminWallet,
+  type CryptoClientWallet,
+} from "@/lib/api/admin/cryptoWallet";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
 
 type WalletTab = "client" | "master" | "gas" | "commission";
 
@@ -18,16 +26,6 @@ type ClientWalletRow = {
   balance: string;
 };
 
-const mockClientWallets: ClientWalletRow[] = Array.from({ length: 7 }, (_, i) => ({
-  id: "1234",
-  date: "23-09-2025 12:19:04 PM",
-  companyId: "company-1",
-  companyName: "Shivraj CSV",
-  assetId: "USDT_ERC20",
-  address: "TXfVTMlbPJcXvngpVdvw88uByFy4emff",
-  balance: "0.000000",
-}));
-
 type MasterWalletCard = {
   id: string;
   currency: string;
@@ -40,64 +38,51 @@ type MasterWalletCard = {
   iconEmoji: string;
 };
 
-const mockMasterWallets: MasterWalletCard[] = [
-  {
-    id: "eur",
-    currency: "Euro",
-    code: "EUR",
-    amount: "€5.998600",
-    fiatAmount: "€5.00 EUR",
-    walletAddress: "1701AAAAA6600",
-    walletAddressMasked: "1701*****6600",
-    iconBg: "#E5F0FF",
-    iconEmoji: "€",
-  },
-  {
-    id: "btc",
-    currency: "BTC",
-    code: "BTC",
-    amount: "₿5.998600",
-    fiatAmount: "€5.00 EUR",
-    walletAddress: "1701BBBBB6600",
-    walletAddressMasked: "1701*****6600",
-    iconBg: "#F7931A",
-    iconEmoji: "₿",
-  },
-  {
-    id: "usdt1",
-    currency: "USDT (ERC20)",
-    code: "USDT_ERC20",
-    amount: "€5.998600",
-    fiatAmount: "€5.00 EUR",
-    walletAddress: "1701CCCCC6600",
-    walletAddressMasked: "1701*****6600",
-    iconBg: "#26A17B",
-    iconEmoji: "T",
-  },
-  {
-    id: "usdt2",
-    currency: "USDT (ERC20)",
-    code: "USDT_ERC20",
-    amount: "€5.998600",
-    fiatAmount: "€5.00 EUR",
-    walletAddress: "1701DDDDD6600",
-    walletAddressMasked: "1701*****6600",
-    iconBg: "#2775CA",
-    iconEmoji: "$",
-  },
-];
+function assetIconBg(code: string): string {
+  const c = code.toUpperCase();
+  if (c.startsWith("BTC")) return "#F7931A";
+  if (c.startsWith("ETH")) return "#627EEA";
+  if (c.startsWith("USDT")) return "#26A17B";
+  if (c.startsWith("USDC")) return "#2775CA";
+  if (c.startsWith("EUR")) return "#E5F0FF";
+  if (c.startsWith("BNB")) return "#F3BA2F";
+  if (c.startsWith("MATIC") || c.startsWith("POL")) return "#8247E5";
+  if (c.startsWith("TRX") || c.startsWith("TRON")) return "#EB0029";
+  return "#94A3B8";
+}
 
-const mockGasWallet: MasterWalletCard = {
-  id: "eth",
-  currency: "Ethereum",
-  code: "ETH",
-  amount: "€5.998600",
-  fiatAmount: "€6.00 EUR",
-  walletAddress: "1701EEEE6600",
-  walletAddressMasked: "1701*****6600",
-  iconBg: "#627EEA",
-  iconEmoji: "Ξ",
-};
+function assetIconChar(code: string): string {
+  const c = code.toUpperCase();
+  if (c.startsWith("BTC")) return "₿";
+  if (c.startsWith("ETH")) return "Ξ";
+  if (c.startsWith("USDT")) return "T";
+  if (c.startsWith("USDC")) return "$";
+  if (c.startsWith("EUR")) return "€";
+  if (c.startsWith("BNB")) return "B";
+  if (c.startsWith("MATIC") || c.startsWith("POL")) return "M";
+  if (c.startsWith("TRX") || c.startsWith("TRON")) return "T";
+  return c[0] ?? "?";
+}
+
+function maskAddress(addr: string): string {
+  if (!addr || addr.length <= 10) return addr;
+  return `${addr.slice(0, 5)}*****${addr.slice(-4)}`;
+}
+
+function toMasterCard(w: CryptoAdminWallet): MasterWalletCard {
+  const code = (w.asset_id ?? w.kraken_asset_id ?? "?").toUpperCase();
+  return {
+    id: `${w.id}`,
+    currency: w.asset_name ?? code,
+    code,
+    amount: `${Number(w.balance ?? 0).toFixed(6)} ${code}`,
+    fiatAmount: "",
+    walletAddress: w.address ?? "",
+    walletAddressMasked: maskAddress(w.address ?? ""),
+    iconBg: assetIconBg(code),
+    iconEmoji: assetIconChar(code),
+  };
+}
 
 type CommissionWalletRow = {
   currency: "USDT" | "BTC" | "USDC";
@@ -107,43 +92,54 @@ type CommissionWalletRow = {
   publicKey: string;
 };
 
-const mockCommissionWallets: CommissionWalletRow[] = [
-  {
-    currency: "USDT",
-    address: "TXfVTM1bPJcXvngpVdvw88uByFy4emff",
-    balance: "0.000000",
-    privateKey: "***************",
-    publicKey: "***************",
-  },
-  {
-    currency: "BTC",
-    address: "TXfVTM1bPJcXvngpVdvw88uByFy4emff",
-    balance: "0.000000",
-    privateKey: "***************",
-    publicKey: "***************",
-  },
-  {
-    currency: "USDC",
-    address: "TXfVTM1bPJcXvngpVdvw88uByFy4emff",
-    balance: "0.000000",
-    privateKey: "***************",
-    publicKey: "***************",
-  },
-];
 
 export default function AdminWalletPage() {
   const [activeTab, setActiveTab] = useState<WalletTab>("master");
   const [search, setSearch] = useState("");
+  const token = useAdminAuthStore((s) => s.token);
 
-  const filteredWallets = mockClientWallets.filter(
-    (w) =>
-      w.id.includes(search) ||
-      w.date.includes(search) ||
-      w.companyName.toLowerCase().includes(search.toLowerCase()) ||
-      w.assetId.toLowerCase().includes(search.toLowerCase()) ||
-      w.address.toLowerCase().includes(search.toLowerCase()) ||
-      w.balance.includes(search)
+  const adminWalletsQuery = useQuery({
+    queryKey: ["admin", "crypto-wallet", "all"],
+    queryFn: () => getAdminCryptoWallets(token!),
+    enabled: !!token,
+  });
+  const clientWalletsQuery = useQuery({
+    queryKey: ["admin", "crypto-wallet", "client", search],
+    queryFn: () =>
+      getClientCryptoWallets(token!, { pageSize: 50, pageNumber: 1, search: search || undefined }),
+    enabled: !!token,
+  });
+
+  const masterWallets: MasterWalletCard[] = useMemo(
+    () => (adminWalletsQuery.data?.master ?? []).map(toMasterCard),
+    [adminWalletsQuery.data]
   );
+  const gasWallets: MasterWalletCard[] = useMemo(
+    () => (adminWalletsQuery.data?.gas ?? []).map(toMasterCard),
+    [adminWalletsQuery.data]
+  );
+
+  const filteredWallets: ClientWalletRow[] = useMemo(() => {
+    const rows = (clientWalletsQuery.data?.wallets ?? []).map((w: CryptoClientWallet) => ({
+      id: String(w.id),
+      date: w.created_at ? new Date(w.created_at).toLocaleString() : "—",
+      companyId: w.company_id != null ? String(w.company_id) : "",
+      companyName: w.company_name ?? w.wallet_name ?? "—",
+      assetId: w.asset_id ?? w.asset_name ?? "—",
+      address: w.address ?? "—",
+      balance: Number(w.balance ?? 0).toFixed(6),
+    }));
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (w) =>
+        w.id.toLowerCase().includes(q) ||
+        w.companyName.toLowerCase().includes(q) ||
+        w.assetId.toLowerCase().includes(q) ||
+        w.address.toLowerCase().includes(q) ||
+        w.balance.toLowerCase().includes(q)
+    );
+  }, [clientWalletsQuery.data, search]);
 
   const tabs: { key: WalletTab; label: string }[] = [
     { key: "client", label: "Client Wallets" },
@@ -313,7 +309,14 @@ export default function AdminWalletPage() {
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            {mockMasterWallets.map((card) => (
+            {masterWallets.length === 0 ? (
+              <div className="col-span-full rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                {adminWalletsQuery.isLoading
+                  ? "Loading master wallets…"
+                  : "No master wallets yet. Create one from the /admin/admin-wallet panel."}
+              </div>
+            ) : null}
+            {masterWallets.map((card) => (
               <div
                 key={card.id}
                 className="admin-wallet-balance-card flex flex-col justify-between rounded-2xl p-5"
@@ -471,32 +474,26 @@ export default function AdminWalletPage() {
             </button>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-[minmax(0,420px)]">
-            <div className="admin-wallet-balance-card flex flex-col justify-between rounded-2xl p-5">
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-2">
+            {gasWallets.length === 0 ? (
+              <div className="col-span-full rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+                {adminWalletsQuery.isLoading
+                  ? "Loading gas wallets…"
+                  : "No gas wallets yet. Create one from the /admin/admin-wallet panel."}
+              </div>
+            ) : null}
+            {gasWallets.map((card) => (
+            <div key={card.id} className="admin-wallet-balance-card flex flex-col justify-between rounded-2xl p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex flex-col items-start gap-2">
                   <div
-                    className="flex h-[48px] w-[48px] items-center justify-center rounded-full p-2.5"
-                    style={{ backgroundColor: mockGasWallet.iconBg }}
+                    className="flex h-[48px] w-[48px] items-center justify-center rounded-full p-2.5 text-white font-semibold"
+                    style={{ backgroundColor: card.iconBg }}
                   >
-                    {/* Ethereum logo */}
-                    <svg viewBox="0 0 32 32" className="h-7 w-7" fill="none" aria-hidden="true">
-                      {/* Upper left face */}
-                      <polygon points="16,4 8,17 16,14" fill="white" fillOpacity="0.9"/>
-                      {/* Upper right face */}
-                      <polygon points="16,4 24,17 16,14" fill="white" fillOpacity="0.55"/>
-                      {/* Lower left face */}
-                      <polygon points="16,14 8,17 16,21" fill="white" fillOpacity="0.7"/>
-                      {/* Lower right face */}
-                      <polygon points="16,14 24,17 16,21" fill="white" fillOpacity="0.4"/>
-                      {/* Bottom left face */}
-                      <polygon points="16,21 8,17 16,28" fill="white" fillOpacity="0.9"/>
-                      {/* Bottom right face */}
-                      <polygon points="16,21 24,17 16,28" fill="white" fillOpacity="0.7"/>
-                    </svg>
+                    {card.iconEmoji}
                   </div>
                   <div className="space-y-2 w-full">
-                    <p className="text-sm font-medium text-gray-400">{mockGasWallet.currency}</p>
+                    <p className="text-sm font-medium text-gray-400">{card.currency}</p>
                     <p
                       className="admin-wallet-balance-amount font-semibold text-gray-900"
                       style={{
@@ -508,9 +505,9 @@ export default function AdminWalletPage() {
                         verticalAlign: "middle",
                       }}
                     >
-                      {mockGasWallet.amount}
+                      {card.amount}
                     </p>
-                    <p className="text-xs text-gray-400">{mockGasWallet.fiatAmount}</p>
+                    <p className="text-xs text-gray-400">{card.fiatAmount}</p>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-10">
@@ -550,11 +547,11 @@ export default function AdminWalletPage() {
               <div className="mt-5 flex items-center gap-2 border-t border-gray-200 pt-3 text-xs">
                 <span className="text-[11px] text-gray-400">Wallet address</span>
                 <span className="font-mono font-medium text-gray-700">
-                  {mockGasWallet.walletAddressMasked}
+                  {card.walletAddressMasked}
                 </span>
                 <button
                   type="button"
-                  onClick={() => navigator.clipboard.writeText(mockGasWallet.walletAddress)}
+                  onClick={() => navigator.clipboard.writeText(card.walletAddress)}
                   className="inline-flex h-5 w-5 items-center justify-center text-gray-400 hover:text-gray-600"
                   aria-label="Copy wallet address"
                 >
@@ -569,6 +566,7 @@ export default function AdminWalletPage() {
                 </button>
               </div>
             </div>
+            ))}
           </div>
         </div>
       )}
@@ -588,12 +586,9 @@ export default function AdminWalletPage() {
             >
               Commission Wallet
             </h2>
-            <button
-              type="button"
-              className="w-full rounded-lg bg-[#2962FF] px-4 py-2 text-sm font-medium text-white  hover:bg-[#1f4ed6] sm:w-auto"
-            >
-              + Commission Wallet
-            </button>
+          </div>
+          <div className="mb-4 rounded-md border border-dashed border-gray-300 p-4 text-sm text-gray-500">
+            Commission wallet configuration isn&apos;t live yet — coming in the next release. Master and gas wallets above are fully functional.
           </div>
 
           <label className="relative mb-4 block w-full">
@@ -630,7 +625,7 @@ export default function AdminWalletPage() {
                 </tr>
               </thead>
               <tbody className="admin-table-row-dividers">
-                {mockCommissionWallets.map((row, idx) => (
+                {([] as Array<{ currency: "USDT" | "BTC" | "USDC"; address: string; balance: string; privateKey: string; publicKey: string }>).map((row, idx) => (
                   <tr key={`${row.currency}-${idx}`} className="bg-transparent">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">

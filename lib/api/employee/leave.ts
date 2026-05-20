@@ -1,30 +1,55 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getLeaveBalance() {
-  const res = await fetch(`${API_BASE_URL}/employee/leave/balance`);
-  if (!res.ok) throw new Error("Failed to fetch leave balance");
-  return res.json();
+export type LeaveType = "Annual" | "Sick" | "Unpaid" | "Maternity" | "Paternity" | "Other";
+
+export interface LeaveRequest {
+  id: number;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdAt: string;
 }
 
-export async function getLeaveRequests(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/employee/leave${query}`);
-  if (!res.ok) throw new Error("Failed to fetch leave requests");
-  return res.json();
+export interface LeaveBalance {
+  year: number;
+  totalAnnual: number;
+  used: number;
+  pending: number;
+  remaining: number;
 }
 
-export async function applyLeave(data: Record<string, unknown>) {
-  const res = await fetch(`${API_BASE_URL}/employee/leave`, {
+export interface LeaveCalendarEvent {
+  id: number;
+  userName: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  status: "pending" | "approved";
+}
+
+export function listLeaveRequests(token: string) {
+  return apiClient<{ requests: LeaveRequest[] }>("/employee/leave", { token });
+}
+
+export function createLeaveRequest(
+  token: string,
+  data: { type: LeaveType; startDate: string; endDate: string; reason?: string }
+) {
+  return apiClient<{ request: LeaveRequest }>("/employee/leave", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    token,
+    body: data,
   });
-  if (!res.ok) throw new Error("Failed to apply leave");
-  return res.json();
 }
 
-export async function getTeamLeaveCalendar() {
-  const res = await fetch(`${API_BASE_URL}/employee/leave/calendar`);
-  if (!res.ok) throw new Error("Failed to fetch team calendar");
-  return res.json();
+export function getLeaveBalance(token: string) {
+  return apiClient<{ balance: LeaveBalance }>("/employee/leave/balance", { token });
+}
+
+export function getTeamLeaveCalendar(token: string) {
+  return apiClient<{ events: LeaveCalendarEvent[] }>("/employee/leave/calendar", { token });
 }

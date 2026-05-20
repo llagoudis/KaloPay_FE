@@ -1,31 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
 
-type ActivityLogRow = {
-  createdAt: string;
-  administrator: string;
-  description: string;
+interface ActivityLogRow {
+  id: number;
   action: string;
-};
+  description: string | null;
+  ip_address: string | null;
+  entity_type: string | null;
+  entity_id: number | null;
+  created_at: string;
+  administrator: string;
+}
 
-const mockActivityLogs: ActivityLogRow[] = Array.from({ length: 7 }, () => ({
-  createdAt: "23-09-2025 12:19:04 PM",
-  administrator: "Shivraj_NET",
-  description: "Shivraj_NET Logged In",
-  action: "Login",
-}));
+interface ActivityLogResponse {
+  data: ActivityLogRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+function useAdminToken() {
+  return useAdminAuthStore((s) => s.token);
+}
+
+function fmtDate(iso: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString();
+}
 
 export default function AdminActivityLogsPage() {
   const [search, setSearch] = useState("");
+  const token = useAdminToken();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin", "activity-logs"],
+    queryFn: () => apiClient<ActivityLogResponse>("/admin/activity-logs?limit=100", { token: token! }),
+    enabled: !!token,
+  });
 
-  const filtered = mockActivityLogs.filter(
-    (row) =>
-      row.administrator.toLowerCase().includes(search.toLowerCase()) ||
-      row.description.toLowerCase().includes(search.toLowerCase()) ||
-      row.action.toLowerCase().includes(search.toLowerCase()) ||
-      row.createdAt.includes(search)
-  );
+  const logs = useMemo(() => {
+    const rows = data?.data ?? [];
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (r) =>
+        (r.administrator ?? "").toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q) ||
+        (r.action ?? "").toLowerCase().includes(q) ||
+        fmtDate(r.created_at).toLowerCase().includes(q)
+    );
+  }, [data, search]);
 
   return (
     <div className="admin-activity-log-page w-full space-y-6">
@@ -45,7 +72,6 @@ export default function AdminActivityLogsPage() {
         </h1>
       </div>
 
-      {/* Ek hi div — iske andar search + saara data; data ke liye alag-alag div nahi */}
       <div className="w-full rounded-xl bg-white p-6 shadow-sm">
         <label className="relative block">
           <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
@@ -62,9 +88,14 @@ export default function AdminActivityLogsPage() {
           />
         </label>
 
+        {error ? (
+          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            Failed to load activity logs: {(error as Error).message}
+          </div>
+        ) : null}
+
         <div className="mt-6 overflow-x-auto rounded-lg">
           <div className="min-w-[720px] px-1">
-            {/* Header — column spacing set, neeche line */}
             <div
               className="admin-activity-log-header grid gap-x-6 py-2 text-xs font-medium text-gray-500"
               style={{ gridTemplateColumns: "1.2fr 1fr 2fr 0.8fr" }}
@@ -74,22 +105,23 @@ export default function AdminActivityLogsPage() {
               <span>Description</span>
               <span>Action</span>
             </div>
-            {/* Data — har detail ke neeche line */}
             <div className="admin-activity-log-rows">
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <div className="py-8 text-center text-sm text-gray-400">Loading activity logs…</div>
+              ) : logs.length === 0 ? (
                 <div className="py-8 text-center text-sm text-gray-400">
                   No activity log entries found.
                 </div>
               ) : (
-                filtered.map((row, i) => (
+                logs.map((row) => (
                   <div
-                    key={i}
+                    key={row.id}
                     className="grid gap-x-6 py-4 text-sm text-gray-700"
                     style={{ gridTemplateColumns: "1.2fr 1fr 2fr 0.8fr" }}
                   >
-                    <span className="whitespace-nowrap">{row.createdAt}</span>
+                    <span className="whitespace-nowrap">{fmtDate(row.created_at)}</span>
                     <span>{row.administrator}</span>
-                    <span>{row.description}</span>
+                    <span>{row.description ?? "—"}</span>
                     <span>{row.action}</span>
                   </div>
                 ))

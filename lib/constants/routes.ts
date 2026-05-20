@@ -21,6 +21,7 @@ export const ROUTES = {
     activityLogs: "/admin/activity-logs",
     clientActivityLogs: "/admin/client-activity-logs",
     administrators: "/admin/administrators",
+    documents: "/admin/documents",
     settings: "/admin/settings",
   },
   employer: {

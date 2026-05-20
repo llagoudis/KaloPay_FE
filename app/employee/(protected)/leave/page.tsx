@@ -2,71 +2,68 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  useApplyLeave,
+  useMyLeaveBalance,
+  useMyLeaveRequests,
+} from "@/hooks/employee/useEmployeeData";
+import type { LeaveType } from "@/lib/api/employee/leave";
 
-type LeaveRequest = {
-  id: string;
-  type: "Annual" | "Sick" | "Unpaid";
-  from: string;
-  to: string;
-  reason: string;
-  status: "Pending" | "Approved" | "Rejected";
-};
+const LEAVE_TYPES: LeaveType[] = ["Annual", "Sick", "Unpaid", "Maternity", "Paternity", "Other"];
 
-const STORAGE_KEY = "kalopay-employee-leave-requests";
-
-function loadRequests(): LeaveRequest[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as LeaveRequest[]) : [];
-  } catch {
-    return [];
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "approved":
+      return "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300";
+    case "rejected":
+      return "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300";
+    case "cancelled":
+      return "rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-slate-700 dark:text-slate-200";
+    default:
+      return "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
   }
 }
 
-function saveRequests(requests: LeaveRequest[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
+function fmtStatus(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export default function EmployeeLeavePage() {
-  const [requests, setRequests] = useState<LeaveRequest[]>(loadRequests);
+  const { data: leaveData, isLoading, error } = useMyLeaveRequests();
+  const { data: balanceData } = useMyLeaveBalance();
+  const applyMut = useApplyLeave();
+
   const [formOpen, setFormOpen] = useState(false);
-  const [type, setType] = useState<LeaveRequest["type"]>("Annual");
+  const [type, setType] = useState<LeaveType>("Annual");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+  const requests = leaveData?.requests ?? [];
+  const balance = balanceData?.balance;
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+    setSubmitError(null);
     if (!from || !to) {
-      setError("Please choose start and end dates.");
+      setSubmitError("Please choose start and end dates.");
       return;
     }
     if (new Date(from) > new Date(to)) {
-      setError("End date must be on or after start date.");
+      setSubmitError("End date must be on or after start date.");
       return;
     }
-    const next: LeaveRequest = {
-      id: `lr-${Date.now()}`,
-      type,
-      from,
-      to,
-      reason: reason.trim(),
-      status: "Pending",
-    };
-    const updated = [next, ...requests];
-    setRequests(updated);
-    saveRequests(updated);
-    setFormOpen(false);
-    setFrom("");
-    setTo("");
-    setReason("");
-    setType("Annual");
+    try {
+      await applyMut.mutateAsync({ type, startDate: from, endDate: to, reason: reason || undefined });
+      setFormOpen(false);
+      setFrom("");
+      setTo("");
+      setReason("");
+      setType("Annual");
+    } catch (err) {
+      setSubmitError((err as Error).message);
+    }
   };
 
   return (
@@ -75,7 +72,7 @@ export default function EmployeeLeavePage() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Leave</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            Submit a time-off request and track its status.
+            Submit time-off requests and track approvals from your employer.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -95,6 +92,15 @@ export default function EmployeeLeavePage() {
         </div>
       </div>
 
+      {balance ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <BalanceCard label={`Annual ${balance.year}`} value={`${balance.totalAnnual} days`} />
+          <BalanceCard label="Used" value={`${balance.used} days`} tone="green" />
+          <BalanceCard label="Pending" value={`${balance.pending} days`} tone="amber" />
+          <BalanceCard label="Remaining" value={`${balance.remaining} days`} tone="blue" />
+        </div>
+      ) : null}
+
       <div className="rounded-xl bg-white shadow-sm dark:bg-slate-900">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -108,7 +114,19 @@ export default function EmployeeLeavePage() {
               </tr>
             </thead>
             <tbody>
-              {requests.length === 0 ? (
+              {error ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-red-600">
+                    Failed to load leave: {(error as Error).message}
+                  </td>
+                </tr>
+              ) : isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
+                    Loading…
+                  </td>
+                </tr>
+              ) : requests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500 dark:text-slate-400">
                     No leave requests yet.
@@ -118,21 +136,11 @@ export default function EmployeeLeavePage() {
                 requests.map((r) => (
                   <tr key={r.id} className="border-b border-gray-100 dark:border-slate-800">
                     <td className="px-4 py-3 text-gray-900 dark:text-slate-100">{r.type}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{r.from}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{r.to}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{r.startDate?.slice(0, 10)}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{r.endDate?.slice(0, 10)}</td>
                     <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{r.reason || "—"}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={
-                          r.status === "Approved"
-                            ? "rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                            : r.status === "Rejected"
-                            ? "rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                            : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                        }
-                      >
-                        {r.status}
-                      </span>
+                      <span className={statusBadgeClass(r.status)}>{fmtStatus(r.status)}</span>
                     </td>
                   </tr>
                 ))
@@ -170,12 +178,12 @@ export default function EmployeeLeavePage() {
                 <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Type</span>
                 <select
                   value={type}
-                  onChange={(e) => setType(e.target.value as LeaveRequest["type"])}
+                  onChange={(e) => setType(e.target.value as LeaveType)}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 >
-                  <option>Annual</option>
-                  <option>Sick</option>
-                  <option>Unpaid</option>
+                  {LEAVE_TYPES.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
                 </select>
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -208,15 +216,11 @@ export default function EmployeeLeavePage() {
                   placeholder="Optional note for your manager"
                 />
               </label>
-              {error ? (
+              {submitError ? (
                 <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-900/40 dark:text-red-200">
-                  {error}
+                  {submitError}
                 </div>
               ) : null}
-              <p className="text-xs text-gray-500 dark:text-slate-400">
-                Note: requests are tracked locally until the leave API is connected. Your employer
-                will follow up directly to confirm.
-              </p>
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -227,15 +231,41 @@ export default function EmployeeLeavePage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  disabled={applyMut.isPending}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
                 >
-                  Submit Request
+                  {applyMut.isPending ? "Submitting…" : "Submit Request"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function BalanceCard({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "green" | "amber" | "blue";
+}) {
+  const toneClass =
+    tone === "green"
+      ? "text-green-600 dark:text-green-300"
+      : tone === "amber"
+      ? "text-amber-600 dark:text-amber-300"
+      : tone === "blue"
+      ? "text-blue-600 dark:text-blue-300"
+      : "text-gray-900 dark:text-slate-100";
+  return (
+    <div className="rounded-xl bg-white p-4 shadow-sm dark:bg-slate-900">
+      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${toneClass}`}>{value}</p>
     </div>
   );
 }
