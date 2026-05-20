@@ -12,7 +12,7 @@ export interface AdminAdministrator {
 }
 
 export function getAdministrators(token: string) {
-  return apiClient<{ administrators: AdminAdministrator[] }>("/admin/administrators", { token });
+  return apiClient<{ data: AdminAdministrator[] }>("/admin/administrators", { token });
 }
 
 export interface CreateAdministratorInput {

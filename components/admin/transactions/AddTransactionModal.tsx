@@ -58,19 +58,26 @@ export default function AddTransactionModal({ open, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="add-tx-title"
       onClick={onClose}
+      style={{ colorScheme: "light" }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
+        className="w-full max-w-lg rounded-2xl p-6 shadow-xl"
+        style={{ backgroundColor: "#FFFFFF", color: "#111827" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="add-tx-title" className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+          <h2
+            id="add-tx-title"
+            className="text-lg font-semibold"
+            style={{ color: "#111827" }}
+          >
             Add New Transaction
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-slate-800"
+            className="rounded p-1 hover:bg-gray-100"
+            style={{ color: "#9CA3AF" }}
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,10 +88,10 @@ export default function AddTransactionModal({ open, onClose }: Props) {
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Sender">
-              <input value={sender} onChange={(e) => setSender(e.target.value)} className={INPUT_CLASS} placeholder="External / sender name" />
+              <input value={sender} onChange={(e) => setSender(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} placeholder="External / sender name" />
             </Field>
             <Field label="Beneficiary">
-              <input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} className={INPUT_CLASS} placeholder="Recipient name" />
+              <input value={beneficiary} onChange={(e) => setBeneficiary(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} placeholder="Recipient name" />
             </Field>
             <Field label="Amount *">
               <input
@@ -94,15 +101,16 @@ export default function AddTransactionModal({ open, onClose }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className={INPUT_CLASS}
+                style={INPUT_STYLE}
                 placeholder="0.00"
                 required
               />
             </Field>
             <Field label="Currency">
-              <input value={currency} onChange={(e) => setCurrency(e.target.value)} className={INPUT_CLASS} placeholder="USD" />
+              <input value={currency} onChange={(e) => setCurrency(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE} placeholder="USD" />
             </Field>
             <Field label="Transaction type">
-              <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className={INPUT_CLASS}>
+              <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE}>
                 <option>Outgoing Transfer</option>
                 <option>Incoming Transfer</option>
                 <option>Payroll</option>
@@ -111,7 +119,7 @@ export default function AddTransactionModal({ open, onClose }: Props) {
               </select>
             </Field>
             <Field label="Payment type">
-              <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={INPUT_CLASS}>
+              <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE}>
                 <option>SEPA SCT</option>
                 <option>SEPA Instant</option>
                 <option>SWIFT</option>
@@ -121,7 +129,7 @@ export default function AddTransactionModal({ open, onClose }: Props) {
               </select>
             </Field>
             <Field label="Status">
-              <select value={transactionStatus} onChange={(e) => setTransactionStatus(e.target.value)} className={INPUT_CLASS}>
+              <select value={transactionStatus} onChange={(e) => setTransactionStatus(e.target.value)} className={INPUT_CLASS} style={INPUT_STYLE}>
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
                 <option value="completed">Completed</option>
@@ -135,12 +143,13 @@ export default function AddTransactionModal({ open, onClose }: Props) {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
                 className={INPUT_CLASS}
+                style={INPUT_STYLE}
                 placeholder="Optional note"
               />
             </Field>
           </div>
           {submitError ? (
-            <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-900/40 dark:text-red-200">
+            <div className="rounded-md p-2 text-sm" style={{ backgroundColor: "#FEF2F2", color: "#B91C1C" }}>
               {submitError}
             </div>
           ) : null}
@@ -148,7 +157,8 @@ export default function AddTransactionModal({ open, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+              style={{ borderColor: "#D1D5DB", backgroundColor: "#FFFFFF", color: "#374151" }}
             >
               Cancel
             </button>
@@ -167,7 +177,13 @@ export default function AddTransactionModal({ open, onClose }: Props) {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600";
+  "w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+
+const INPUT_STYLE: React.CSSProperties = {
+  borderColor: "#D1D5DB",
+  backgroundColor: "#FFFFFF",
+  color: "#111827",
+};
 
 function Field({
   label,
@@ -180,7 +196,7 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
-      <span className="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">
+      <span className="mb-1 block text-sm font-medium" style={{ color: "#374151" }}>
         {label}
       </span>
       {children}

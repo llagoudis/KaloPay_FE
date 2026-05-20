@@ -80,7 +80,7 @@ export default function AdminTable() {
   const deleteMut = useDeleteAdministrator();
 
   const rows: AdministratorRow[] = useMemo(() => {
-    return (adminData?.administrators ?? []).map((a) => {
+    return (adminData?.data ?? []).map((a) => {
       const { firstName, lastName } = splitName(a.name);
       return {
         id: a.id,

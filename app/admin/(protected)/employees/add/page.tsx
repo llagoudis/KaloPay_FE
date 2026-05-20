@@ -105,6 +105,25 @@ export default function AdminAddEmployeePage() {
   const [contractStart, setContractStart] = useState("");
   const [contractEnd, setContractEnd] = useState("");
 
+  // Step 1 — additional bound fields
+  const [identificationType, setIdentificationType] = useState("");
+  const [passportNo, setPassportNo] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+  const [nationalInsuranceNo, setNationalInsuranceNo] = useState("");
+  const [tic, setTic] = useState("");
+
+  // Step 2 — additional bound fields
+  const [flatApartmentNo, setFlatApartmentNo] = useState("");
+  const [floor, setFloor] = useState("");
+
+  // Step 3 — additional bound fields
+  const [legalEntity, setLegalEntity] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [scopeOfWork, setScopeOfWork] = useState("");
+  const [departmentRole, setDepartmentRole] = useState("");
+  const [directManagerEmail, setDirectManagerEmail] = useState("");
+  const [partTimePercentage, setPartTimePercentage] = useState("");
+
   const router = useRouter();
   const createMut = useCreateAdminEmployee();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -124,38 +143,57 @@ export default function AdminAddEmployeePage() {
         email: personalEmail.trim(),
         work_email: workEmail || undefined,
         phone: primaryPhone ? `${selectedPrimaryCode.split(" ")[0]} ${primaryPhone}`.trim() : undefined,
+        emergency_phone: emergencyPhone
+          ? `${selectedEmergencyCode.split(" ")[0]} ${emergencyPhone}`.trim()
+          : undefined,
         nationality: selectedNationality || undefined,
         date_of_birth: dateOfBirth || undefined,
         employee_no: employeeNo || undefined,
+        identification_type: identificationType || undefined,
+        passport_number: passportNo || undefined,
+        national_insurance_no: nationalInsuranceNo || undefined,
+        tic: tic || undefined,
         street_name: streetName || undefined,
         street_no: streetNo || undefined,
+        flat_apartment_no: flatApartmentNo || undefined,
+        floor: floor || undefined,
         postal_code: postalCode || undefined,
         city: city || undefined,
         province: province || undefined,
         country: selectedAddressCountry || undefined,
         job_title: jobTitle || undefined,
+        legal_entity: legalEntity || undefined,
+        group_name: groupName || undefined,
+        scope_of_work: scopeOfWork || undefined,
         department: department || undefined,
+        department_role: departmentRole || undefined,
+        seniority_level: seniorityLevel || undefined,
+        line_manager_email: directManagerEmail || undefined,
         employment_type: employmentType || undefined,
         employee_status: employeeStatus || "active",
+        part_time_percentage: partTimePercentage || undefined,
         contract_start: contractStart || undefined,
         contract_end: contractEnd || undefined,
+        payment_method: paymentMethod || undefined,
+        payment_preference: paymentPreference || undefined,
+        compensation_type: compensationType || undefined,
         payment_currency_code: paymentCurrencyCode || undefined,
         gross_annual_salary: grossAnnualSalary || undefined,
         bank_name: bankName || undefined,
+        bank_address: bankAddress || undefined,
         swift_bic: swiftBic || undefined,
         iban: iban || undefined,
         usdt_erc_wallet: usdtErcWallet || undefined,
+        usdc_erc_wallet: usdcErcWallet || undefined,
+        usdc_polygon_wallet: usdcPolyWallet || undefined,
         btc_wallet: btcWallet || undefined,
       });
       router.push(ROUTES.admin.employees);
     } catch (err) {
       setSubmitError((err as Error).message);
     }
-    void bankAddress; void usdcErcWallet; void usdcPolyWallet;
-    void seniorityLevel; void paymentMethod; void paymentPreference; void compensationType;
     void varComp1EffectiveDate; void varComp1Frequency; void varComp1Type; void varComp1Title; void varComp1Amount;
     void primaryCodeOpen; void setPrimaryCodeOpen; void emergencyCodeOpen; void setEmergencyCodeOpen;
-    void selectedEmergencyCode; void setSelectedEmergencyCode;
     void addressCountryOpen; void setAddressCountryOpen;
     void contractStartRef; void contractEndRef; void varComp1DateRef;
   };
@@ -408,7 +446,11 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Identification Type
               </label>
-              <SelectWithArrow className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-400 bg-white">
+              <SelectWithArrow
+                value={identificationType}
+                onChange={(e) => setIdentificationType(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 bg-white"
+              >
                 <option value="">Select identification type</option>
                 <option value="passport">Passport</option>
                 <option value="national_id">National ID</option>
@@ -421,7 +463,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter passport no"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={passportNo}
+                onChange={(e) => setPassportNo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -443,7 +487,7 @@ export default function AdminAddEmployeePage() {
                     </div>
                   )}
                 </div>
-                <input type="tel" placeholder="980-00-000-00" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+                <input type="tel" placeholder="980-00-000-00" value={primaryPhone} onChange={(e) => setPrimaryPhone(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
               </div>
             </div>
             <div>
@@ -465,7 +509,7 @@ export default function AdminAddEmployeePage() {
                     </div>
                   )}
                 </div>
-                <input type="tel" placeholder="980-00-000-00" className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+                <input type="tel" placeholder="980-00-000-00" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
               </div>
             </div>
             <div>
@@ -475,7 +519,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter national insurance no"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={nationalInsuranceNo}
+                onChange={(e) => setNationalInsuranceNo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -485,7 +531,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter TIC"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={tic}
+                onChange={(e) => setTic(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div className="sm:col-span-2 flex justify-end pt-6">
@@ -529,7 +577,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter street name"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={streetName}
+                onChange={(e) => setStreetName(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -539,7 +589,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter street number"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={streetNo}
+                onChange={(e) => setStreetNo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -549,7 +601,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter flat/appartment number"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={flatApartmentNo}
+                onChange={(e) => setFlatApartmentNo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -559,7 +613,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter floor"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={floor}
+                onChange={(e) => setFloor(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -569,7 +625,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter postal code"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -579,7 +637,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter province/region/state"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={province}
+                onChange={(e) => setProvince(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -589,7 +649,9 @@ export default function AdminAddEmployeePage() {
               <input
                 type="text"
                 placeholder="Enter city"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div className="relative">
@@ -655,13 +717,13 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Legal entity <span className="text-red-500">*</span>
               </label>
-              <input type="text" placeholder="Enter legal entity" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="text" placeholder="Enter legal entity" value={legalEntity} onChange={(e) => setLegalEntity(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Group (optional)
               </label>
-              <input type="text" placeholder="Enter group" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="text" placeholder="Enter group" value={groupName} onChange={(e) => setGroupName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -685,7 +747,7 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Scope of work
               </label>
-              <input type="text" placeholder="Enter scope of work" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="text" placeholder="Enter scope of work" value={scopeOfWork} onChange={(e) => setScopeOfWork(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -703,13 +765,13 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Department role
               </label>
-              <input type="text" placeholder="Enter department role" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="text" placeholder="Enter department role" value={departmentRole} onChange={(e) => setDepartmentRole(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Direct manager email
               </label>
-              <input type="email" placeholder="Enter direct manager email" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="email" placeholder="Enter direct manager email" value={directManagerEmail} onChange={(e) => setDirectManagerEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
@@ -751,7 +813,7 @@ export default function AdminAddEmployeePage() {
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
                 Part time percentage
               </label>
-              <input type="number" placeholder="Enter part time percentage" className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400" />
+              <input type="number" placeholder="Enter part time percentage" value={partTimePercentage} onChange={(e) => setPartTimePercentage(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
