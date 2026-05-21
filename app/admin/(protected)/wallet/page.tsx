@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Table from "@/components/ui/Table";
 import { cn } from "@/lib/utils/cn";
 import { ROUTES } from "@/lib/constants/routes";
 import {
+  createAdminCryptoWallet,
+  createClientCryptoWallet,
   getAdminCryptoWallets,
   getClientCryptoWallets,
   type CryptoAdminWallet,
@@ -98,6 +100,7 @@ export default function AdminWalletPage() {
   const [search, setSearch] = useState("");
   const token = useAdminAuthStore((s) => s.token);
 
+  const qc = useQueryClient();
   const adminWalletsQuery = useQuery({
     queryKey: ["admin", "crypto-wallet", "all"],
     queryFn: () => getAdminCryptoWallets(token!),
@@ -109,6 +112,38 @@ export default function AdminWalletPage() {
       getClientCryptoWallets(token!, { pageSize: 50, pageNumber: 1, search: search || undefined }),
     enabled: !!token,
   });
+
+  const createAdminWalletMut = useMutation({
+    mutationFn: (kind: "MASTER" | "GAS") => createAdminCryptoWallet(token!, kind),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "crypto-wallet"] });
+    },
+  });
+
+  const [clientWalletName, setClientWalletName] = useState("");
+  const [clientWalletCompanyId, setClientWalletCompanyId] = useState("");
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const createClientWalletMut = useMutation({
+    mutationFn: (data: { walletName: string; companyId?: string }) =>
+      createClientCryptoWallet(token!, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "crypto-wallet"] });
+      setClientModalOpen(false);
+      setClientWalletName("");
+      setClientWalletCompanyId("");
+    },
+  });
+
+  async function handleCreateAdminWallet(kind: "MASTER" | "GAS") {
+    setCreateError(null);
+    try {
+      await createAdminWalletMut.mutateAsync(kind);
+    } catch (e) {
+      setCreateError(`${kind} wallet create failed: ${(e as Error).message}`);
+    }
+  }
 
   const masterWallets: MasterWalletCard[] = useMemo(
     () => (adminWalletsQuery.data?.master ?? []).map(toMasterCard),
@@ -300,20 +335,37 @@ export default function AdminWalletPage() {
             >
               Master Wallet
             </h2>
-            <button
-              type="button"
-              className="w-full rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white  hover:bg-[#0D46C3] sm:w-auto"
-            >
-              + Create Client Wallet
-            </button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <button
+                type="button"
+                onClick={() => handleCreateAdminWallet("MASTER")}
+                disabled={createAdminWalletMut.isPending}
+                className="rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-medium text-white hover:bg-[#0D46C3] disabled:opacity-60"
+              >
+                {createAdminWalletMut.isPending ? "Creating…" : "+ Create Master Wallet"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setClientModalOpen(true)}
+                className="rounded-lg border border-[#0F50DB] bg-white px-4 py-2 text-sm font-medium text-[#0F50DB] hover:bg-blue-50"
+              >
+                + Create Client Wallet
+              </button>
+            </div>
           </div>
+
+          {createError ? (
+            <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              {createError}
+            </div>
+          ) : null}
 
           <div className="grid gap-5 md:grid-cols-2">
             {masterWallets.length === 0 ? (
               <div className="col-span-full rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
                 {adminWalletsQuery.isLoading
                   ? "Loading master wallets…"
-                  : "No master wallets yet. Create one from the /admin/admin-wallet panel."}
+                  : "No master wallets yet. Click + Create Master Wallet to generate one."}
               </div>
             ) : null}
             {masterWallets.map((card) => (
@@ -468,9 +520,11 @@ export default function AdminWalletPage() {
             </h2>
             <button
               type="button"
-              className="w-full rounded-lg bg-[#2962FF] px-4 py-2 text-sm font-medium text-white  hover:bg-[#1f4ed6] sm:w-auto"
+              onClick={() => handleCreateAdminWallet("GAS")}
+              disabled={createAdminWalletMut.isPending}
+              className="w-full rounded-lg bg-[#2962FF] px-4 py-2 text-sm font-medium text-white hover:bg-[#1f4ed6] disabled:opacity-60 sm:w-auto"
             >
-              + Create Gas Wallet
+              {createAdminWalletMut.isPending ? "Creating…" : "+ Create Gas Wallet"}
             </button>
           </div>
 
@@ -767,6 +821,94 @@ export default function AdminWalletPage() {
           </div>
         </div>
       )}
+
+      {clientModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setClientModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Create Client Wallet</h2>
+              <button
+                type="button"
+                onClick={() => setClientModalOpen(false)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form
+              className="space-y-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setCreateError(null);
+                if (!clientWalletName.trim()) {
+                  setCreateError("Wallet name is required.");
+                  return;
+                }
+                try {
+                  await createClientWalletMut.mutateAsync({
+                    walletName: clientWalletName.trim(),
+                    companyId: clientWalletCompanyId || undefined,
+                  });
+                } catch (err) {
+                  setCreateError((err as Error).message);
+                }
+              }}
+            >
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Wallet name *</span>
+                <input
+                  type="text"
+                  value={clientWalletName}
+                  onChange={(e) => setClientWalletName(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                  placeholder="e.g. Acme Co. Master"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-gray-700">Company ID (optional)</span>
+                <input
+                  type="number"
+                  value={clientWalletCompanyId}
+                  onChange={(e) => setClientWalletCompanyId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                  placeholder="e.g. 5"
+                />
+              </label>
+              {createError ? (
+                <div className="rounded-md bg-red-50 p-2 text-sm text-red-700">{createError}</div>
+              ) : null}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setClientModalOpen(false)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createClientWalletMut.isPending}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {createClientWalletMut.isPending ? "Creating…" : "Create"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

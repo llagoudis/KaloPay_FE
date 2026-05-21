@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/constants/routes";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
-import Modal from "@/components/ui/Modal";
+import { apiClient } from "@/lib/api/client";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
+import AddDocumentModal from "@/components/admin/documents/AddDocumentModal";
+import EditDocumentModal, {
+  type EditableDocument,
+} from "@/components/admin/documents/EditDocumentModal";
 
 type TabId = "details" | "documents" | "accounts" | "employees";
 
@@ -126,7 +132,25 @@ const MOCK_COMPANY = {
   },
 };
 
+interface ApiDocumentRow {
+  id: number;
+  entity_type: string;
+  entity_id: number;
+  document_type: string | null;
+  document_status: "pending" | "approved" | "rejected";
+  country: string | null;
+  file_name: string;
+  file_size: number | null;
+  mime_type: string | null;
+  uploaded_by_name: string | null;
+  issue_date: string | null;
+  expiry_date: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 type DocumentRow = {
+  id: number;
   documentType: string;
   status: string;
   file: string;
@@ -135,18 +159,8 @@ type DocumentRow = {
   country: string;
   issueDate: string;
   validUntil: string;
+  raw: ApiDocumentRow;
 };
-
-const MOCK_DOCUMENTS: DocumentRow[] = Array.from({ length: 5 }, () => ({
-  documentType: "Certificate Of Formation",
-  status: "Approved",
-  file: "Link",
-  documentNumber: "-",
-  accountStatus: "-",
-  country: "Cyprus",
-  issueDate: "-",
-  validUntil: "-",
-}));
 
 type AccountRow = {
   number: string;
@@ -223,17 +237,35 @@ export default function AdminCompanyDetailPage({
   params: Promise<{ companyId: string }>;
 }) {
   const { companyId } = use(params);
+  const cid = Number(companyId);
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [documentsSearch, setDocumentsSearch] = useState("");
   const [addDocumentOpen, setAddDocumentOpen] = useState(false);
-  const [docType, setDocType] = useState("");
-  const [docCountry, setDocCountry] = useState("");
-  const [docNumber, setDocNumber] = useState("");
-  const [docStatus, setDocStatus] = useState("");
-  const [docIssueDate, setDocIssueDate] = useState("");
-  const [docValidUptil, setDocValidUptil] = useState("");
+  const [editDocument, setEditDocument] = useState<EditableDocument | null>(null);
   const [employeesSearch, setEmployeesSearch] = useState("");
   const c = MOCK_COMPANY;
+
+  const token = useAdminAuthStore((s) => s.token);
+  const documentsQuery = useQuery({
+    queryKey: ["admin", "documents", "company", cid],
+    queryFn: () =>
+      apiClient<{ data: ApiDocumentRow[]; total: number }>(
+        `/admin/documents?entityType=company&entityId=${cid}&limit=50`,
+        { token: token! }
+      ),
+    enabled: !!token && Number.isFinite(cid),
+  });
+  const qc = useQueryClient();
+  const deleteDocMut = useMutation({
+    mutationFn: (docId: number) =>
+      apiClient<{ message: string }>(`/admin/documents/${docId}`, {
+        method: "DELETE",
+        token: token!,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "documents", "company", cid] });
+    },
+  });
 
   const filteredCompanyEmployees = MOCK_COMPANY_EMPLOYEES.filter(
     (e) =>
@@ -242,12 +274,28 @@ export default function AdminCompanyDetailPage({
       e.id.includes(employeesSearch)
   );
 
-  const filteredDocuments = MOCK_DOCUMENTS.filter(
-    (d) =>
-      d.documentType.toLowerCase().includes(documentsSearch.toLowerCase()) ||
-      d.country.toLowerCase().includes(documentsSearch.toLowerCase()) ||
-      d.documentNumber.includes(documentsSearch)
-  );
+  const filteredDocuments: DocumentRow[] = useMemo(() => {
+    const rows: DocumentRow[] = (documentsQuery.data?.data ?? []).map((d) => ({
+      id: d.id,
+      documentType: d.document_type ?? "—",
+      status: d.document_status ?? "pending",
+      file: d.file_name,
+      documentNumber: String(d.id),
+      accountStatus: "—",
+      country: d.country ?? "—",
+      issueDate: d.issue_date ? new Date(d.issue_date).toLocaleDateString() : "—",
+      validUntil: d.expiry_date ? new Date(d.expiry_date).toLocaleDateString() : "—",
+      raw: d,
+    }));
+    if (!documentsSearch) return rows;
+    const q = documentsSearch.toLowerCase();
+    return rows.filter(
+      (d) =>
+        d.documentType.toLowerCase().includes(q) ||
+        d.country.toLowerCase().includes(q) ||
+        d.file.toLowerCase().includes(q)
+    );
+  }, [documentsQuery.data, documentsSearch]);
 
   return (
     <div className="view-company-detail-page w-full space-y-6">
@@ -538,27 +586,72 @@ export default function AdminCompanyDetailPage({
               {
                 key: "status",
                 header: "Status",
-                render: (value: unknown) => (
-                  <Badge label={String(value)} variant="success" />
-                ),
+                render: (value: unknown) => {
+                  const v = String(value).toLowerCase();
+                  const variant: "success" | "warning" | "danger" =
+                    v === "approved" ? "success" : v === "rejected" ? "danger" : "warning";
+                  return <Badge label={String(value)} variant={variant} />;
+                },
               },
               {
                 key: "file",
                 header: "File",
                 render: (value: unknown) => (
-                  <span className="font-medium text-blue-600 hover:underline cursor-pointer">
-                    {String(value)}
-                  </span>
+                  <span className="font-medium text-blue-600">{String(value)}</span>
                 ),
               },
-              { key: "documentNumber", header: "Document Number" },
-              { key: "accountStatus", header: "Account Status" },
               { key: "country", header: "Country" },
               { key: "issueDate", header: "Issue Date" },
               { key: "validUntil", header: "Valid Until" },
+              {
+                key: "id" as const,
+                header: "Actions",
+                render: (_v: unknown, row: DocumentRow) => (
+                  <div className="inline-flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditDocument({
+                          id: row.raw.id,
+                          document_type: row.raw.document_type,
+                          country: row.raw.country,
+                          issue_date: row.raw.issue_date,
+                          expiry_date: row.raw.expiry_date,
+                          notes: row.raw.notes,
+                          file_name: row.raw.file_name,
+                        })
+                      }
+                      className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm(`Delete document "${row.raw.file_name}"?`)) return;
+                        try {
+                          await deleteDocMut.mutateAsync(row.raw.id);
+                        } catch (e) {
+                          alert(`Failed to delete: ${(e as Error).message}`);
+                        }
+                      }}
+                      disabled={deleteDocMut.isPending}
+                      className="rounded-md border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ),
+              },
             ]}
             data={filteredDocuments}
-            emptyMessage="No documents found."
+            emptyMessage={
+              documentsQuery.isLoading
+                ? "Loading documents…"
+                : documentsQuery.error
+                ? `Failed to load: ${(documentsQuery.error as Error).message}`
+                : "No documents found."
+            }
             className="admin-list-table mt-5 border-0 border-gray-100"
           />
         </div>
@@ -674,142 +767,20 @@ export default function AdminCompanyDetailPage({
         </div>
       )}
 
-      {/* Add New Document modal — Figma 441-4105 */}
-      <Modal
-        isOpen={addDocumentOpen}
+      <AddDocumentModal
+        open={addDocumentOpen}
         onClose={() => setAddDocumentOpen(false)}
-        title="Add New Document"
-        size="2xl"
-        className="px-8 py-8 sm:px-10 sm:py-9"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setAddDocumentOpen(false);
-          }}
-          className="add-document-modal space-y-8"
-        >
-          <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5">
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Document Type <span className="text-red-500">*</span>
-              </label>
-              <SelectWithArrow
-                surface="modal"
-                value={docType}
-                onChange={(e) => setDocType(e.target.value)}
-                className={`add-document-modal-select w-full rounded-lg border border-gray-300 px-3 py-2 ${docType === "" ? "text-gray-500" : "text-gray-900"}`}
-              >
-                <option value="">Select</option>
-                <option value="certificate">Certificate Of Formation</option>
-              </SelectWithArrow>
-            </div>
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Country <span className="text-red-500">*</span>
-              </label>
-              <SelectWithArrow
-                surface="modal"
-                value={docCountry}
-                onChange={(e) => setDocCountry(e.target.value)}
-                className={`add-document-modal-select w-full rounded-lg border border-gray-300 px-3 py-2 ${docCountry === "" ? "text-gray-500" : "text-gray-900"}`}
-              >
-                <option value="">Select</option>
-                <option value="cyprus">Cyprus</option>
-              </SelectWithArrow>
-            </div>
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Document Number
-              </label>
-              <input
-                type="text"
-                placeholder="Enter document no"
-                value={docNumber}
-                onChange={(e) => setDocNumber(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Document Status
-              </label>
-              <SelectWithArrow
-                surface="modal"
-                value={docStatus}
-                onChange={(e) => setDocStatus(e.target.value)}
-                className={`add-document-modal-select w-full rounded-lg border border-gray-300 px-3 py-2 ${docStatus === "" ? "text-gray-500" : "text-gray-900"}`}
-              >
-                <option value="">Select</option>
-                <option value="approved">Approved</option>
-              </SelectWithArrow>
-            </div>
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Issue Date
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Select"
-                  value={docIssueDate}
-                  onChange={(e) => setDocIssueDate(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: DROPDOWN_ARROW_COLOR }}>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-            <div>
-              <label className="add-document-modal-label mb-2 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-                Valid Uptil
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Select"
-                  value={docValidUptil}
-                  onChange={(e) => setDocValidUptil(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-gray-900 placeholder-gray-400"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: DROPDOWN_ARROW_COLOR }}>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <label className="add-document-modal-label mb-3 block" style={ADD_DOCUMENT_LABEL_STYLE}>
-              Upload Files
-            </label>
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/80 px-3 py-8 text-center sm:py-12">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100" aria-hidden>
-                <svg className="h-7 w-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16V8m0 0l-3 3m3-3l3 3M6.5 19a4.5 4.5 0 01-1.41-8.775A6 6 0 0118 10.5a4.5 4.5 0 01.99 8.895" />
-                </svg>
-              </div>
-              <p className="mt-3 text-sm font-medium text-gray-700 break-words">Choose a file or drag & drop it here</p>
-              <p className="mt-1 text-xs text-gray-500">Please upload only one CSV file (max 5MB)</p>
-              <Button type="button" variant="outline" size="md" className="mt-4">
-                Browse Files
-              </Button>
-            </div>
-          </div>
-          <div className="add-document-modal-footer flex justify-end gap-2 border-t pt-6 sm:gap-3">
-            <Button type="button" variant="outline" onClick={() => setAddDocumentOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Add
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        entityType="company"
+        entityId={cid}
+      />
+
+      <EditDocumentModal
+        open={editDocument !== null}
+        onClose={() => setEditDocument(null)}
+        doc={editDocument}
+        entityType="company"
+        entityId={cid}
+      />
     </div>
   );
 }

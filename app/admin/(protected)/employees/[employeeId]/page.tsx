@@ -17,6 +17,10 @@ import EditEmploymentModal from "@/components/user/people/EditEmploymentModal";
 import EditCompensationModal from "@/components/user/people/EditCompensationModal";
 import EditBankWalletModal from "@/components/user/people/EditBankWalletModal";
 import EditNotesModal from "@/components/user/people/EditNotesModal";
+import AddDocumentModal from "@/components/admin/documents/AddDocumentModal";
+import EditDocumentModal, {
+  type EditableDocument,
+} from "@/components/admin/documents/EditDocumentModal";
 
 type TabId = "details" | "documents" | "accounts";
 
@@ -163,32 +167,18 @@ function useEmployeeDocuments(employeeId: number | null) {
   });
 }
 
-interface UploadDocBody {
-  entityType: "employee";
-  entityId: number;
-  documentType?: string;
-  country?: string;
-  fileName: string;
-  fileData: string;
-  mimeType?: string;
-  issueDate?: string;
-  expiryDate?: string;
-  notes?: string;
-}
-
-function useUploadDocument() {
+function useDeleteAdminDocument(employeeId: number | null) {
   const token = useAdminToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: UploadDocBody) =>
-      apiClient<{ document: AdminDocumentRow }>("/admin/documents", {
-        method: "POST",
+    mutationFn: (id: number) =>
+      apiClient<{ message: string }>(`/admin/documents/${id}`, {
+        method: "DELETE",
         token: token!,
-        body,
       }),
-    onSuccess: (_d, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({
-        queryKey: ["admin", "documents", "employee", vars.entityId],
+        queryKey: ["admin", "documents", "employee", employeeId],
       });
     },
   });
@@ -214,6 +204,8 @@ export default function AdminEmployeeDetailPage({
   const [editBankOpen, setEditBankOpen] = useState(false);
   const [editNotesOpen, setEditNotesOpen] = useState(false);
   const [addDocumentOpen, setAddDocumentOpen] = useState(false);
+  const [editDocument, setEditDocument] = useState<EditableDocument | null>(null);
+  const deleteDocMut = useDeleteAdminDocument(Number.isFinite(id) ? id : null);
 
   const emp = data?.employee as Record<string, unknown> | undefined;
 
@@ -454,7 +446,7 @@ export default function AdminEmployeeDetailPage({
             color: "#0E1620",
           }}
         >
-          View Individual — {String(emp.first_name ?? "")} {String(emp.last_name ?? "")}
+          View Individual
         </h1>
       </div>
 
@@ -657,11 +649,30 @@ export default function AdminEmployeeDetailPage({
 
       {activeTab === "documents" && (
         <DocumentsTab
-          employeeId={id}
           documents={documentsQuery.data?.data ?? []}
           isLoading={documentsQuery.isLoading}
           error={documentsQuery.error as Error | null}
           onAddClick={() => setAddDocumentOpen(true)}
+          onEdit={(d) =>
+            setEditDocument({
+              id: d.id,
+              document_type: d.document_type,
+              country: d.country,
+              issue_date: d.issue_date,
+              expiry_date: d.expiry_date,
+              notes: d.notes,
+              file_name: d.file_name,
+            })
+          }
+          onDelete={async (d) => {
+            if (!confirm(`Delete document "${d.file_name}"? This cannot be undone.`)) return;
+            try {
+              await deleteDocMut.mutateAsync(d.id);
+            } catch (e) {
+              alert(`Failed to delete: ${(e as Error).message}`);
+            }
+          }}
+          isDeleting={deleteDocMut.isPending}
         />
       )}
 
@@ -712,7 +723,16 @@ export default function AdminEmployeeDetailPage({
       <AddDocumentModal
         open={addDocumentOpen}
         onClose={() => setAddDocumentOpen(false)}
-        employeeId={id}
+        entityType="employee"
+        entityId={id}
+      />
+
+      <EditDocumentModal
+        open={editDocument !== null}
+        onClose={() => setEditDocument(null)}
+        doc={editDocument}
+        entityType="employee"
+        entityId={id}
       />
     </div>
   );
@@ -726,17 +746,21 @@ function fmtBytes(n: number | null): string {
 }
 
 function DocumentsTab({
-  employeeId: _employeeId,
   documents,
   isLoading,
   error,
   onAddClick,
+  onEdit,
+  onDelete,
+  isDeleting,
 }: {
-  employeeId: number;
   documents: AdminDocumentRow[];
   isLoading: boolean;
   error: Error | null;
   onAddClick: () => void;
+  onEdit: (d: AdminDocumentRow) => void;
+  onDelete: (d: AdminDocumentRow) => void;
+  isDeleting: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -758,7 +782,7 @@ function DocumentsTab({
       ) : null}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] text-sm">
+        <table className="w-full min-w-[800px] text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-left text-xs uppercase text-gray-500">
               <th className="px-3 py-3">Uploaded</th>
@@ -767,18 +791,19 @@ function DocumentsTab({
               <th className="px-3 py-3">Issue / Expiry</th>
               <th className="px-3 py-3">Size</th>
               <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
                   Loading…
                 </td>
               </tr>
             ) : documents.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
                   No documents uploaded yet.
                 </td>
               </tr>
@@ -808,6 +833,25 @@ function DocumentsTab({
                       {d.document_status}
                     </span>
                   </td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(d)}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(d)}
+                        disabled={isDeleting}
+                        className="rounded-md border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}
@@ -818,198 +862,3 @@ function DocumentsTab({
   );
 }
 
-function AddDocumentModal({
-  open,
-  onClose,
-  employeeId,
-}: {
-  open: boolean;
-  onClose: () => void;
-  employeeId: number;
-}) {
-  const uploadMut = useUploadDocument();
-  const [documentType, setDocumentType] = useState("");
-  const [country, setCountry] = useState("");
-  const [issueDate, setIssueDate] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  if (!open) return null;
-
-  const readAsBase64 = (f: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error ?? new Error("File read failed"));
-      reader.readAsDataURL(f);
-    });
-
-  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmitError(null);
-    if (!file) {
-      setSubmitError("Please choose a file to upload.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("File too large (max 5 MB).");
-      return;
-    }
-    try {
-      const fileData = await readAsBase64(file);
-      await uploadMut.mutateAsync({
-        entityType: "employee",
-        entityId: employeeId,
-        documentType: documentType || undefined,
-        country: country || undefined,
-        fileName: file.name,
-        fileData,
-        mimeType: file.type || undefined,
-        issueDate: issueDate || undefined,
-        expiryDate: expiryDate || undefined,
-        notes: notes || undefined,
-      });
-      setDocumentType("");
-      setCountry("");
-      setIssueDate("");
-      setExpiryDate("");
-      setNotes("");
-      setFile(null);
-      onClose();
-    } catch (err) {
-      setSubmitError((err as Error).message);
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Add Document</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 text-gray-400 hover:bg-gray-100"
-            aria-label="Close"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-        <form className="space-y-4" onSubmit={submit}>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">
-              Document type
-            </span>
-            <select
-              value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-            >
-              <option value="">Select</option>
-              <option value="passport">Passport</option>
-              <option value="id_card">National ID</option>
-              <option value="visa">Visa</option>
-              <option value="work_permit">Work Permit</option>
-              <option value="contract">Contract</option>
-              <option value="tax_form">Tax Form</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Country</span>
-              <input
-                type="text"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. United States"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">
-                File (max 5 MB)
-              </span>
-              <input
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="block w-full text-sm text-gray-900 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">
-                Issue date
-              </span>
-              <input
-                type="date"
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">
-                Expiry date
-              </span>
-              <input
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-              />
-            </label>
-          </div>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">Notes</span>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-              placeholder="Optional"
-            />
-          </label>
-          {submitError ? (
-            <div className="rounded-md bg-red-50 p-2 text-sm text-red-700">
-              {submitError}
-            </div>
-          ) : null}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={uploadMut.isPending}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-            >
-              {uploadMut.isPending ? "Uploading…" : "Upload"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}

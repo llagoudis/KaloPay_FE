@@ -939,7 +939,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter gross annual salary"
                 value={grossAnnualSalary}
                 onChange={(e) => setGrossAnnualSalary(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <div>
@@ -1000,7 +1000,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter"
                 value={varComp1Title}
                 onChange={(e) => setVarComp1Title(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1012,7 +1012,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter amount"
                 value={varComp1Amount}
                 onChange={(e) => setVarComp1Amount(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <div className="sm:col-span-2 flex justify-between pt-6">
@@ -1063,7 +1063,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter bank name"
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1075,7 +1075,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter bank address"
                 value={bankAddress}
                 onChange={(e) => setBankAddress(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1087,7 +1087,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter SWIFT/BIC"
                 value={swiftBic}
                 onChange={(e) => setSwiftBic(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1099,7 +1099,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter IBAN"
                 value={iban}
                 onChange={(e) => setIban(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1111,7 +1111,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDT_ERC Wallet Address"
                 value={usdtErcWallet}
                 onChange={(e) => setUsdtErcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1123,7 +1123,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDC_ERC Wallet Address"
                 value={usdcErcWallet}
                 onChange={(e) => setUsdcErcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1135,7 +1135,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter USDC_Poly Wallet Address"
                 value={usdcPolyWallet}
                 onChange={(e) => setUsdcPolyWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
@@ -1147,7 +1147,7 @@ export default function AdminAddEmployeePage() {
                 placeholder="Enter BTC Wallet Address"
                 value={btcWallet}
                 onChange={(e) => setBtcWallet(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-500 placeholder-gray-400"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div className="sm:col-span-2 flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
