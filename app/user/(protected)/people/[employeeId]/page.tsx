@@ -236,7 +236,6 @@ export default function EmployeeProfilePage({
       departmentRole: values.departmentRole || null,
       workLocationCountry: values.workLocationCountry || null,
       contractEnd: values.terminationDate || null,
-      partTimePercentage: values.partTimePercentage || null,
     });
     setEditEmploymentOpen(false);
   }
@@ -366,7 +365,6 @@ export default function EmployeeProfilePage({
                   ["Direct manager email", dash(p.lineManagerEmail)],
                   ["Contract end date", fmtDate(p.contractEnd)],
                   ["Employment type", dash(p.employmentType)],
-                  ["Part-time percentage", dash(p.partTimePercentage)],
                   ["Work location/country", dash(p.workLocationCountry)],
                   ["Termination date", fmtDate(p.terminationDate)],
                   ["Status", dash(p.employeeStatus)],
@@ -446,7 +444,6 @@ export default function EmployeeProfilePage({
             departmentRole: p.departmentRole ?? "",
             workLocationCountry: p.workLocationCountry ?? "",
             terminationDate: p.contractEnd ?? "",
-            partTimePercentage: p.partTimePercentage ?? "",
           }}
           onSave={handleSaveEmployment}
         />

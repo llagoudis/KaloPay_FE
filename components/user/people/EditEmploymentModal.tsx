@@ -16,7 +16,6 @@ export type EditEmploymentForm = {
   departmentRole: string;
   workLocationCountry: string;
   terminationDate: string;
-  partTimePercentage: string;
 };
 
 const COUNTRIES = [
@@ -64,7 +63,6 @@ const defaultForm: EditEmploymentForm = {
   departmentRole: "",
   workLocationCountry: "",
   terminationDate: "",
-  partTimePercentage: "",
 };
 
 interface EditEmploymentModalProps {
@@ -300,18 +298,6 @@ export default function EditEmploymentModal({
                 { value: "contract", label: "Contract" },
               ]}
             />
-            <div>
-              <label className={labelClass}>Part time percentage</label>
-              <input
-                type="number"
-                value={form.partTimePercentage}
-                onChange={(e) => update("partTimePercentage", e.target.value)}
-                placeholder="Enter part time percentage"
-                min={0}
-                max={100}
-                className={inputClass}
-              />
-            </div>
             <div className="edit-personal-details-modal-status-input w-full sm:col-span-2">
             <SelectField
               label="Status"

@@ -61,7 +61,6 @@ const defaultEmploymentForm = {
   startDate: "",
   terminationDate: "",
   employmentType: "",
-  partTimePercentage: "",
   status: "",
 };
 
@@ -277,7 +276,6 @@ export default function AddEmployeePage() {
         departmentRole: employmentForm.departmentRole || null,
         lineManagerEmail: employmentForm.lineManagerEmail || null,
         workLocationCountry: employmentForm.workLocationCountry || null,
-        partTimePercentage: employmentForm.partTimePercentage || null,
         jobTitle: employmentForm.jobTitle || undefined,
         department: employmentForm.department || undefined,
         employmentType: employmentForm.employmentType || undefined,
@@ -905,18 +903,6 @@ export default function AddEmployeePage() {
                     labelClassName={labelClass}
                     mutedIfEmptyClass={mutedIfEmpty}
                   />
-                  <div>
-                    <label className={labelClass}>Part time percentage</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={employmentForm.partTimePercentage}
-                      onChange={(e) => updateEmployment("partTimePercentage", e.target.value)}
-                      placeholder="Enter part time percentage"
-                      className={inputClass}
-                    />
-                  </div>
                 </div>
               </div>
             </div>

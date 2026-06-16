@@ -122,7 +122,6 @@ export default function AdminAddEmployeePage() {
   const [scopeOfWork, setScopeOfWork] = useState("");
   const [departmentRole, setDepartmentRole] = useState("");
   const [directManagerEmail, setDirectManagerEmail] = useState("");
-  const [partTimePercentage, setPartTimePercentage] = useState("");
 
   const router = useRouter();
   const createMut = useCreateAdminEmployee();
@@ -171,7 +170,6 @@ export default function AdminAddEmployeePage() {
         line_manager_email: directManagerEmail || undefined,
         employment_type: employmentType || undefined,
         employee_status: employeeStatus || "active",
-        part_time_percentage: partTimePercentage || undefined,
         contract_start: contractStart || undefined,
         contract_end: contractEnd || undefined,
         payment_method: paymentMethod || undefined,
@@ -808,12 +806,6 @@ export default function AdminAddEmployeePage() {
                 <option value="full-time">Full Time</option>
                 <option value="part-time">Part Time</option>
               </SelectWithArrow>
-            </div>
-            <div>
-              <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>
-                Part time percentage
-              </label>
-              <input type="number" placeholder="Enter part time percentage" value={partTimePercentage} onChange={(e) => setPartTimePercentage(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400" />
             </div>
             <div>
               <label className="add-employee-label mb-2.5 block" style={LABEL_STYLE}>

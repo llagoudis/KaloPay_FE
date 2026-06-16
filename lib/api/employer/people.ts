@@ -66,7 +66,6 @@ export type PersonDetail = {
   contractStart: string | null;
   contractEnd: string | null;
   terminationDate: string | null;
-  partTimePercentage: string | null;
   // Compensation
   paymentMethod: string | null;
   paymentPreference: string | null;

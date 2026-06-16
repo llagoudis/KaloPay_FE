@@ -53,7 +53,8 @@ const AVAILABLE_REPORTS = [
   { id: "6", title: "Upcoming Terminations This Year", subtitle: "Shows the number of upcoming intended and involuntary terminations scheduled for the rest of the year.", tag: "Terminations", icon: "people" as const },
   { id: "7", title: "Monthly Paysheets", subtitle: "Access and download monthly paysheets for all employees.", tag: "Payroll", icon: "dollar" as const },
   { id: "8", title: "IR59 Forms", subtitle: "Generate and download IR59 tax forms for employees.", tag: "Tax", icon: "document" as const },
-  { id: "9", title: "IR63 Forms", subtitle: "Generate and download IR63 tax forms for employees.", tag: "Tax", icon: "document" as const },
+  { id: "9", title: "IR63", subtitle: "Generate and download IR63 emoluments certificates for employees.", tag: "Tax", icon: "document" as const },
+  { id: "10", title: "Payslips", subtitle: "Generate and download monthly payslips for employees.", tag: "Payroll", icon: "dollar" as const },
 ];
 
 export default function UserReportsScreen() {

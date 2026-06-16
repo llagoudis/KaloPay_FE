@@ -2,9 +2,84 @@
 
 import { useMyPayslips, useMyProfile } from "@/hooks/employee/useEmployeeData";
 import type { Payslip } from "@/lib/api/employee/profile";
+import type { EmployeeProfile } from "@/lib/api/employee/profile";
 
 function fmtMoney(n: number, currency: string) {
   return n.toLocaleString("en-US", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 });
+}
+
+function dash(v: string | number | null | undefined) {
+  return v === null || v === undefined || v === "" ? "—" : String(v);
+}
+
+/** Payslip print layout — mirrors the company-issued payslip template (period header,
+ * Employee/Payment Details boxes, Earnings/Deductions/Contributions/Transactions grid, Net Salary). */
+function buildPayslipHtml(p: Payslip, profile: EmployeeProfile | undefined) {
+  const companyName = profile?.companyName ?? "—";
+  const net = fmtMoney(p.amount, p.currency);
+  return `
+    <div style="font-family: Arial, Helvetica, sans-serif; color:#111; max-width:900px;">
+      <div style="color:#1d3fae; font-weight:bold; font-size:18px;">${companyName}</div>
+      <div style="margin:16px 0; background:#e9edfb; padding:10px 16px; text-align:center; font-weight:bold; font-size:16px;">
+        Payslip for Period: ${dash(p.period)}
+      </div>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+        <tr>
+          <td style="vertical-align:top; width:50%; padding-right:12px;">
+            <div style="background:#eef1fc; padding:10px;">
+              <div style="font-weight:bold; color:#1d3fae; text-decoration:underline; margin-bottom:6px;">Employee Details</div>
+              <div><b>Name:</b> ${dash(profile?.name)}</div>
+              <div><b>Employment Date:</b> ${dash(profile?.contractStart)}</div>
+              <div><b>Job Title:</b> ${dash(profile?.jobTitle)}</div>
+              <div><b>Address:</b> ${dash(profile?.city)}${profile?.country ? ", " + profile.country : ""}</div>
+            </div>
+          </td>
+          <td style="vertical-align:top; width:50%;">
+            <div style="background:#eef1fc; padding:10px;">
+              <div style="font-weight:bold; color:#1d3fae; text-decoration:underline; margin-bottom:6px;">Payment Details (${p.currency})</div>
+              <div><b>Payroll Period:</b> ${dash(p.period)}</div>
+              <div><b>Reference:</b> ${dash(p.ref)}</div>
+              <div><b>Payment Method:</b> ${dash(profile?.paymentCurrencyCode)}</div>
+              <div><b>Payment Date:</b> ${dash(p.paymentDate?.slice(0, 10))}</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="background:#1d3fae; color:#fff;">
+            <th style="padding:6px; text-align:left;">Earnings</th>
+            <th style="padding:6px; text-align:left;">Deductions</th>
+            <th style="padding:6px; text-align:left;">Contributions</th>
+            <th style="padding:6px; text-align:left;">Transactions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:6px; border-bottom:1px solid #e5e7eb;">Basic Salary</td>
+            <td style="padding:6px; border-bottom:1px solid #e5e7eb;">—</td>
+            <td style="padding:6px; border-bottom:1px solid #e5e7eb;">—</td>
+            <td style="padding:6px; border-bottom:1px solid #e5e7eb;">—</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px; display:flex; justify-content:flex-end; background:#eef1fc; padding:10px 16px; font-weight:bold;">
+        Net Salary: ${net}
+      </div>
+    </div>
+  `;
+}
+
+function openPayslipPreview(payslip: Payslip, profile: EmployeeProfile | undefined) {
+  const win = window.open("", "_blank");
+  if (!win) {
+    alert("Pop-ups blocked. Allow pop-ups to preview/print this payslip.");
+    return;
+  }
+  win.document.write(
+    `<html><head><title>Payslip ${payslip.ref}</title></head><body>${buildPayslipHtml(payslip, profile)}<script>setTimeout(()=>window.print(),300)</script></body></html>`
+  );
+  win.document.close();
 }
 
 function downloadCsv(filename: string, payslip: Payslip) {
@@ -107,6 +182,13 @@ export default function EmployeeReportsPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-slate-200">{p.paymentDate?.slice(0, 10) ?? "—"}</td>
                     <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openPayslipPreview(p, profile)}
+                        className="mr-2 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        View
+                      </button>
                       <button
                         type="button"
                         onClick={() => downloadCsv(`payslip-${p.ref}.csv`, p)}

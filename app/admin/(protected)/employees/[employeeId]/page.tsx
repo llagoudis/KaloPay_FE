@@ -263,7 +263,6 @@ export default function AdminEmployeeDetailPage({
       status: v(emp?.employee_status, "active"),
       startDate: v(emp?.contract_start, "").slice(0, 10),
       terminationDate: v(emp?.contract_end ?? emp?.termination_date, "").slice(0, 10),
-      partTimePercentage: v(emp?.part_time_percentage, ""),
       workLocationCountry: v(emp?.work_location_country, ""),
     }),
     [emp]
@@ -360,7 +359,6 @@ export default function AdminEmployeeDetailPage({
         employee_status: values.status || "active",
         contract_start: values.startDate || null,
         contract_end: values.terminationDate || null,
-        part_time_percentage: values.partTimePercentage || null,
         work_location_country: values.workLocationCountry || null,
       },
     });
@@ -557,10 +555,6 @@ export default function AdminEmployeeDetailPage({
                 <DetailRow
                   label="Contract end date"
                   value={fmtDate(emp.contract_end)}
-                />
-                <DetailRow
-                  label="Part time percentage"
-                  value={v(emp.part_time_percentage)}
                 />
               </div>
             </div>
