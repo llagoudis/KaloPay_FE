@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/constants/routes";
 import { useAdminEmployee, useUpdateAdminEmployee } from "@/hooks/admin/useEmployees";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
-import { apiClient } from "@/lib/api/client";
+import { listDocuments, deleteDocument } from "@/lib/api/admin/documents";
 import EditPersonalDetailsModal, {
   type EditPersonalForm,
 } from "@/components/user/people/EditPersonalDetailsModal";
@@ -159,10 +159,7 @@ function useEmployeeDocuments(employeeId: number | null) {
   return useQuery({
     queryKey: ["admin", "documents", "employee", employeeId],
     queryFn: () =>
-      apiClient<{ data: AdminDocumentRow[]; total: number }>(
-        `/admin/documents?entityType=employee&entityId=${employeeId}&limit=50`,
-        { token: token! }
-      ),
+      listDocuments(token!, { entityType: "employee", entityId: String(employeeId), limit: 50 }),
     enabled: !!token && employeeId !== null,
   });
 }
@@ -171,11 +168,7 @@ function useDeleteAdminDocument(employeeId: number | null) {
   const token = useAdminToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) =>
-      apiClient<{ message: string }>(`/admin/documents/${id}`, {
-        method: "DELETE",
-        token: token!,
-      }),
+    mutationFn: (id: number) => deleteDocument(token!, id),
     onSuccess: () => {
       qc.invalidateQueries({
         queryKey: ["admin", "documents", "employee", employeeId],

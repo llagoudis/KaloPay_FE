@@ -2,18 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
+import { getProfile, updateProfile, changePassword as apiChangePassword, type AdminProfile } from "@/lib/api/admin/settings";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
-
-interface AdminProfile {
-  id: number;
-  name: string;
-  email: string;
-  avatar: string | null;
-  two_factor_enabled?: boolean;
-  is_email_verified?: boolean;
-  created_at?: string;
-}
 
 function useAdminToken() {
   return useAdminAuthStore((s) => s.token);
@@ -23,7 +13,7 @@ function useAdminProfile() {
   const token = useAdminToken();
   return useQuery({
     queryKey: ["admin", "settings", "profile"],
-    queryFn: () => apiClient<{ profile: AdminProfile }>("/admin/settings/profile", { token: token! }),
+    queryFn: () => getProfile(token!),
     enabled: !!token,
   });
 }
@@ -33,11 +23,7 @@ function useUpdateAdminProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: { name?: string; email?: string; avatar?: string }) =>
-      apiClient<{ profile: AdminProfile }>("/admin/settings/profile", {
-        method: "PUT",
-        token: token!,
-        body: data,
-      }),
+      updateProfile(token!, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "settings", "profile"] });
     },
@@ -48,11 +34,7 @@ function useChangeAdminPassword() {
   const token = useAdminToken();
   return useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
-      apiClient<{ message: string }>("/admin/settings/password", {
-        method: "PUT",
-        token: token!,
-        body: data,
-      }),
+      apiChangePassword(token!, data),
   });
 }
 

@@ -2,26 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
+import { getActivityLogs, type ActivityLog as ActivityLogRow } from "@/lib/api/admin/activityLogs";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
-
-interface ActivityLogRow {
-  id: number;
-  action: string;
-  description: string | null;
-  ip_address: string | null;
-  entity_type: string | null;
-  entity_id: number | null;
-  created_at: string;
-  administrator: string;
-}
-
-interface ActivityLogResponse {
-  data: ActivityLogRow[];
-  total: number;
-  page: number;
-  limit: number;
-}
 
 function useAdminToken() {
   return useAdminAuthStore((s) => s.token);
@@ -37,7 +19,7 @@ export default function AdminActivityLogsPage() {
   const token = useAdminToken();
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin", "activity-logs"],
-    queryFn: () => apiClient<ActivityLogResponse>("/admin/activity-logs?limit=100", { token: token! }),
+    queryFn: () => getActivityLogs(token!, { limit: "100" }),
     enabled: !!token,
   });
 

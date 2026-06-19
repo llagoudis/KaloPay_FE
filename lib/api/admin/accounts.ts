@@ -1,14 +1,26 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getAccounts(params?: Record<string, string>) {
-  const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/admin/accounts${query}`);
-  if (!res.ok) throw new Error("Failed to fetch accounts");
-  return res.json();
+export interface AccountRow {
+  id: number;
+  slNo?: number;
+  number: string;
+  providerNumber: string;
+  holder: string;
+  type: string;
+  providerCurrency: string;
+  status: string;
+  providerName: string;
+  bankDetails?: string;
+  iban?: string;
+  swiftBic?: string;
+  bankName?: string;
 }
 
-export async function getAccount(id: string) {
-  const res = await fetch(`${API_BASE_URL}/admin/accounts/${id}`);
-  if (!res.ok) throw new Error("Failed to fetch account");
-  return res.json();
+export function getAccounts(token: string, params?: Record<string, string>) {
+  const query = params ? `?${new URLSearchParams(params)}` : "";
+  return apiClient<{ accounts: AccountRow[]; total?: number }>(`/admin/accounts${query}`, { token });
+}
+
+export function getAccount(token: string, id: string) {
+  return apiClient<{ account: AccountRow }>(`/admin/accounts/${id}`, { token });
 }

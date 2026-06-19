@@ -7,8 +7,8 @@ import { ROUTES } from "@/lib/constants/routes";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
-import { apiClient } from "@/lib/api/client";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { listDocuments, deleteDocument } from "@/lib/api/admin/documents";
 import AddDocumentModal from "@/components/admin/documents/AddDocumentModal";
 import EditDocumentModal, {
   type EditableDocument,
@@ -249,19 +249,12 @@ export default function AdminCompanyDetailPage({
   const documentsQuery = useQuery({
     queryKey: ["admin", "documents", "company", cid],
     queryFn: () =>
-      apiClient<{ data: ApiDocumentRow[]; total: number }>(
-        `/admin/documents?entityType=company&entityId=${cid}&limit=50`,
-        { token: token! }
-      ),
+      listDocuments(token!, { entityType: "company", entityId: String(cid), limit: 50 }),
     enabled: !!token && Number.isFinite(cid),
   });
   const qc = useQueryClient();
   const deleteDocMut = useMutation({
-    mutationFn: (docId: number) =>
-      apiClient<{ message: string }>(`/admin/documents/${docId}`, {
-        method: "DELETE",
-        token: token!,
-      }),
+    mutationFn: (docId: number) => deleteDocument(token!, docId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "documents", "company", cid] });
     },

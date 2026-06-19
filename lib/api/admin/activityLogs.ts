@@ -1,8 +1,24 @@
-import { API_BASE_URL } from "@/lib/constants/config";
+import { apiClient } from "@/lib/api/client";
 
-export async function getActivityLogs(params?: Record<string, string>) {
+export interface ActivityLog {
+  id: number;
+  action: string;
+  description: string | null;
+  ip_address: string | null;
+  entity_type: string | null;
+  entity_id: number | null;
+  created_at: string;
+  administrator: string;
+}
+
+export interface ActivityLogResponse {
+  data: ActivityLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export function getActivityLogs(token: string, params?: Record<string, string>) {
   const query = params ? `?${new URLSearchParams(params)}` : "";
-  const res = await fetch(`${API_BASE_URL}/admin/activity-logs${query}`);
-  if (!res.ok) throw new Error("Failed to fetch activity logs");
-  return res.json();
+  return apiClient<ActivityLogResponse>(`/admin/activity-logs${query}`, { token });
 }

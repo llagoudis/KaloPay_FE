@@ -2,94 +2,38 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
 import { ROUTES } from "@/lib/constants/routes";
+import { getAccounts, type AccountRow as ApiAccountRow } from "@/lib/api/admin/accounts";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
 
-type AccountType = "Crypto" | "Bank";
-
-type AccountRow = {
-  slNo: number;
-  number: string;
-  providerNumber: string;
-  holder: string;
-  type: AccountType;
-  providerCurrency: string;
-  status: string;
-  providerName: string;
-  // Bank-only (when type === "Bank")
-  bankDetails?: string;
-  iban?: string;
-  swiftBic?: string;
-  bankName?: string;
-};
-
-const mockAccounts: AccountRow[] = [
-  {
-    slNo: 2983,
-    number: "7984505Y88",
-    providerNumber: "0xC9f2b6d607b0f78b94ab84d205FF8137a7eb487037",
-    holder: "AKSHAY_NET",
-    type: "Crypto",
-    providerCurrency: "USDT (ERC20)",
-    status: "Active",
-    providerName: "Freebooks",
-  },
-  {
-    slNo: 2984,
-    number: "7984505Y89",
-    providerNumber: "",
-    holder: "AKSHAY_NET",
-    type: "Bank",
-    providerCurrency: "EURO",
-    status: "Active",
-    providerName: "Freebooks",
-    bankDetails: "General Payments Gate LTD",
-    iban: "GB50TRWI23148510000949",
-    swiftBic: "TRWIGB2LXXX",
-    bankName: "My EU Pay Ltd.",
-  },
-  {
-    slNo: 2985,
-    number: "7984505Y90",
-    providerNumber: "0xD1e3f8c719c1e89c95b04c306FF9248b8fc598848",
-    holder: "JOHN_DOE",
-    type: "Crypto",
-    providerCurrency: "USDT (ERC20)",
-    status: "Active",
-    providerName: "Acme Corp",
-  },
-  {
-    slNo: 2986,
-    number: "7984505Y91",
-    providerNumber: "",
-    holder: "JANE_SMITH",
-    type: "Bank",
-    providerCurrency: "GBP",
-    status: "Active",
-    providerName: "Acme Corp",
-    bankDetails: "Payments Gate UK Ltd",
-    iban: "GB82WEST12345698765432",
-    swiftBic: "WESTGB2LXXX",
-    bankName: "Westminster Bank",
-  },
-];
+type AccountRow = ApiAccountRow & { actions: null } & Record<string, unknown>;
 
 export default function AdminAccountsPage() {
-  const [search, setSearch] = useState("");
+  const token = useAdminAuthStore((s) => s.token);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin", "accounts"],
+    queryFn: () => getAccounts(token!),
+    enabled: !!token,
+  });
 
-  const filtered = mockAccounts.filter(
+  const [search, setSearch] = useState("");
+  const accounts = data?.accounts ?? [];
+
+  const filtered = accounts.filter(
     (a) =>
-      a.number.toLowerCase().includes(search.toLowerCase()) ||
-      a.holder.toLowerCase().includes(search.toLowerCase()) ||
-      a.providerName.toLowerCase().includes(search.toLowerCase()) ||
-      a.providerNumber.toLowerCase().includes(search.toLowerCase()) ||
-      a.providerCurrency.toLowerCase().includes(search.toLowerCase()) ||
+      a.number?.toLowerCase().includes(search.toLowerCase()) ||
+      a.holder?.toLowerCase().includes(search.toLowerCase()) ||
+      a.providerName?.toLowerCase().includes(search.toLowerCase()) ||
+      a.providerNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      a.providerCurrency?.toLowerCase().includes(search.toLowerCase()) ||
       (a.bankDetails?.toLowerCase().includes(search.toLowerCase())) ||
       (a.iban?.toLowerCase().includes(search.toLowerCase())) ||
       (a.swiftBic?.toLowerCase().includes(search.toLowerCase())) ||
       (a.bankName?.toLowerCase().includes(search.toLowerCase())) ||
-      String(a.slNo).includes(search)
+      String(a.slNo ?? a.id).includes(search)
   );
 
   const columns = [
@@ -97,7 +41,7 @@ export default function AdminAccountsPage() {
       key: "slNo" as const,
       header: "SL NO",
       headerClassName: "whitespace-nowrap",
-      render: (value: unknown) => String(value),
+      render: (value: unknown, row: AccountRow) => String(value ?? row.id ?? "—"),
     },
     {
       key: "number" as const,
@@ -175,7 +119,7 @@ export default function AdminAccountsPage() {
     },
   ];
 
-  const tableData = filtered.map((a) => ({ ...a, actions: null }));
+  const tableData = filtered.map((a) => ({ ...a, actions: null as null }));
 
   return (
     <div className="w-full space-y-6">
@@ -213,12 +157,18 @@ export default function AdminAccountsPage() {
             />
           </label>
         </div>
-        <Table<AccountRow & { actions: null }>
-          columns={columns}
-          data={tableData}
-          emptyMessage="No accounts found."
-          className="admin-list-table mt-6 border-0 border-gray-100"
-        />
+        {error ? (
+          <p className="mt-6 text-sm text-red-600">Failed to load accounts: {(error as Error).message}</p>
+        ) : isLoading ? (
+          <p className="mt-6 text-sm text-gray-500">Loading accounts…</p>
+        ) : (
+          <Table<AccountRow>
+            columns={columns}
+            data={tableData}
+            emptyMessage="No accounts found."
+            className="admin-list-table mt-6 border-0 border-gray-100"
+          />
+        )}
       </div>
     </div>
   );
