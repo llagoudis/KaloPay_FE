@@ -1,31 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
-import { useAdminAuthStore } from "@/store/adminAuthStore";
+import Table from "@/components/ui/Table";
+import { useActivityLogs } from "@/hooks/admin/useActivityLogs";
+import type { ActivityLog } from "@/lib/api/admin/activityLogs";
 
-interface ActivityLogRow {
-  id: number;
-  action: string;
-  description: string | null;
-  ip_address: string | null;
-  entity_type: string | null;
-  entity_id: number | null;
-  created_at: string;
-  administrator: string;
-}
-
-interface ActivityLogResponse {
-  data: ActivityLogRow[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-function useAdminToken() {
-  return useAdminAuthStore((s) => s.token);
-}
+type ActivityLogRow = ActivityLog & Record<string, unknown>;
 
 function fmtDate(iso: string) {
   if (!iso) return "—";
@@ -34,12 +14,7 @@ function fmtDate(iso: string) {
 
 export default function AdminActivityLogsPage() {
   const [search, setSearch] = useState("");
-  const token = useAdminToken();
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["admin", "activity-logs"],
-    queryFn: () => apiClient<ActivityLogResponse>("/admin/activity-logs?limit=100", { token: token! }),
-    enabled: !!token,
-  });
+  const { data, isLoading, error } = useActivityLogs({ limit: "100" });
 
   const logs = useMemo(() => {
     const rows = data?.data ?? [];
@@ -47,29 +22,40 @@ export default function AdminActivityLogsPage() {
     const q = search.toLowerCase();
     return rows.filter(
       (r) =>
-        (r.administrator ?? "").toLowerCase().includes(q) ||
-        (r.description ?? "").toLowerCase().includes(q) ||
         (r.action ?? "").toLowerCase().includes(q) ||
+        (r.entity ?? "").toLowerCase().includes(q) ||
+        (r.details ?? "").toLowerCase().includes(q) ||
+        (r.ip_address ?? "").toLowerCase().includes(q) ||
         fmtDate(r.created_at).toLowerCase().includes(q)
     );
   }, [data, search]);
 
+  const columns = [
+    { key: "id" as const, header: "ID", render: (v: unknown) => String(v) },
+    {
+      key: "admin_id" as const,
+      header: "Admin",
+      render: (v: unknown) => String(v ?? "—"),
+    },
+    { key: "action" as const, header: "Action" },
+    { key: "entity" as const, header: "Entity", render: (v: unknown) => String(v ?? "—") },
+    { key: "details" as const, header: "Details", render: (v: unknown) => String(v ?? "—") },
+    {
+      key: "ip_address" as const,
+      header: "IP Address",
+      render: (v: unknown) => String(v ?? "—"),
+    },
+    {
+      key: "created_at" as const,
+      header: "Created At",
+      render: (v: unknown) => fmtDate(String(v)),
+    },
+  ];
+
   return (
     <div className="admin-activity-log-page w-full space-y-6">
-      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
-        <h1
-          className="admin-page-heading align-middle font-semibold"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontWeight: 600,
-            fontSize: "24px",
-            lineHeight: "26px",
-            letterSpacing: "0px",
-            color: "#0E1620",
-          }}
-        >
-          Admin Activity Log
-        </h1>
+      <div className="w-full rounded-[10px] bg-white p-6">
+        <h1 className="text-2xl font-semibold text-[#0E1620]">Admin Activity Log</h1>
       </div>
 
       <div className="w-full rounded-xl bg-white p-6 shadow-sm">
@@ -88,47 +74,18 @@ export default function AdminActivityLogsPage() {
           />
         </label>
 
-        {error ? (
+        {error && (
           <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
             Failed to load activity logs: {(error as Error).message}
           </div>
-        ) : null}
+        )}
 
-        <div className="mt-6 overflow-x-auto rounded-lg">
-          <div className="min-w-[720px] px-1">
-            <div
-              className="admin-activity-log-header grid gap-x-6 py-2 text-xs font-medium text-gray-500"
-              style={{ gridTemplateColumns: "1.2fr 1fr 2fr 0.8fr" }}
-            >
-              <span>Created at</span>
-              <span>Administrator</span>
-              <span>Description</span>
-              <span>Action</span>
-            </div>
-            <div className="admin-activity-log-rows">
-              {isLoading ? (
-                <div className="py-8 text-center text-sm text-gray-400">Loading activity logs…</div>
-              ) : logs.length === 0 ? (
-                <div className="py-8 text-center text-sm text-gray-400">
-                  No activity log entries found.
-                </div>
-              ) : (
-                logs.map((row) => (
-                  <div
-                    key={row.id}
-                    className="grid gap-x-6 py-4 text-sm text-gray-700"
-                    style={{ gridTemplateColumns: "1.2fr 1fr 2fr 0.8fr" }}
-                  >
-                    <span className="whitespace-nowrap">{fmtDate(row.created_at)}</span>
-                    <span>{row.administrator}</span>
-                    <span>{row.description ?? "—"}</span>
-                    <span>{row.action}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <Table<ActivityLogRow>
+          columns={columns}
+          data={logs as ActivityLogRow[]}
+          emptyMessage={isLoading ? "Loading activity logs…" : "No activity log entries found."}
+          className="admin-list-table mt-6 border-0"
+        />
       </div>
     </div>
   );

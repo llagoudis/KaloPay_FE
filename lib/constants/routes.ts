@@ -23,6 +23,12 @@ export const ROUTES = {
     administrators: "/admin/administrators",
     documents: "/admin/documents",
     settings: "/admin/settings",
+    reports: {
+      payroll: "/admin/reports/payroll",
+      monthly: "/admin/reports/monthly",
+      period: "/admin/reports/period",
+      annual: "/admin/reports/annual",
+    },
   },
   employer: {
     login: "/user/login",

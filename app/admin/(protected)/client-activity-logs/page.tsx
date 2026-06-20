@@ -1,51 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Table from "@/components/ui/Table";
+import { useClientActivityLogs } from "@/hooks/admin/useActivityLogs";
+import type { ActivityLog } from "@/lib/api/admin/activityLogs";
 
-type ClientActivityLogRow = {
-  createdAt: string;
-  initiator: string;
-  ipAddress: string;
-  description: string;
-  action: string;
-};
+type ActivityLogRow = ActivityLog & Record<string, unknown>;
 
-const mockClientActivityLogs: ClientActivityLogRow[] = Array.from({ length: 7 }, () => ({
-  createdAt: "23-09-2015 12:19:04 PM",
-  initiator: "Shivraj_NET",
-  ipAddress: "12.12.146.51",
-  description: "Shivraj_NET Logged in",
-  action: "Google Authentication",
-}));
+function fmtDate(iso: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString();
+}
 
 export default function AdminClientActivityLogsPage() {
   const [search, setSearch] = useState("");
+  const { data, isLoading, error } = useClientActivityLogs({ limit: "100" });
 
-  const filtered = mockClientActivityLogs.filter(
-    (row) =>
-      row.initiator.toLowerCase().includes(search.toLowerCase()) ||
-      row.description.toLowerCase().includes(search.toLowerCase()) ||
-      row.action.toLowerCase().includes(search.toLowerCase()) ||
-      row.ipAddress.includes(search) ||
-      row.createdAt.includes(search)
-  );
+  const logs = useMemo(() => {
+    const rows = data?.data ?? [];
+    if (!search) return rows;
+    const q = search.toLowerCase();
+    return rows.filter(
+      (r) =>
+        (r.action ?? "").toLowerCase().includes(q) ||
+        (r.entity ?? "").toLowerCase().includes(q) ||
+        (r.details ?? "").toLowerCase().includes(q) ||
+        (r.ip_address ?? "").toLowerCase().includes(q) ||
+        fmtDate(r.created_at).toLowerCase().includes(q)
+    );
+  }, [data, search]);
+
+  const columns = [
+    { key: "id" as const, header: "ID", render: (v: unknown) => String(v) },
+    {
+      key: "admin_id" as const,
+      header: "Initiator",
+      render: (v: unknown) => String(v ?? "—"),
+    },
+    { key: "action" as const, header: "Action" },
+    { key: "entity" as const, header: "Entity", render: (v: unknown) => String(v ?? "—") },
+    { key: "details" as const, header: "Details", render: (v: unknown) => String(v ?? "—") },
+    {
+      key: "ip_address" as const,
+      header: "IP Address",
+      render: (v: unknown) => String(v ?? "—"),
+    },
+    {
+      key: "created_at" as const,
+      header: "Created At",
+      render: (v: unknown) => fmtDate(String(v)),
+    },
+  ];
 
   return (
     <div className="admin-activity-log-page w-full space-y-6">
-      <div className="w-full rounded-[10px] bg-white" style={{ padding: "24px" }}>
-        <h1
-          className="admin-page-heading align-middle font-semibold"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontWeight: 600,
-            fontSize: "24px",
-            lineHeight: "26px",
-            letterSpacing: "0px",
-            color: "#0E1620",
-          }}
-        >
-          Client Activity Log
-        </h1>
+      <div className="w-full rounded-[10px] bg-white p-6">
+        <h1 className="text-2xl font-semibold text-[#0E1620]">Client Activity Log</h1>
       </div>
 
       <div className="w-full rounded-xl bg-white p-6 shadow-sm">
@@ -64,43 +74,20 @@ export default function AdminClientActivityLogsPage() {
           />
         </label>
 
-        <div className="mt-6 overflow-x-auto rounded-lg">
-          <div className="min-w-[820px] px-2">
-            {/* Header — spacing set, neeche line */}
-            <div
-              className="admin-activity-log-header grid gap-x-6 py-3 text-xs font-medium text-gray-500"
-              style={{ gridTemplateColumns: "1.2fr 1fr 1fr 2fr 1fr" }}
-            >
-              <span className="pl-3">Created at</span>
-              <span className="pl-3">Initiator</span>
-              <span className="pl-3">IP Address</span>
-              <span className="pl-3">Description</span>
-              <span className="whitespace-nowrap pl-3">Action</span>
-            </div>
-            {/* Data — sab columns same left padding se align */}
-            <div className="admin-activity-log-rows">
-              {filtered.length === 0 ? (
-                <div className="py-8 text-center text-sm text-gray-400">
-                  No client activity log entries found.
-                </div>
-              ) : (
-                filtered.map((row, i) => (
-                  <div
-                    key={i}
-                    className="grid gap-x-6 py-4 text-sm text-gray-700"
-                    style={{ gridTemplateColumns: "1.2fr 1fr 1fr 2fr 1fr" }}
-                  >
-                    <span className="whitespace-nowrap pl-3">{row.createdAt}</span>
-                    <span className="pl-3">{row.initiator}</span>
-                    <span className="pl-3">{row.ipAddress}</span>
-                    <span className="pl-3">{row.description}</span>
-                    <span className="whitespace-nowrap pl-3">{row.action}</span>
-                  </div>
-                ))
-              )}
-            </div>
+        {error && (
+          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            Failed to load client activity logs: {(error as Error).message}
           </div>
-        </div>
+        )}
+
+        <Table<ActivityLogRow>
+          columns={columns}
+          data={logs as ActivityLogRow[]}
+          emptyMessage={
+            isLoading ? "Loading client activity logs…" : "No client activity log entries found."
+          }
+          className="admin-list-table mt-6 border-0"
+        />
       </div>
     </div>
   );
