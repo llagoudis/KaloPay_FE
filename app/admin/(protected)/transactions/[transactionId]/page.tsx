@@ -1,7 +1,13 @@
 "use client";
 
 import { use } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/constants/routes";
 import Button from "@/components/ui/Button";
+import { apiClient } from "@/lib/api/client";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { type AdminTransaction } from "@/lib/api/admin/transactions";
 
 const SECTION_HEADER_STYLE =
   "border-b border-gray-200 px-4 py-3";
@@ -54,60 +60,81 @@ function SectionCard({
   );
 }
 
-const MOCK_TRANSACTION = {
-  id: "b2d80-170-data-dms-b4d84eb0f2",
-  virtualId: "c1dc2b03-604b-a1b008a827",
-  transactionType: "Incoming Transfer",
-  recurringTransfer: "No",
-  createdAt: "14.12.2023 10:22:19 AM",
-  updatedAt: "14.12.2023 10:22:19 AM",
-  currency: "BTC_TEST",
-  fee: "-",
-  paymentType: "FREEBLOCK",
-  rate: "-",
-  fx: "-",
-  transactionStatus: "COMPLETED",
-  beneficiaryBank: {
-    bankName: "Revolut",
-    country: "Cyprus",
-    bankAddress: "-",
-    swiftBic: "-",
-  },
-  additionalInfo: {
-    referenceTransaction: "-",
-    referencedBy: "Zbo",
-    error: "-",
-    providerId: "-",
-  },
-  beneficiary: {
-    name: "Justin Paul",
-    type: "Person",
-    accountNumber: "BTC_TEST",
-    currency: "BTC_TEST",
-    country: "-",
-    addressLine1: "-",
-  },
-  parameters: {
-    txHash: "E3K7xUlzxbdh5fp4cqkp2b3w3x3e3b5c02d1c6e87b42b8e51",
-  },
-  documents: [
-    { id: "1", name: "Doc 1" },
-    { id: "2", name: "Doc 2" },
-  ],
-};
-
 export default function AdminTransactionDetailPage({
   params,
 }: {
   params: Promise<{ transactionId: string }>;
 }) {
   const { transactionId } = use(params);
-  const t = MOCK_TRANSACTION;
+  const router = useRouter();
+  const token = useAdminAuthStore((s) => s.token);
+
+  const transactionQuery = useQuery({
+    queryKey: ["admin", "transactions", transactionId],
+    queryFn: () => apiClient<{ transaction: AdminTransaction }>(`/admin/transactions/${transactionId}`, { token: token! }),
+    enabled: !!token && !!transactionId,
+  });
+
+  if (transactionQuery.isLoading) {
+    return <div className="py-12 text-center text-gray-400">Loading…</div>;
+  }
+
+  if (transactionQuery.error) {
+    return <div className="py-12 text-center text-red-500">Failed to load transaction: {(transactionQuery.error as Error).message}</div>;
+  }
+
+  const tx = transactionQuery.data?.transaction;
+
+  const t = {
+    id: tx?.transaction_ref ?? String(tx?.id ?? "—"),
+    virtualId: String(tx?.id ?? "—"),
+    transactionType: tx?.transaction_type ?? tx?.transactionType ?? "—",
+    recurringTransfer: "—",
+    createdAt: tx?.created_at ? new Date(tx.created_at).toLocaleString() : "—",
+    updatedAt: "—",
+    currency: tx?.currency ?? "—",
+    fee: "—",
+    paymentType: tx?.payment_type ?? tx?.paymentType ?? "—",
+    rate: "—",
+    fx: "—",
+    transactionStatus: tx?.transaction_status ?? tx?.transactionStatus ?? "—",
+    beneficiaryBank: {
+      bankName: "—",
+      country: "—",
+      bankAddress: "—",
+      swiftBic: "—",
+    },
+    additionalInfo: {
+      referenceTransaction: "—",
+      referencedBy: "—",
+      error: "—",
+      providerId: "—",
+    },
+    beneficiary: {
+      name: "—",
+      type: "—",
+      accountNumber: "—",
+      currency: tx?.currency ?? "—",
+      country: "—",
+      addressLine1: "—",
+    },
+    parameters: {
+      txHash: "—",
+    },
+    documents: [] as { id: string; name: string }[],
+  };
 
   return (
     <div className="view-transaction-detail-page w-full space-y-6">
-      {/* Transaction heading — alag div, parent ke andar NAHI */}
-      <div className="bg-white px-6 py-5" style={{ borderRadius: "10px" }}>
+      {/* Transaction heading */}
+      <div className="bg-white px-6 py-5 flex items-center gap-4" style={{ borderRadius: "10px" }}>
+        <button
+          type="button"
+          onClick={() => router.push(ROUTES.admin.transactions)}
+          className="text-sm font-medium text-blue-600 hover:underline"
+        >
+          ← Back
+        </button>
         <h1
           className="admin-page-heading font-semibold text-gray-900"
           style={{
@@ -121,7 +148,7 @@ export default function AdminTransactionDetailPage({
         </h1>
       </div>
 
-      {/* Main grid — light: gray shell; dark: transparent (globals) */}
+      {/* Main grid */}
       <div
         className="view-transaction-detail-shell grid grid-cols-1 lg:grid-cols-[747px_1fr]"
         style={{
@@ -135,7 +162,7 @@ export default function AdminTransactionDetailPage({
         role="region"
         aria-label="Transaction details"
       >
-        {/* Left column — width 747px, gap 10px, teeno divs 416px min-height, padding 16px */}
+        {/* Left column */}
         <div
           className="flex flex-col w-full"
           style={{ width: "747px", maxWidth: "100%", gap: "10px" }}
@@ -173,22 +200,26 @@ export default function AdminTransactionDetailPage({
 
           <SectionCard title="Uploaded Documents">
             <div className="space-y-4">
-              {t.documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between gap-4 border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
-                >
-                  <span className="text-sm font-medium text-gray-900">{doc.name}</span>
-                  <Button variant="primary" size="sm">
-                    Download
-                  </Button>
-                </div>
-              ))}
+              {t.documents.length === 0 ? (
+                <p className="text-sm text-gray-400">No documents uploaded.</p>
+              ) : (
+                t.documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between gap-4 border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+                  >
+                    <span className="text-sm font-medium text-gray-900">{doc.name}</span>
+                    <Button variant="primary" size="sm">
+                      Download
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
           </SectionCard>
         </div>
 
-        {/* Right column — bacha hua space bhar lega, right par empty space nahi */}
+        {/* Right column */}
         <div className="flex flex-col gap-6 min-w-0">
           <SectionCard title="Beneficiary Bank">
             <DetailRow label="Bank name" value={t.beneficiaryBank.bankName} />

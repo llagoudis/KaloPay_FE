@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { use, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/constants/routes";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
+import { apiClient } from "@/lib/api/client";
+import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { type AdminAccount } from "@/lib/api/admin/accounts";
+import { type AdminTransaction } from "@/lib/api/admin/transactions";
 
 const SECTION_HEADER_STYLE =
   "border-b border-gray-200 px-4 py-3 flex items-center justify-between";
@@ -28,28 +33,6 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
-const MOCK_ACCOUNT = {
-  client: "AKSHAY_NET",
-  number: "019FNhiA4cV",
-  type: "TEX_TEST",
-  status: "ACTIVE",
-  createdAt: "12 Apr 2025 11:39:02 PM",
-  holder: "AKSHAY_NET",
-  name: "-",
-  primary: "-",
-  statusChangedBy: "-",
-  providerName: "Provider Name",
-  accountNumber: "-",
-  bic: "-",
-  currency: "-",
-  balances: {
-    currency: "TEX_TEST",
-    current: "193138.32000000002",
-    reserved: "-",
-    available: "-",
-  },
-};
-
 type TransactionRow = {
   id: string;
   amount: string;
@@ -59,15 +42,6 @@ type TransactionRow = {
   date: string;
 };
 
-const MOCK_TRANSACTIONS: TransactionRow[] = Array.from({ length: 5 }, () => ({
-  id: "2983",
-  amount: "+500000000",
-  description: "Test Description",
-  type: "Outgoing Transfer",
-  status: "Completed",
-  date: "07-01-2025 11:58:43 AM",
-}));
-
 export default function AdminAccountDetailPage({
   params,
 }: {
@@ -75,7 +49,51 @@ export default function AdminAccountDetailPage({
 }) {
   const { accountId } = use(params);
   const [showMicroTransaction, setShowMicroTransaction] = useState(false);
-  const a = MOCK_ACCOUNT;
+  const token = useAdminAuthStore((s) => s.token);
+
+  const accountQuery = useQuery({
+    queryKey: ["admin", "accounts", accountId],
+    queryFn: () => apiClient<{ account: AdminAccount }>(`/admin/accounts/${accountId}`, { token: token! }),
+    enabled: !!token && !!accountId,
+  });
+
+  const transactionsQuery = useQuery({
+    queryKey: ["admin", "transactions", "account", accountId],
+    queryFn: () => apiClient<{ data: AdminTransaction[]; total: number }>(`/admin/transactions?accountId=${accountId}&limit=20`, { token: token! }),
+    enabled: !!token && !!accountId,
+  });
+
+  const account = accountQuery.data?.account;
+  const a = {
+    client: account?.company_name ?? "—",
+    number: account?.account_number ?? "—",
+    type: account?.account_type ?? "—",
+    status: account?.status ?? "—",
+    createdAt: account?.created_at ? new Date(account.created_at).toLocaleString() : "—",
+    holder: account?.company_name ?? "—",
+    name: "—",
+    primary: "—",
+    statusChangedBy: "—",
+    providerName: account?.provider ?? "—",
+    accountNumber: account?.account_number ?? "—",
+    bic: "—",
+    currency: account?.currency ?? "—",
+    balances: {
+      currency: account?.currency ?? "—",
+      current: account?.balance ?? "—",
+      reserved: "—",
+      available: "—",
+    },
+  };
+
+  const transactionRows: TransactionRow[] = (transactionsQuery.data?.data ?? []).map((t) => ({
+    id: String(t.id),
+    amount: t.amount,
+    description: t.description ?? "—",
+    type: t.transaction_type,
+    status: t.transaction_status,
+    date: t.created_at ? new Date(t.created_at).toLocaleString() : "—",
+  }));
 
   const transactionColumns = [
     { key: "id" as const, header: "ID", render: (v: unknown) => String(v) },
@@ -90,10 +108,21 @@ export default function AdminAccountDetailPage({
     { key: "date" as const, header: "Date", render: (v: unknown) => String(v) },
   ];
 
+  if (accountQuery.isLoading) {
+    return <div className="py-12 text-center text-gray-400">Loading…</div>;
+  }
+
+  if (accountQuery.error) {
+    return <div className="py-12 text-center text-red-500">Failed to load account: {(accountQuery.error as Error).message}</div>;
+  }
+
   return (
     <div className="view-account-detail-page w-full space-y-6">
-      {/* View Accounts — title row (light: white card; dark: navy strip via globals) */}
-      <div className="view-account-page-title-card rounded-[10px] bg-white px-4 py-4 sm:px-6 sm:py-5">
+      {/* View Accounts — title row */}
+      <div className="view-account-page-title-card rounded-[10px] bg-white px-4 py-4 sm:px-6 sm:py-5 flex items-center gap-4">
+        <Link href={ROUTES.admin.accounts} className="text-sm font-medium text-blue-600 hover:underline">
+          ← Back
+        </Link>
         <h1
           className="admin-page-heading font-semibold text-gray-900"
           style={{
@@ -107,7 +136,7 @@ export default function AdminAccountDetailPage({
         </h1>
       </div>
 
-      {/* Main bordered container — iske andar Details, Provider, Balances, Transactions */}
+      {/* Main bordered container */}
       <div
         className="view-account-detail-shell space-y-6"
         style={{
@@ -248,8 +277,8 @@ export default function AdminAccountDetailPage({
           </div>
           <Table<TransactionRow>
             columns={transactionColumns}
-            data={MOCK_TRANSACTIONS}
-            emptyMessage="No transactions found."
+            data={transactionRows}
+            emptyMessage={transactionsQuery.isLoading ? "Loading transactions…" : "No transactions found."}
             bordered={false}
             rowDividers
             className="view-account-transactions-table"

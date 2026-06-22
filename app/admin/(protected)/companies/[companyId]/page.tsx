@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { use, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/constants/routes";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
 import Badge from "@/components/ui/Badge";
+import Modal from "@/components/ui/Modal";
 import { apiClient } from "@/lib/api/client";
 import { useAdminAuthStore } from "@/store/adminAuthStore";
+import { useCompany, useUpdateCompany } from "@/hooks/admin/useCompanies";
+import { useAdminEmployees } from "@/hooks/admin/useEmployees";
+import { type AdminAccount } from "@/lib/api/admin/accounts";
 import AddDocumentModal from "@/components/admin/documents/AddDocumentModal";
 import EditDocumentModal, {
   type EditableDocument,
@@ -99,38 +104,6 @@ function DetailRowInline({ label, value }: { label: string; value: React.ReactNo
   );
 }
 
-const MOCK_COMPANY = {
-  name: "Alexa",
-  incorporationDate: "12-12-2025",
-  registrationNumber: "-",
-  verificationLevel: "-",
-  otherBusinessType: "-",
-  accountStatus: "-",
-  createdAt: "12-12-2025",
-  consentTerms: "12-12-2025",
-  clientId: "35",
-  companyType: "Test Company",
-  owner: "Amar Hegde",
-  taxIdentificationNumber: "-",
-  verificationStatus: "PENDING",
-  businessType: "-",
-  beneficialOwnerType: "-",
-  statusReason: "-",
-  uploadedAt: "12-12-2025",
-  accounts: { privateAccount: "-", vaultNumber: "-" },
-  settings: {
-    priceList: "-",
-    actualPriceList: "-",
-    skipTransferPreApproval: "-",
-  },
-  fees: { recurring: "-", fxMarkup: "-" },
-  contacts: {
-    phone: "-",
-    email: "abc@gmail.com",
-    url: "-",
-    signalEnabled: "-",
-  },
-};
 
 interface ApiDocumentRow {
   id: number;
@@ -170,43 +143,6 @@ type AccountRow = {
   currentBalance: string;
 };
 
-const MOCK_ACCOUNTS: AccountRow[] = [
-  {
-    number: "HE123129",
-    providerNumber: "Bank Details: General Payments Gate LTD\nIBAN: GB50TRW23148510000949\nSWIFT/BIC: TRWIGB2LXXX\nBank Name: My EU Pay Ltd.",
-    type: "Standard",
-    providerCurrency: "BTC",
-    currentBalance: "0.00",
-  },
-  {
-    number: "HE123129",
-    providerNumber: "ASdawoqqwe123121412",
-    type: "Standard",
-    providerCurrency: "BTC",
-    currentBalance: "0.00",
-  },
-  {
-    number: "HE123129",
-    providerNumber: "Coin / Token: Bitcoin (BTC)\nNetwork: Bitcoin (BTC)\nWallet Address: bc1qxyzexamplebitcoi",
-    type: "Standard",
-    providerCurrency: "BTC",
-    currentBalance: "0.00",
-  },
-  {
-    number: "HE123129",
-    providerNumber: "Asdawoqqwe12321412",
-    type: "Standard",
-    providerCurrency: "BTC",
-    currentBalance: "0.00",
-  },
-  {
-    number: "HE123129",
-    providerNumber: "Bank Details: General Payments Gate LTD\nIBAN:GB50TRW123148510000949\nSWIFT/BIC: TRWIGB2LXXX\nBank Name: My EU Pay Ltd.",
-    type: "Standard",
-    providerCurrency: "BTC",
-    currentBalance: "0.00",
-  },
-];
 
 type CompanyEmployeeRow = {
   id: string;
@@ -216,13 +152,6 @@ type CompanyEmployeeRow = {
   enabled: string;
 };
 
-const MOCK_COMPANY_EMPLOYEES: CompanyEmployeeRow[] = Array.from({ length: 5 }, () => ({
-  id: "12",
-  company: "Test",
-  fullName: "John Doe",
-  accessRoles: "Admin",
-  enabled: "No",
-}));
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "details", label: "Details" },
@@ -238,14 +167,54 @@ export default function AdminCompanyDetailPage({
 }) {
   const { companyId } = use(params);
   const cid = Number(companyId);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [documentsSearch, setDocumentsSearch] = useState("");
   const [addDocumentOpen, setAddDocumentOpen] = useState(false);
   const [editDocument, setEditDocument] = useState<EditableDocument | null>(null);
   const [employeesSearch, setEmployeesSearch] = useState("");
-  const c = MOCK_COMPANY;
+  const [editCompanyOpen, setEditCompanyOpen] = useState(false);
+
+  // Edit company form state
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editCountry, setEditCountry] = useState("");
+  const [editBusinessType, setEditBusinessType] = useState("");
+  const [editVerificationStatus, setEditVerificationStatus] = useState("");
+  const [editAccountStatus, setEditAccountStatus] = useState("");
 
   const token = useAdminAuthStore((s) => s.token);
+
+  // Real company data
+  const companyQuery = useCompany(companyId);
+  const updateCompanyMut = useUpdateCompany();
+
+  const company = companyQuery.data?.company;
+  const c = {
+    name: company?.name ?? "—",
+    clientId: company?.clientId ?? String(company?.id ?? "—"),
+    companyType: company?.business_type ?? company?.businessType ?? "—",
+    owner: company?.ownerName ?? company?.owner_name ?? "—",
+    incorporationDate: company?.incorporation_date ? new Date(company.incorporation_date).toLocaleDateString() : "—",
+    registrationNumber: company?.registration_number ?? "—",
+    verificationLevel: company?.verification_level ?? "—",
+    otherBusinessType: "—",
+    accountStatus: company?.accountStatus ?? company?.account_status ?? "—",
+    createdAt: company?.created_at ? new Date(company.created_at).toLocaleDateString() : "—",
+    consentTerms: "—",
+    taxIdentificationNumber: company?.tax_id ?? "—",
+    verificationStatus: company?.verificationStatus ?? company?.verification_status ?? "—",
+    businessType: company?.businessType ?? company?.business_type ?? "—",
+    beneficialOwnerType: "—",
+    statusReason: "—",
+    uploadedAt: "—",
+    accounts: { privateAccount: "—", vaultNumber: "—" },
+    settings: { priceList: "—", actualPriceList: "—", skipTransferPreApproval: "—" },
+    fees: { recurring: "—", fxMarkup: "—" },
+    contacts: { phone: company?.phone ?? "—", email: company?.email ?? "—", url: "—", signalEnabled: "—" },
+  };
+
   const documentsQuery = useQuery({
     queryKey: ["admin", "documents", "company", cid],
     queryFn: () =>
@@ -255,6 +224,14 @@ export default function AdminCompanyDetailPage({
       ),
     enabled: !!token && Number.isFinite(cid),
   });
+  const accountsQuery = useQuery({
+    queryKey: ["admin", "accounts", "company", cid],
+    queryFn: () => apiClient<{ data: AdminAccount[]; total: number }>(`/admin/accounts?companyId=${cid}&limit=50`, { token: token! }),
+    enabled: !!token && Number.isFinite(cid),
+  });
+
+  const employeesQuery = useAdminEmployees(Number.isFinite(cid) ? { companyId: String(cid) } : undefined);
+
   const qc = useQueryClient();
   const deleteDocMut = useMutation({
     mutationFn: (docId: number) =>
@@ -267,7 +244,15 @@ export default function AdminCompanyDetailPage({
     },
   });
 
-  const filteredCompanyEmployees = MOCK_COMPANY_EMPLOYEES.filter(
+  const allEmployees: CompanyEmployeeRow[] = (employeesQuery.data?.data ?? []).map((e) => ({
+    id: String(e.id),
+    company: (e as Record<string, unknown>).company_name as string ?? c.name,
+    fullName: `${(e as Record<string, unknown>).first_name ?? ""} ${(e as Record<string, unknown>).last_name ?? ""}`.trim() || "—",
+    accessRoles: (e as Record<string, unknown>).role as string ?? "—",
+    enabled: (e as Record<string, unknown>).is_active ? "Yes" : "No",
+  }));
+
+  const filteredCompanyEmployees = allEmployees.filter(
     (e) =>
       e.fullName.toLowerCase().includes(employeesSearch.toLowerCase()) ||
       e.company.toLowerCase().includes(employeesSearch.toLowerCase()) ||
@@ -297,20 +282,72 @@ export default function AdminCompanyDetailPage({
     );
   }, [documentsQuery.data, documentsSearch]);
 
+  const accountRows: AccountRow[] = (accountsQuery.data?.data ?? []).map((a) => ({
+    number: a.account_number,
+    providerNumber: a.provider ?? "—",
+    type: a.account_type,
+    providerCurrency: a.currency,
+    currentBalance: a.balance,
+  }));
+
+  const handleEditCompanyOpen = () => {
+    setEditName(company?.name ?? "");
+    setEditEmail(company?.email ?? "");
+    setEditPhone(company?.phone ?? "");
+    setEditCountry(company?.country ?? "");
+    setEditBusinessType(company?.business_type ?? company?.businessType ?? "");
+    setEditVerificationStatus(company?.verificationStatus ?? company?.verification_status ?? "");
+    setEditAccountStatus(company?.accountStatus ?? company?.account_status ?? "");
+    setEditCompanyOpen(true);
+  };
+
+  const handleEditCompanySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    await updateCompanyMut.mutateAsync({
+      id: companyId,
+      data: {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+        country: editCountry,
+        business_type: editBusinessType,
+        verification_status: editVerificationStatus,
+        account_status: editAccountStatus,
+      },
+    });
+    setEditCompanyOpen(false);
+  };
+
+  if (companyQuery.isLoading) {
+    return <div className="py-12 text-center text-gray-400">Loading…</div>;
+  }
+
   return (
     <div className="view-company-detail-page w-full space-y-6">
-      <div className="view-company-page-title-card rounded-[10px] bg-white px-6 py-5">
-        <h1
-          className="admin-page-heading font-semibold text-gray-900"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontSize: "22px",
-            lineHeight: "28px",
-            color: "#0E1620",
-          }}
-        >
-          View Company
-        </h1>
+      <div className="view-company-page-title-card rounded-[10px] bg-white px-6 py-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(ROUTES.admin.companies)}
+            className="text-sm font-medium text-blue-600 hover:underline"
+          >
+            ← Back
+          </button>
+          <h1
+            className="admin-page-heading font-semibold text-gray-900"
+            style={{
+              fontFamily: "var(--font-poppins), Poppins, sans-serif",
+              fontSize: "22px",
+              lineHeight: "28px",
+              color: "#0E1620",
+            }}
+          >
+            View Company
+          </h1>
+        </div>
+        <Button variant="primary" size="md" onClick={handleEditCompanyOpen}>
+          Edit company
+        </Button>
       </div>
 
       <div
@@ -691,8 +728,8 @@ export default function AdminCompanyDetailPage({
               { key: "providerCurrency", header: "Provider Currency" },
               { key: "currentBalance", header: "Current Balance" },
             ]}
-            data={MOCK_ACCOUNTS}
-            emptyMessage="No accounts found."
+            data={accountRows}
+            emptyMessage={accountsQuery.isLoading ? "Loading accounts…" : "No accounts found."}
             className="admin-list-table border-0 border-gray-100 [&_table]:text-sm [&_table]:leading-5 [&_th]:font-normal [&_td]:align-middle"
           />
         </div>
@@ -736,8 +773,8 @@ export default function AdminCompanyDetailPage({
               {
                 key: "fullName",
                 header: "Full Name",
-                render: (value: unknown) => (
-                  <Link href="#" className="font-medium text-blue-600 hover:underline">
+                render: (value: unknown, row: CompanyEmployeeRow) => (
+                  <Link href={ROUTES.admin.employeeDetail(row.id)} className="font-medium text-blue-600 hover:underline">
                     {String(value)}
                   </Link>
                 ),
@@ -766,6 +803,59 @@ export default function AdminCompanyDetailPage({
           />
         </div>
       )}
+
+      <Modal isOpen={editCompanyOpen} onClose={() => setEditCompanyOpen(false)} title="Edit Company" size="lg">
+        <form className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleEditCompanySubmit}>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label>
+            <input required value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Company name" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Email" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
+            <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Phone" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Country</label>
+            <input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Country" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Business Type</label>
+            <input value={editBusinessType} onChange={(e) => setEditBusinessType(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Business type" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Verification Status</label>
+            <select value={editVerificationStatus} onChange={(e) => setEditVerificationStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
+              <option value="">Select</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Account Status</label>
+            <select value={editAccountStatus} onChange={(e) => setEditAccountStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
+              <option value="">Select</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2 flex justify-end gap-3 pt-2">
+            <Button type="button" variant="secondary" size="md" onClick={() => setEditCompanyOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="md" disabled={updateCompanyMut.isPending}>
+              {updateCompanyMut.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <AddDocumentModal
         open={addDocumentOpen}
