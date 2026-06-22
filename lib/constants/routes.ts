@@ -6,6 +6,8 @@ export const ROUTES = {
     verifyEmail: "/admin/verify-email",
     twoFA: "/admin/2fa",
     dashboard: "/admin/dashboard",
+    bills: "/admin/bills",
+    topups: "/admin/top-ups",
     employees: "/admin/employees",
     employeeAdd: "/admin/employees/add",
     employeeDetail: (id: string) => `/admin/employees/${id}`,
