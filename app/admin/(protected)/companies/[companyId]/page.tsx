@@ -21,90 +21,6 @@ import EditDocumentModal, {
 
 type TabId = "details" | "documents" | "accounts" | "employees";
 
-const SECTION_HEADER_STYLE =
-  "border-b border-gray-200 px-4 py-3 flex items-center justify-between";
-const SECTION_HEADER_BG = "rgb(222, 236, 250)";
-const SECTION_HEADING_STYLE: React.CSSProperties = {
-  fontFamily: "var(--font-poppins), Poppins, sans-serif",
-  fontWeight: 500,
-  fontSize: "16px",
-  lineHeight: "20px",
-  letterSpacing: "0%",
-  color: "#000000",
-};
-const SECTION_BORDER = "1px solid #DFDFDF";
-/** Form labels in Add Document modal — color from CSS via `.add-document-modal-label` + `data-modal-theme` (inline color was overriding dark theme) */
-const ADD_DOCUMENT_LABEL_STYLE: React.CSSProperties = {
-  fontFamily: "var(--font-poppins), Poppins, sans-serif",
-  fontWeight: 500,
-  fontSize: "16px",
-  lineHeight: "20px",
-  letterSpacing: "0%",
-};
-const DROPDOWN_ARROW_COLOR = "#878787DD";
-
-function SelectWithArrow({
-  children,
-  className,
-  surface = "default",
-  ...props
-}: React.ComponentPropsWithoutRef<"select"> & { surface?: "default" | "modal" }) {
-  const isModal = surface === "modal";
-  return (
-    <div className={isModal ? "relative add-document-modal-select-wrap" : "relative"}>
-      <select
-        className={className}
-        style={
-          isModal
-            ? { appearance: "none", paddingRight: "2.5rem" }
-            : {
-                appearance: "none",
-                paddingRight: "2.5rem",
-                border: "1px solid #E5E7EB",
-                backgroundColor: "#FFFFFF",
-              }
-        }
-        {...props}
-      >
-        {children}
-      </select>
-      <span
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-        style={isModal ? undefined : { color: DROPDOWN_ARROW_COLOR }}
-      >
-        <svg
-          className={`h-4 w-4 ${isModal ? "text-gray-500" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </span>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="mb-4 flex flex-col gap-0.5">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-gray-900">{value}</span>
-    </div>
-  );
-}
-
-/** Label left, value right — same row, for Accounts/Settings/Fees/Contacts brabar layout */
-function DetailRowInline({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-gray-100 py-2.5 last:border-b-0">
-      <span className="text-sm text-gray-500 shrink-0">{label}</span>
-      <span className="text-sm font-medium text-gray-900 text-right min-w-0">{value}</span>
-    </div>
-  );
-}
-
-
 interface ApiDocumentRow {
   id: number;
   entity_type: string;
@@ -143,7 +59,6 @@ type AccountRow = {
   currentBalance: string;
 };
 
-
 type CompanyEmployeeRow = {
   id: string;
   company: string;
@@ -152,13 +67,45 @@ type CompanyEmployeeRow = {
   enabled: string;
 };
 
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "details", label: "Details" },
-  { id: "documents", label: "Documents" },
-  { id: "accounts", label: "Accounts" },
-  { id: "employees", label: "Employees" },
-];
+function FeesEstimateCard({ cycle, base, per, count }: { cycle: string; base: number; per: number; count: number }) {
+  const noun = cycle === "Annual" ? "year" : "month";
+  const perTotal = per * count;
+  const cycleTotal = base + perTotal;
+  const monthly = cycle === "Annual" ? cycleTotal / 12 : cycleTotal;
+  const annual = cycle === "Annual" ? cycleTotal : cycleTotal * 12;
+  const fmt = (n: number) => "€" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const chip: React.CSSProperties = { background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 12, padding: "12px 16px" };
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "linear-gradient(125deg, #0a1c36 0%, #14305a 100%)", color: "#fff", position: "relative", border: "1px solid #E5E7EB" }}>
+      <div style={{ position: "absolute", top: -60, right: -30, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,90,0.18), transparent 70%)" }} />
+      <div style={{ position: "relative", padding: "18px 22px" }}>
+        <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "#d4af5a", marginBottom: 12 }}>Estimated Charge</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "rgba(255,255,255,0.78)", padding: "6px 0" }}>
+          <span>Base platform fee</span>
+          <span style={{ fontFamily: "monospace" }}>{fmt(base)} / {noun}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "rgba(255,255,255,0.78)", padding: "6px 0" }}>
+          <span>Per-employee ({count} × {fmt(per)})</span>
+          <span style={{ fontFamily: "monospace" }}>{fmt(perTotal)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.16)", marginTop: 6, paddingTop: 12 }}>
+          <span style={{ fontWeight: 600, color: "#fff", fontSize: 14 }}>Total per {noun}</span>
+          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 24 }}>{fmt(cycleTotal)}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
+          <div style={chip}>
+            <div style={{ fontSize: 11, color: "#9db8ef", fontWeight: 600, textTransform: "uppercase" as const }}>Monthly</div>
+            <div style={{ marginTop: 4, fontFamily: "monospace", fontWeight: 600, fontSize: 17 }}>{fmt(monthly)}</div>
+          </div>
+          <div style={chip}>
+            <div style={{ fontSize: 11, color: "#9db8ef", fontWeight: 600, textTransform: "uppercase" as const }}>Annual</div>
+            <div style={{ marginTop: 4, fontFamily: "monospace", fontWeight: 600, fontSize: 17 }}>{fmt(annual)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminCompanyDetailPage({
   params,
@@ -213,7 +160,15 @@ export default function AdminCompanyDetailPage({
     settings: { priceList: "—", actualPriceList: "—", skipTransferPreApproval: "—" },
     fees: { recurring: "—", fxMarkup: "—" },
     contacts: { phone: company?.phone ?? "—", email: company?.email ?? "—", url: "—", signalEnabled: "—" },
+    country: company?.country ?? "—",
   };
+
+  const statusTone = (() => {
+    const s = (c.verificationStatus ?? "").toLowerCase();
+    if (s === "active" || s === "approved") return { bg: "rgba(56,142,60,0.25)", fg: "#bff0c4", bd: "rgba(191,240,196,0.4)" };
+    if (s === "suspended" || s === "terminated" || s === "rejected") return { bg: "rgba(220,38,38,0.25)", fg: "#ffc9c9", bd: "rgba(255,201,201,0.4)" };
+    return { bg: "rgba(215,158,27,0.25)", fg: "#ffe39a", bd: "rgba(255,227,154,0.4)" };
+  })();
 
   const documentsQuery = useQuery({
     queryKey: ["admin", "documents", "company", cid],
@@ -323,554 +278,223 @@ export default function AdminCompanyDetailPage({
   }
 
   return (
-    <div className="view-company-detail-page w-full space-y-6">
-      <div className="view-company-page-title-card rounded-[10px] bg-white px-6 py-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.push(ROUTES.admin.companies)}
-            className="text-sm font-medium text-blue-600 hover:underline"
-          >
-            ← Back
-          </button>
-          <h1
-            className="admin-page-heading font-semibold text-gray-900"
-            style={{
-              fontFamily: "var(--font-poppins), Poppins, sans-serif",
-              fontSize: "22px",
-              lineHeight: "28px",
-              color: "#0E1620",
-            }}
-          >
-            View Company
-          </h1>
-        </div>
-        <Button variant="primary" size="md" onClick={handleEditCompanyOpen}>
-          Edit company
-        </Button>
-      </div>
-
-      <div
-        className="admin-tab-strip view-company-tab-card overflow-x-auto rounded-2xl border border-gray-200 lg:overflow-visible shadow-none"
-        style={{
-          backgroundColor: "#FFFFFF",
-          padding: "8px",
-        }}
-      >
-        <div className="flex min-w-max items-center gap-1 lg:min-w-0 lg:w-full">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors lg:flex-1 lg:shrink lg:whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "admin-tab-btn--active text-white"
-                  : "admin-tab-btn--inactive text-[#6C757D]"
-              }`}
-              style={
-                activeTab === tab.id
-                  ? { backgroundColor: "#0F50DB", borderRadius: "10px" }
-                  : undefined
-              }
-            >
-              {tab.label}
+    <div className="w-full" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Navy Hero */}
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: "26px 28px", background: "linear-gradient(125deg, #0a1c36 0%, #12294c 55%, #1b3b66 100%)", color: "#fff" }}>
+        <div style={{ position: "absolute", top: -80, right: -40, width: 260, height: 260, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,90,0.18), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -100, right: 130, width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle, rgba(46,110,210,0.22), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            <button onClick={() => router.push(ROUTES.admin.companies)} style={{ display: "inline-flex", alignItems: "center", gap: 7, marginBottom: 14, padding: 0, border: "none", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>
+              ← Companies
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, minWidth: 0 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 18, background: "linear-gradient(135deg, rgba(212,175,90,0.9), rgba(184,142,52,0.9))", display: "flex", alignItems: "center", justifyContent: "center", color: "#1a2336", fontWeight: 700, fontSize: 28, flexShrink: 0, boxShadow: "0 6px 18px rgba(0,0,0,0.25)" }}>
+                {c.name.charAt(0)}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <h1 style={{ margin: 0, fontWeight: 700, fontSize: 25, color: "#fff", letterSpacing: "-0.01em" }}>{c.name}</h1>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 11px", borderRadius: 9999, fontSize: 12, fontWeight: 600, background: statusTone.bg, color: statusTone.fg, border: `1px solid ${statusTone.bd}` }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />{c.verificationStatus}
+                  </span>
+                </div>
+                <p style={{ margin: "6px 0 0", fontSize: 14.5, color: "#cfe0ff" }}>{c.companyType} · {c.businessType}</p>
+                <p style={{ margin: "3px 0 0", fontSize: 13, color: "#9db8ef", fontFamily: "monospace" }}>{c.clientId} · {c.contacts.email}</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            <button onClick={() => router.push(ROUTES.admin.companies)} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Back</button>
+            <button onClick={handleEditCompanyOpen} style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 18px", borderRadius: 10, border: "none", background: "#fff", color: "#0a1c36", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>Edit company</button>
+          </div>
+        </div>
+        <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginTop: 24 }}>
+          {[{ label: "Client ID", value: c.clientId }, { label: "Verification", value: c.verificationLevel }, { label: "Business Type", value: c.businessType }, { label: "Country", value: c.country }].map((k) => (
+            <div key={k.label} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 12, padding: "13px 16px" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#9db8ef" }}>{k.label}</div>
+              <div style={{ marginTop: 5, fontSize: 16, fontWeight: 600, color: "#fff" }}>{k.value}</div>
+            </div>
           ))}
         </div>
       </div>
 
+      {/* Tab strip */}
+      <div style={{ display: "inline-flex", gap: 4, background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 5 }}>
+        {([ { id: "details", label: "Details" }, { id: "documents", label: "Documents" }, { id: "accounts", label: "Accounts/Wallets" }, { id: "employees", label: "Employees" } ] as { id: TabId; label: string }[]).map((tab) => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            style={{ padding: "8px 22px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 14, background: activeTab === tab.id ? "#0F50DB" : "transparent", color: activeTab === tab.id ? "#fff" : "#6C757D", transition: "background 0.15s" }}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Details tab */}
       {activeTab === "details" && (
-        <div
-          className="view-company-details-parent grid grid-cols-1 gap-4 rounded-2xl p-3 min-h-[200px] sm:p-4 sm:gap-6 lg:grid-cols-[1fr_auto] lg:grid-rows-[auto_auto_auto_auto] border border-gray-200"
-          style={{ backgroundColor: "#FFFFFF" }}
-          role="region"
-          aria-label="View company details"
-          data-figma="441-2527"
-        >
-          <div
-            className="view-company-details-section overflow-hidden shadow-none lg:row-span-4"
-            style={{ borderRadius: "10px", border: SECTION_BORDER }}
-            data-section="Details"
-          >
-            <div
-              className={SECTION_HEADER_STYLE}
-              style={{ backgroundColor: SECTION_HEADER_BG }}
-            >
-              <span style={SECTION_HEADING_STYLE}>Details</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
+          <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "15px 20px", borderBottom: "1px solid #E5E7EB" }}>
+              <span style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(15,80,219,0.1)", color: "#0F50DB", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              </span>
+              <span style={{ fontWeight: 600, fontSize: 15, color: "#0E1620" }}>Company Details</span>
             </div>
-            <div className="view-company-section-body p-4">
-              {/* Top row: Photo + Name below icon (left) | Client ID, Company Type, Owner (right) */}
-              <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="flex flex-col items-start gap-2">
-                  <span className="text-sm text-gray-500">Photo</span>
-                  <div
-                    className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-2xl font-semibold text-gray-600"
-                    aria-hidden
-                  >
-                    {c.name.charAt(0)}
-                  </div>
-                  <div className="min-w-0">
-                    <DetailRow label="Name" value={c.name} />
-                  </div>
+            <div style={{ padding: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 28px" }}>
+              {[
+                ["Name", c.name], ["Client ID", c.clientId], ["Company Type", c.companyType], ["Owner", c.owner],
+                ["Incorporation Date", c.incorporationDate], ["Tax Identification Number", c.taxIdentificationNumber],
+                ["Registration Number", c.registrationNumber], ["Verification Status", c.verificationStatus],
+                ["Verification Level", c.verificationLevel], ["Business Type", c.businessType],
+                ["Beneficial Owner Type", c.beneficialOwnerType], ["Account Status", c.accountStatus],
+                ["Status Reason", c.statusReason], ["Created At", c.createdAt],
+                ["Consent Terms", c.consentTerms], ["Uploaded At", c.uploadedAt],
+              ].map(([label, value]) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9EA6B3" }}>{label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "#0E1620" }}>{String(value) || "—"}</span>
                 </div>
-                <div>
-                  <DetailRow label="Client ID" value={c.clientId} />
-                  <DetailRow
-                    label="Company Type"
-                    value={
-                      <span
-                        className="company-detail-value-text"
-                        style={{
-                          fontFamily: "var(--font-poppins), Poppins, sans-serif",
-                          fontWeight: 400,
-                          fontStyle: "normal",
-                          fontSize: "16px",
-                          lineHeight: "20px",
-                          letterSpacing: "0%",
-                          verticalAlign: "middle",
-                          color: "#000000",
-                        }}
-                      >
-                        {c.companyType}
-                      </span>
-                    }
-                  />
-                  <DetailRow
-                    label="Owner"
-                    value={
-                      <Link
-                        href="#"
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {c.owner}
-                      </Link>
-                    }
-                  />
-                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <FeesEstimateCard
+              cycle={String((company as unknown as Record<string,unknown>)?.billing_cycle ?? "Monthly")}
+              base={parseFloat(String((company as unknown as Record<string,unknown>)?.base_fee ?? "0")) || 0}
+              per={parseFloat(String((company as unknown as Record<string,unknown>)?.per_employee_fee ?? "0")) || 0}
+              count={allEmployees.length}
+            />
+            <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "15px 20px", borderBottom: "1px solid #E5E7EB" }}>
+                <span style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(15,80,219,0.1)", color: "#0F50DB", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                </span>
+                <span style={{ fontWeight: 600, fontSize: 15, color: "#0E1620" }}>Contacts</span>
               </div>
-              {/* Two columns aligned: left | right */}
-              <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <div>
-                  <DetailRow label="Incorporation Date" value={c.incorporationDate} />
-                  <DetailRow label="Registration Number" value={c.registrationNumber} />
-                  <DetailRow label="Verification Level" value={c.verificationLevel} />
-                  <DetailRow label="Other Business Type" value={c.otherBusinessType} />
-                  <DetailRow label="Account Status" value={c.accountStatus} />
-                  <DetailRow label="Created At" value={c.createdAt} />
-                  <DetailRow label="Consent Terms" value={c.consentTerms} />
-                </div>
-                <div>
-                  <DetailRow label="Tax Identification Number" value={c.taxIdentificationNumber} />
-                  <DetailRow
-                    label="Verification Status"
-                    value={
-                      <span
-                        className="company-detail-value-text"
-                        style={{
-                          fontFamily: "var(--font-poppins), Poppins, sans-serif",
-                          fontWeight: 400,
-                          fontStyle: "normal",
-                          fontSize: "16px",
-                          lineHeight: "20px",
-                          letterSpacing: "0%",
-                          verticalAlign: "middle",
-                          color: "#000000",
-                        }}
-                      >
-                        {c.verificationStatus}
-                      </span>
-                    }
-                  />
-                  <DetailRow label="Business Type" value={c.businessType} />
-                  <DetailRow label="Beneficial Owner Type" value={c.beneficialOwnerType} />
-                  <DetailRow label="Status Reason" value={c.statusReason} />
-                  <DetailRow label="Uploaded At" value={c.uploadedAt} />
-                </div>
+              <div style={{ padding: "6px 20px" }}>
+                {[["Phone", c.contacts.phone], ["Email", c.contacts.email], ["URL", c.contacts.url], ["Signal", c.contacts.signalEnabled]].map(([label, value], i, arr) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid #E5E7EB" : "none" }}>
+                    <span style={{ fontSize: 13, color: "#9EA6B3" }}>{label}</span>
+                    <span style={{ fontSize: 13.5, fontWeight: 500, color: "#0E1620" }}>{String(value) || "—"}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-
-          <div
-            className="view-company-details-section w-full min-w-0 max-w-none overflow-hidden shadow-none lg:w-[320px] lg:max-w-[320px] lg:col-start-2 lg:row-start-1"
-            style={{ borderRadius: "10px", border: SECTION_BORDER }}
-            data-section="Accounts"
-          >
-              <div
-                className={SECTION_HEADER_STYLE}
-                style={{ backgroundColor: SECTION_HEADER_BG }}
-              >
-                <span style={SECTION_HEADING_STYLE}>Accounts</span>
-              </div>
-              <div className="view-company-section-body grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Private Account</span>
-                  <span className="text-sm font-medium text-gray-900">{c.accounts.privateAccount}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Vault number</span>
-                  <span className="text-sm font-medium text-gray-900">{c.accounts.vaultNumber}</span>
-                </div>
-              </div>
-            </div>
-          <div
-              className="view-company-details-section w-full min-w-0 max-w-none overflow-hidden shadow-none lg:w-[320px] lg:max-w-[320px] lg:col-start-2 lg:row-start-2"
-              style={{ borderRadius: "10px", border: SECTION_BORDER }}
-              data-section="Settings"
-            >
-              <div
-                className={SECTION_HEADER_STYLE}
-                style={{ backgroundColor: SECTION_HEADER_BG }}
-              >
-                <span style={SECTION_HEADING_STYLE}>Settings</span>
-              </div>
-              <div className="view-company-section-body space-y-4 p-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-gray-500">Price List</span>
-                    <span className="text-sm font-medium text-gray-900">{c.settings.priceList}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-gray-500">Actual Price List</span>
-                    <span className="text-sm font-medium text-gray-900">{c.settings.actualPriceList}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Skip Transfer Pre Approval</span>
-                  <span className="text-sm font-medium text-gray-900">{c.settings.skipTransferPreApproval}</span>
-                </div>
-              </div>
-            </div>
-          <div
-              className="view-company-details-section w-full min-w-0 max-w-none overflow-hidden shadow-none lg:w-[320px] lg:max-w-[320px] lg:col-start-2 lg:row-start-3"
-              style={{ borderRadius: "10px", border: SECTION_BORDER }}
-              data-section="Fees"
-            >
-              <div
-                className={SECTION_HEADER_STYLE}
-                style={{ backgroundColor: SECTION_HEADER_BG }}
-              >
-                <span style={SECTION_HEADING_STYLE}>Fees</span>
-              </div>
-              <div className="view-company-section-body grid grid-cols-2 gap-4 p-4">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Recurring</span>
-                  <span className="text-sm font-medium text-gray-900">{c.fees.recurring}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">FX Markup</span>
-                  <span className="text-sm font-medium text-gray-900">{c.fees.fxMarkup}</span>
-                </div>
-              </div>
-            </div>
-          <div
-              className="view-company-details-section w-full min-w-0 max-w-none overflow-hidden shadow-none lg:w-[320px] lg:max-w-[320px] lg:col-start-2 lg:row-start-4"
-              style={{ borderRadius: "10px", border: SECTION_BORDER }}
-              data-section="Contacts"
-            >
-              <div
-                className={SECTION_HEADER_STYLE}
-                style={{ backgroundColor: SECTION_HEADER_BG }}
-              >
-                <span style={SECTION_HEADING_STYLE}>Contacts</span>
-              </div>
-              <div className="view-company-section-body grid grid-cols-1 gap-x-6 gap-y-4 p-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Phone</span>
-                  <span className="text-sm font-medium text-gray-900">{c.contacts.phone}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Email</span>
-                  <span className="text-sm font-medium text-gray-900">{c.contacts.email}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">URL</span>
-                  <span className="text-sm font-medium text-gray-900">{c.contacts.url}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm text-gray-500">Signal Enabled</span>
-                  <span className="text-sm font-medium text-gray-900">{c.contacts.signalEnabled}</span>
-                </div>
-              </div>
-            </div>
         </div>
       )}
 
+      {/* Documents tab */}
       {activeTab === "documents" && (
-        <div className="view-company-tab-panel w-full rounded-2xl bg-white p-6 shadow-sm">
-          <div className="view-company-tab-toolbar flex min-w-0 items-center gap-4">
-            <label className="relative min-w-0 flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #E5E7EB" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <label style={{ position: "relative", flex: 1, minWidth: 200 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9EA6B3" }}>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </span>
-              <input
-                type="search"
-                placeholder="Search"
-                value={documentsSearch}
-                onChange={(e) => setDocumentsSearch(e.target.value)}
-                className="view-company-tab-search h-10 w-full min-w-0 rounded-lg bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-0 focus:ring-offset-0"
-              />
+              <input type="search" placeholder="Search documents" value={documentsSearch} onChange={(e) => setDocumentsSearch(e.target.value)}
+                style={{ height: 40, width: "100%", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", padding: "0 12px 0 36px", fontSize: 14, color: "#0E1620", outline: "none" }} />
             </label>
-            <Button variant="primary" size="md" onClick={() => setAddDocumentOpen(true)}>
-              + Add new
-            </Button>
+            <button onClick={() => setAddDocumentOpen(true)} style={{ height: 40, padding: "0 18px", borderRadius: 8, border: "none", background: "#0F50DB", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap" }}>+ Add new</button>
           </div>
           <Table<DocumentRow>
             columns={[
               { key: "documentType", header: "Document Type" },
-              {
-                key: "status",
-                header: "Status",
-                render: (value: unknown) => {
-                  const v = String(value).toLowerCase();
-                  const variant: "success" | "warning" | "danger" =
-                    v === "approved" ? "success" : v === "rejected" ? "danger" : "warning";
-                  return <Badge label={String(value)} variant={variant} />;
-                },
-              },
-              {
-                key: "file",
-                header: "File",
-                render: (value: unknown) => (
-                  <span className="font-medium text-blue-600">{String(value)}</span>
-                ),
-              },
+              { key: "status", header: "Status", render: (value: unknown) => { const v = String(value).toLowerCase(); const variant: "success" | "warning" | "danger" = v === "approved" ? "success" : v === "rejected" ? "danger" : "warning"; return <Badge label={String(value)} variant={variant} />; } },
+              { key: "file", header: "File", render: (value: unknown) => <span style={{ fontWeight: 500, color: "#0F50DB" }}>{String(value)}</span> },
               { key: "country", header: "Country" },
               { key: "issueDate", header: "Issue Date" },
               { key: "validUntil", header: "Valid Until" },
-              {
-                key: "id" as const,
-                header: "Actions",
-                render: (_v: unknown, row: DocumentRow) => (
-                  <div className="inline-flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEditDocument({
-                          id: row.raw.id,
-                          document_type: row.raw.document_type,
-                          country: row.raw.country,
-                          issue_date: row.raw.issue_date,
-                          expiry_date: row.raw.expiry_date,
-                          notes: row.raw.notes,
-                          file_name: row.raw.file_name,
-                        })
-                      }
-                      className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!confirm(`Delete document "${row.raw.file_name}"?`)) return;
-                        try {
-                          await deleteDocMut.mutateAsync(row.raw.id);
-                        } catch (e) {
-                          alert(`Failed to delete: ${(e as Error).message}`);
-                        }
-                      }}
-                      disabled={deleteDocMut.isPending}
-                      className="rounded-md border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ),
-              },
+              { key: "id" as const, header: "Actions", render: (_v: unknown, row: DocumentRow) => (
+                <div style={{ display: "inline-flex", gap: 8 }}>
+                  <button type="button" onClick={() => setEditDocument({ id: row.raw.id, document_type: row.raw.document_type, country: row.raw.country, issue_date: row.raw.issue_date, expiry_date: row.raw.expiry_date, notes: row.raw.notes, file_name: row.raw.file_name })}
+                    style={{ borderRadius: 7, border: "1px solid #E5E7EB", background: "#fff", color: "#0E1620", padding: "4px 12px", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>Edit</button>
+                  <button type="button" onClick={async () => { if (!confirm(`Delete "${row.raw.file_name}"?`)) return; try { await deleteDocMut.mutateAsync(row.raw.id); } catch (e) { alert(`Failed: ${(e as Error).message}`); } }} disabled={deleteDocMut.isPending}
+                    style={{ borderRadius: 7, border: "1px solid #fee2e2", background: "#fff", color: "#991b1b", padding: "4px 12px", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>Delete</button>
+                </div>
+              ) },
             ]}
             data={filteredDocuments}
-            emptyMessage={
-              documentsQuery.isLoading
-                ? "Loading documents…"
-                : documentsQuery.error
-                ? `Failed to load: ${(documentsQuery.error as Error).message}`
-                : "No documents found."
-            }
-            className="admin-list-table mt-5 border-0 border-gray-100"
+            emptyMessage={documentsQuery.isLoading ? "Loading…" : documentsQuery.error ? `Error: ${(documentsQuery.error as Error).message}` : "No documents found."}
+            className="admin-list-table border-0"
           />
         </div>
       )}
 
+      {/* Accounts tab */}
       {activeTab === "accounts" && (
-        <div
-          className="view-company-tab-panel w-full rounded-2xl bg-white p-6 shadow-sm text-gray-900"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontWeight: 400,
-            fontStyle: "normal",
-            fontSize: "14px",
-            lineHeight: "20px",
-            letterSpacing: "0%",
-          }}
-        >
+        <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #E5E7EB" }}>
           <Table<AccountRow>
             columns={[
-              {
-                key: "number",
-                header: "Number",
-                render: (value: unknown) => (
-                  <Link href="#" className="font-medium text-blue-600 hover:underline">
-                    {String(value)}
-                  </Link>
-                ),
-              },
-              {
-                key: "providerNumber",
-                header: "Provider Number",
-                render: (value: unknown) => (
-                  <span className="whitespace-pre-line text-left" style={{ verticalAlign: "middle" }}>{String(value)}</span>
-                ),
-              },
+              { key: "number", header: "Account Number", render: (value: unknown) => <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#0F50DB" }}>{String(value)}</span> },
+              { key: "providerNumber", header: "Provider" },
               { key: "type", header: "Type" },
-              { key: "providerCurrency", header: "Provider Currency" },
-              { key: "currentBalance", header: "Current Balance" },
+              { key: "providerCurrency", header: "Currency" },
+              { key: "currentBalance", header: "Balance", render: (value: unknown) => <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{String(value)}</span> },
             ]}
             data={accountRows}
-            emptyMessage={accountsQuery.isLoading ? "Loading accounts…" : "No accounts found."}
-            className="admin-list-table border-0 border-gray-100 [&_table]:text-sm [&_table]:leading-5 [&_th]:font-normal [&_td]:align-middle"
+            emptyMessage={accountsQuery.isLoading ? "Loading…" : "No accounts found."}
+            className="admin-list-table border-0"
           />
         </div>
       )}
 
+      {/* Employees tab */}
       {activeTab === "employees" && (
-        <div className="view-company-tab-panel w-full rounded-2xl bg-white p-6 shadow-sm">
-          <div className="view-company-tab-toolbar flex min-w-0 items-center gap-4">
-            <label className="relative min-w-0 flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <div style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", border: "1px solid #E5E7EB" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <label style={{ position: "relative", flex: 1 }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9EA6B3" }}>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </span>
-              <input
-                type="search"
-                placeholder="Search"
-                value={employeesSearch}
-                onChange={(e) => setEmployeesSearch(e.target.value)}
-                className="view-company-tab-search h-10 w-full min-w-0 rounded-lg bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-0 focus:ring-offset-0"
-              />
+              <input type="search" placeholder="Search employees" value={employeesSearch} onChange={(e) => setEmployeesSearch(e.target.value)}
+                style={{ height: 40, width: "100%", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", padding: "0 12px 0 36px", fontSize: 14, outline: "none" }} />
             </label>
-            <Link href={ROUTES.admin.companyAdd} className="shrink-0">
-              <Button variant="primary" size="md" type="button">
-                + Add new
-              </Button>
-            </Link>
+            <Link href={ROUTES.admin.employeeAdd} style={{ height: 40, padding: "0 18px", borderRadius: 8, background: "#0F50DB", color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", textDecoration: "none" }}>+ Add new employee</Link>
           </div>
           <Table<CompanyEmployeeRow>
             columns={[
-              { key: "id", header: "ID" },
-              {
-                key: "company",
-                header: "Company",
-                render: (value: unknown) => (
-                  <Link href="#" className="font-medium text-blue-600 hover:underline">
-                    {String(value)}
-                  </Link>
-                ),
-              },
-              {
-                key: "fullName",
-                header: "Full Name",
-                render: (value: unknown, row: CompanyEmployeeRow) => (
-                  <Link href={ROUTES.admin.employeeDetail(row.id)} className="font-medium text-blue-600 hover:underline">
-                    {String(value)}
-                  </Link>
-                ),
-              },
-              { key: "accessRoles", header: "Access Roles" },
-              { key: "enabled", header: "Enabled" },
-              {
-                key: "actions",
-                header: "",
-                render: () => (
-                  <button
-                    type="button"
-                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                    aria-label="Actions"
-                  >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                    </svg>
-                  </button>
-                ),
-              },
+              { key: "id", header: "ID", render: (value: unknown) => <span style={{ fontFamily: "monospace", fontSize: 12.5 }}>{String(value)}</span> },
+              { key: "fullName", header: "Name", render: (value: unknown, row: CompanyEmployeeRow) => <Link href={ROUTES.admin.employeeDetail(row.id)} style={{ fontWeight: 500, color: "#0F50DB", textDecoration: "none" }}>{String(value)}</Link> },
+              { key: "company", header: "Company" },
+              { key: "accessRoles", header: "Role" },
+              { key: "enabled", header: "Active" },
             ]}
-            data={filteredCompanyEmployees.map((e) => ({ ...e, actions: null }))}
+            data={filteredCompanyEmployees}
             emptyMessage="No employees found."
-            className="admin-list-table mt-5 border-0 border-gray-100"
+            className="admin-list-table border-0"
           />
         </div>
       )}
 
+      {/* Edit company modal */}
       <Modal isOpen={editCompanyOpen} onClose={() => setEditCompanyOpen(false)} title="Edit Company" size="lg">
         <form className="grid grid-cols-1 gap-5 sm:grid-cols-2" onSubmit={handleEditCompanySubmit}>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label>
-            <input required value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Company name" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Email" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
-            <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Phone" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Country</label>
-            <input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Country" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Business Type</label>
-            <input value={editBusinessType} onChange={(e) => setEditBusinessType(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900" placeholder="Business type" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Verification Status</label>
-            <select value={editVerificationStatus} onChange={(e) => setEditVerificationStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Name <span className="text-red-500">*</span></label><input required value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Company name" /></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label><input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Email" /></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label><input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Phone" /></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Country</label><input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Country" /></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Business Type</label><input value={editBusinessType} onChange={(e) => setEditBusinessType(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Business type" /></div>
+          <div><label className="mb-1.5 block text-sm font-medium text-gray-700">Verification Status</label>
+            <select value={editVerificationStatus} onChange={(e) => setEditVerificationStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">Select</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="suspended">Suspended</option>
+              {["active","pending","approved","rejected","suspended"].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}
             </select>
           </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Account Status</label>
-            <select value={editAccountStatus} onChange={(e) => setEditAccountStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900">
+          <div className="sm:col-span-2"><label className="mb-1.5 block text-sm font-medium text-gray-700">Account Status</label>
+            <select value={editAccountStatus} onChange={(e) => setEditAccountStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">Select</option>
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="closed">Closed</option>
+              {["active","suspended","closed"].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase()+v.slice(1)}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2 flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" size="md" onClick={() => setEditCompanyOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" size="md" disabled={updateCompanyMut.isPending}>
-              {updateCompanyMut.isPending ? "Saving…" : "Save Changes"}
-            </Button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setEditCompanyOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" size="md" disabled={updateCompanyMut.isPending}>{updateCompanyMut.isPending ? "Saving…" : "Save Changes"}</Button>
           </div>
         </form>
       </Modal>
 
-      <AddDocumentModal
-        open={addDocumentOpen}
-        onClose={() => setAddDocumentOpen(false)}
-        entityType="company"
-        entityId={cid}
-      />
-
-      <EditDocumentModal
-        open={editDocument !== null}
-        onClose={() => setEditDocument(null)}
-        doc={editDocument}
-        entityType="company"
-        entityId={cid}
-      />
+      <AddDocumentModal open={addDocumentOpen} onClose={() => setAddDocumentOpen(false)} entityType="company" entityId={cid} />
+      <EditDocumentModal open={editDocument !== null} onClose={() => setEditDocument(null)} doc={editDocument} entityType="company" entityId={cid} />
     </div>
   );
 }

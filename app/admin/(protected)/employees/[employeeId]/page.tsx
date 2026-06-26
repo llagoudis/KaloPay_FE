@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "@/lib/constants/routes";
 import { useAdminEmployee, useUpdateAdminEmployee } from "@/hooks/admin/useEmployees";
@@ -190,6 +191,7 @@ export default function AdminEmployeeDetailPage({
   params: Promise<{ employeeId: string }>;
 }) {
   const { employeeId } = use(params);
+  const router = useRouter();
   const id = Number(employeeId);
   const [activeTab, setActiveTab] = useState<TabId>("details");
 
@@ -434,40 +436,65 @@ export default function AdminEmployeeDetailPage({
     );
   }
 
+  const firstName = v(emp.first_name || emp.firstName, "—");
+  const lastName = v(emp.last_name || emp.lastName, "—");
+  const fullName = [firstName, lastName].filter((s) => s !== "—").join(" ") || "—";
+  const empStatus = v(emp.employee_status || emp.status, "Active");
+  const statusTone = (() => {
+    const s = empStatus.toLowerCase();
+    if (s === "active") return { bg: "rgba(56,142,60,0.25)", fg: "#bff0c4", bd: "rgba(191,240,196,0.4)" };
+    if (s === "terminated" || s === "suspended") return { bg: "rgba(220,38,38,0.25)", fg: "#ffc9c9", bd: "rgba(255,201,201,0.4)" };
+    return { bg: "rgba(215,158,27,0.25)", fg: "#ffe39a", bd: "rgba(255,227,154,0.4)" };
+  })();
+
   return (
-    <div className="w-full space-y-6">
-      <div className="bg-white px-6 py-5" style={{ borderRadius: "10px" }}>
-        <h1
-          className="admin-page-heading font-semibold"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontSize: "22px",
-            lineHeight: "28px",
-            color: "#0E1620",
-          }}
-        >
-          View Individual
-        </h1>
+    <div className="w-full" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Navy Hero */}
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: "28px 32px", background: "linear-gradient(120deg, #0a1c36 0%, #0d2a6b 55%, #1b3b88 100%)", color: "#fff" }}>
+        <div style={{ position: "absolute", top: -90, right: -50, width: 280, height: 280, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: -120, right: 140, width: 240, height: 240, borderRadius: "50%", background: "rgba(255,255,255,0.05)", pointerEvents: "none" }} />
+        <div style={{ position: "relative", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18, minWidth: 0 }}>
+            <div style={{ width: 76, height: 76, borderRadius: "50%", background: "rgba(255,255,255,0.14)", border: "2px solid rgba(255,255,255,0.35)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 600, fontSize: 26, flexShrink: 0 }}>
+              {firstName.charAt(0)}{lastName !== "—" ? lastName.charAt(0) : ""}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <h1 style={{ margin: 0, fontWeight: 700, fontSize: 24, color: "#fff", letterSpacing: "-0.01em" }}>{fullName}</h1>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 11px", borderRadius: 9999, fontSize: 12, fontWeight: 600, background: statusTone.bg, color: statusTone.fg, border: `1px solid ${statusTone.bd}` }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />{empStatus}
+                </span>
+              </div>
+              <p style={{ margin: "5px 0 0", fontSize: 14, color: "#cfe0ff" }}>{v(emp.job_title || emp.jobTitle)} · {v(emp.department)}</p>
+              <p style={{ margin: "3px 0 0", fontSize: 13, color: "#9db8ef", fontFamily: "monospace" }}>{v(emp.employee_no || emp.employeeNo)} · {v(emp.work_email || emp.workEmail || emp.email)}</p>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+            <button onClick={() => router.push(ROUTES.admin.employees)} style={{ height: 40, padding: "0 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>← Back</button>
+          </div>
+        </div>
+        <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginTop: 24 }}>
+          {[
+            { label: "Gross Annual", value: fmtMoney(emp.gross_annual_salary || emp.grossAnnual, v(emp.payment_currency_code || emp.payCurrency, "EUR")) },
+            { label: "Monthly", value: fmtMoney(emp.monthly_salary, v(emp.payment_currency_code || emp.payCurrency, "EUR")) },
+            { label: "Department", value: v(emp.department) },
+            { label: "KYC", value: v(emp.kyc_status || emp.kyc, "Pending") },
+          ].map((k) => (
+            <div key={k.label} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 12, padding: "13px 16px" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "#9db8ef" }}>{k.label}</div>
+              <div style={{ marginTop: 5, fontSize: 15, fontWeight: 600, color: "#fff" }}>{k.value}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div
-        className="admin-tab-strip grid grid-cols-3 items-center gap-1"
-        style={{
-          backgroundColor: "#ffffff",
-          borderRadius: "16px",
-          padding: "8px",
-          border: "1px solid #E5E7EB",
-        }}
-      >
+      <div style={{ display: "inline-flex", gap: 4, background: "#fff", border: "1px solid #E5E7EB", borderRadius: 12, padding: 5 }}>
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`min-w-0 whitespace-nowrap rounded-[12px] px-2 py-2 text-center text-[13px] font-medium transition-colors sm:px-4 sm:py-2.5 sm:text-sm ${
-              activeTab === tab.id ? "text-white" : "text-[#6C757D]"
-            }`}
-            style={activeTab === tab.id ? { backgroundColor: "#0F50DB" } : undefined}
+            style={{ padding: "8px 22px", borderRadius: 9, border: "none", cursor: "pointer", fontWeight: 600, fontSize: 14, background: activeTab === tab.id ? "#0F50DB" : "transparent", color: activeTab === tab.id ? "#fff" : "#6C757D", transition: "background 0.15s" }}
           >
             {tab.label}
           </button>

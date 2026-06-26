@@ -158,6 +158,49 @@ const inputClass =
 const selectClass = (val: string) =>
   `w-full min-h-[2.75rem] rounded-lg border border-gray-300 px-4 py-2.5 bg-white ${val === "" ? "text-gray-500" : "text-gray-900"}`;
 
+const cfInput: React.CSSProperties = { width: "100%", height: 46, boxSizing: "border-box", borderRadius: 11, border: "1px solid #E5E7EB", background: "#fff", padding: "0 14px", fontFamily: "inherit", fontSize: 14, color: "#0E1620", outline: "none" };
+const cfLabel: React.CSSProperties = { display: "block", marginBottom: 7, fontWeight: 600, fontSize: 11.5, letterSpacing: "0.04em", textTransform: "uppercase", color: "#6C757D" };
+
+function FeesEstimateCard({ cycle, base, per, count }: { cycle: string; base: number; per: number; count: number }) {
+  const noun = cycle === "Annual" ? "year" : "month";
+  const perTotal = per * count;
+  const cycleTotal = base + perTotal;
+  const monthly = cycle === "Annual" ? cycleTotal / 12 : cycleTotal;
+  const annual = cycle === "Annual" ? cycleTotal : cycleTotal * 12;
+  const fmt = (n: number) => "€" + (n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const chip: React.CSSProperties = { background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 12, padding: "12px 16px" };
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", background: "linear-gradient(125deg, #0a1c36 0%, #14305a 100%)", color: "#fff", position: "relative", border: "1px solid #E5E7EB" }}>
+      <div style={{ position: "absolute", top: -60, right: -30, width: 180, height: 180, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,90,0.18), transparent 70%)" }} />
+      <div style={{ position: "relative", padding: "18px 22px" }}>
+        <div style={{ fontSize: 11.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "#d4af5a", marginBottom: 12 }}>Estimated Charge</div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "rgba(255,255,255,0.78)", padding: "6px 0" }}>
+          <span>Base platform fee</span>
+          <span style={{ fontFamily: "monospace" }}>{fmt(base)} / {noun}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "rgba(255,255,255,0.78)", padding: "6px 0" }}>
+          <span>Per-employee ({count} × {fmt(per)})</span>
+          <span style={{ fontFamily: "monospace" }}>{fmt(perTotal)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.16)", marginTop: 6, paddingTop: 12 }}>
+          <span style={{ fontWeight: 600, color: "#fff", fontSize: 14 }}>Total per {noun}</span>
+          <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 24 }}>{fmt(cycleTotal)}</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
+          <div style={chip}>
+            <div style={{ fontSize: 11, color: "#9db8ef", fontWeight: 600, textTransform: "uppercase" as const }}>Monthly</div>
+            <div style={{ marginTop: 4, fontFamily: "monospace", fontWeight: 600, fontSize: 17 }}>{fmt(monthly)}</div>
+          </div>
+          <div style={chip}>
+            <div style={{ fontSize: 11, color: "#9db8ef", fontWeight: 600, textTransform: "uppercase" as const }}>Annual</div>
+            <div style={{ marginTop: 4, fontFamily: "monospace", fontWeight: 600, fontSize: 17 }}>{fmt(annual)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminAddCompanyPage() {
   const router = useRouter();
   const createMut = useCreateCompany();
@@ -189,6 +232,12 @@ export default function AdminAddCompanyPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fees & billing state
+  const [billingCycle, setBillingCycle] = useState("Monthly");
+  const [employeeCount, setEmployeeCount] = useState(0);
+  const [baseFee, setBaseFee] = useState(0);
+  const [perEmployeeFee, setPerEmployeeFee] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -228,18 +277,16 @@ export default function AdminAddCompanyPage() {
 
   return (
     <div className="admin-add-company-page w-full space-y-4 sm:space-y-6">
-      <div className="rounded-[10px] bg-white px-4 py-4 sm:px-6 sm:py-5">
-        <h1
-          className="admin-page-heading font-semibold"
-          style={{
-            fontFamily: "var(--font-poppins), Poppins, sans-serif",
-            fontSize: "22px",
-            lineHeight: "28px",
-            color: "#0E1620",
-          }}
-        >
-          Add New Company
-        </h1>
+      {/* Navy hero */}
+      <div style={{ position: "relative", overflow: "hidden", borderRadius: 18, padding: "26px 28px", marginBottom: 20, background: "linear-gradient(125deg, #0a1c36 0%, #12294c 55%, #1b3b66 100%)", color: "#fff" }}>
+        <div style={{ position: "absolute", top: -70, right: -40, width: 240, height: 240, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,90,0.20), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 500, color: "rgba(255,255,255,0.6)", marginBottom: 8 }}>
+            <span>Companies</span><span style={{ margin: "0 4px" }}>›</span><span style={{ color: "rgba(255,255,255,0.92)" }}>Add New</span>
+          </div>
+          <h1 style={{ margin: 0, fontWeight: 700, fontSize: 27, letterSpacing: "-0.01em" }}>Add New Company</h1>
+          <p style={{ margin: "7px 0 0", fontSize: 14, color: "rgba(255,255,255,0.72)", maxWidth: 520 }}>Register a new client organization and configure its verification, addresses and access.</p>
+        </div>
       </div>
 
       <div className="details overflow-hidden rounded-2xl bg-white">
@@ -557,6 +604,52 @@ export default function AdminAddCompanyPage() {
             </div>
           </div>
         </SectionBlock>
+
+        {/* Fees & Billing */}
+        <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden", margin: "0 0 0 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 13, padding: "18px 22px", borderBottom: "1px solid #E5E7EB" }}>
+            <span style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(15,80,219,0.1)", color: "#0F50DB", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="19" height="19" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+            </span>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 15.5, color: "#0E1620" }}>Fees &amp; Billing</div>
+              <div style={{ marginTop: 2, fontSize: 12.5, color: "#9EA6B3" }}>What this company is charged — per cycle and per employee</div>
+            </div>
+          </div>
+          <div style={{ padding: 22, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px 22px" }}>
+            <div>
+              <label style={cfLabel}>Billing Cycle <span style={{ color: "#ef4444" }}>*</span></label>
+              <div style={{ position: "relative" }}>
+                <select value={billingCycle} onChange={(e) => setBillingCycle(e.target.value)} style={{ ...cfInput, appearance: "none", paddingRight: 38, cursor: "pointer" }}>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Annual">Annual</option>
+                </select>
+                <span style={{ position: "absolute", right: 13, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#9EA6B3" }}>▼</span>
+              </div>
+            </div>
+            <div>
+              <label style={cfLabel}>Number of Employees <span style={{ color: "#ef4444" }}>*</span></label>
+              <input type="number" min={0} value={employeeCount || ""} onChange={(e) => setEmployeeCount(parseInt(e.target.value) || 0)} placeholder="0" style={cfInput} />
+            </div>
+            <div>
+              <label style={cfLabel}>Base Platform Fee (per {billingCycle === "Annual" ? "year" : "month"}) <span style={{ color: "#ef4444" }}>*</span></label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9EA6B3", pointerEvents: "none" }}>€</span>
+                <input type="number" min={0} step="any" value={baseFee || ""} onChange={(e) => setBaseFee(parseFloat(e.target.value) || 0)} placeholder="0.00" style={{ ...cfInput, paddingLeft: 30 }} />
+              </div>
+            </div>
+            <div>
+              <label style={cfLabel}>Fee per Employee (per {billingCycle === "Annual" ? "year" : "month"}) <span style={{ color: "#ef4444" }}>*</span></label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#9EA6B3", pointerEvents: "none" }}>€</span>
+                <input type="number" min={0} step="any" value={perEmployeeFee || ""} onChange={(e) => setPerEmployeeFee(parseFloat(e.target.value) || 0)} placeholder="0.00" style={{ ...cfInput, paddingLeft: 30 }} />
+              </div>
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <FeesEstimateCard cycle={billingCycle} base={baseFee} per={perEmployeeFee} count={employeeCount} />
+            </div>
+          </div>
+        </div>
 
         {/* Back & Save — narrow buttons, Back left / Save right */}
         <div className="add-company-form-footer flex w-full flex-col items-stretch gap-3 border-t border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
