@@ -540,7 +540,7 @@ function LinkWithAccounting() {
   return (
     <div className="rounded-xl bg-[var(--dash-card,#fff)] p-6 shadow-sm">
       <h3 className="mb-1 text-base font-semibold text-[#0E1620]">Link with Accounting</h3>
-      <p className="mb-6 text-sm text-gray-400">Connect your payroll to an accounting firm's software.</p>
+      <p className="mb-6 text-sm text-gray-400">Connect your payroll to an accounting firm&apos;s software.</p>
 
       {!selectedFirm ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
