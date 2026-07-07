@@ -117,6 +117,7 @@ const navItems: Record<Role, { label: string; href: string }[]> = {
   employee: [
     { label: "Dashboard", href: ROUTES.employee.dashboard },
     { label: "Leave", href: ROUTES.employee.leave },
+    { label: "Team", href: ROUTES.employee.team },
     { label: "Reports", href: ROUTES.employee.reports },
     { label: "Settings", href: ROUTES.employee.settings },
   ],

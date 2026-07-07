@@ -1,19 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useMyProfile } from "@/hooks/employee/useEmployeeData";
 
+const STORAGE_KEY = "kp-leave-approvals";
+
+function usePendingApprovals() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    function read() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const rows = JSON.parse(raw) as { status: string }[];
+          setCount(rows.filter((r) => r.status === "pending").length);
+        } else {
+          setCount(3); // default: 3 mock rows pending initially
+        }
+      } catch {
+        setCount(0);
+      }
+    }
+    read();
+    window.addEventListener("storage", read);
+    return () => window.removeEventListener("storage", read);
+  }, []);
+  return count;
+}
+
 const ACTIONS = [
-  { title: "Apply for Leave", desc: "Submit a new time-off request to your employer.", icon: "calendar", href: "/employee/leave" },
-  { title: "Reports", desc: "Download or view your monthly payslips and tax documents.", icon: "doc", href: "/employee/reports" },
-  { title: "Account Settings", desc: "Update your personal info and password.", icon: "gear", href: "/employee/settings" },
-  { title: "Leave Calendar", desc: "See approved time-off on a calendar view.", icon: "calendar", href: "/employee/leave/calendar" },
-  { title: "Need help?", desc: "Contact your employer or HR for any payroll questions.", icon: "help", href: "/employee/settings" },
+  { title: "Apply for Leave",  desc: "Submit a new time-off request to your employer.",      icon: "calendar", href: "/employee/leave" },
+  { title: "Reports",          desc: "Download or view your monthly payslips and tax docs.",  icon: "doc",      href: "/employee/reports" },
+  { title: "Account Settings", desc: "Update your personal info and password.",               icon: "gear",     href: "/employee/settings" },
+  { title: "Leave Calendar",   desc: "See approved time-off on a calendar view.",             icon: "calendar", href: "/employee/leave/calendar" },
 ];
 
 export default function EmployeeDashboardPage() {
   const { data: profileData } = useMyProfile();
   const profile = profileData?.profile;
+  const pendingApprovals = usePendingApprovals();
 
   const initials = profile?.name
     ? profile.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase()
@@ -29,7 +55,7 @@ export default function EmployeeDashboardPage() {
         <p className="mt-1.5 text-sm text-gray-500">Here&apos;s your KaloPay employee portal.</p>
       </div>
 
-      {/* 3-col grid: profile card + 5 action tiles */}
+      {/* 3-col grid: profile card + action tiles */}
       <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
         {/* Profile card */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -56,7 +82,7 @@ export default function EmployeeDashboardPage() {
           </dl>
         </div>
 
-        {/* Action tiles */}
+        {/* Regular action tiles */}
         {ACTIONS.map((a) => (
           <Link
             key={a.title}
@@ -70,6 +96,25 @@ export default function EmployeeDashboardPage() {
             <p className="mt-1 text-sm text-gray-500">{a.desc}</p>
           </Link>
         ))}
+
+        {/* Team card with live pending badge */}
+        <Link
+          href="/employee/team"
+          className="relative rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+        >
+          {pendingApprovals > 0 && (
+            <span className="absolute right-4 top-4 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+              {pendingApprovals} pending
+            </span>
+          )}
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#EEF2FF] text-[#0F50DB]">
+            <UsersIcon />
+          </span>
+          <p className="text-base font-semibold text-gray-900">Team</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Review your team&apos;s KPIs and approve leave requests.
+          </p>
+        </Link>
       </div>
     </div>
   );
@@ -106,6 +151,15 @@ function ActionIcon({ name }: { name: string }) {
   return (
     <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
       <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }

@@ -2,6 +2,32 @@
 
 import { useState } from "react";
 import Link from "next/link";
+
+// Leave sub-tab bar — links to Apply (this page), Calendar, and Leave Requests
+function LeaveSubTabs({ active }: { active: "apply" | "calendar" | "requests" }) {
+  const tabs = [
+    { label: "Apply for Leave", href: "/employee/leave" },
+    { label: "Calendar & History", href: "/employee/leave/calendar" },
+    { label: "Leave Requests", href: "/employee/leave/requests" },
+  ] as const;
+  return (
+    <div className="flex gap-1 border-b border-gray-200">
+      {tabs.map((t) => {
+        const on = t.href === (active === "apply" ? "/employee/leave" : active === "calendar" ? "/employee/leave/calendar" : "/employee/leave/requests");
+        return (
+          <Link
+            key={t.href}
+            href={t.href}
+            className="mb-[-1px] border-b-2 px-4 py-2.5 text-sm font-medium transition-colors"
+            style={{ borderColor: on ? "#0F50DB" : "transparent", color: on ? "#0F50DB" : "#64748b" }}
+          >
+            {t.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 import {
   useApplyLeave,
   useMyLeaveBalance,
@@ -68,6 +94,9 @@ export default function EmployeeLeavePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Sub-tab bar */}
+      <LeaveSubTabs active="apply" />
+
       {/* Breadcrumb home chip */}
       <div>
         <Link href="/employee/dashboard" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 shadow-sm hover:bg-gray-50">

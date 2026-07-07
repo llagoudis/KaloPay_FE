@@ -52,6 +52,8 @@ export const ROUTES = {
     leave: "/employee/leave",
     leaveApply: "/employee/leave/apply",
     leaveCalendar: "/employee/leave/calendar",
+    leaveRequests: "/employee/leave/requests",
+    team: "/employee/team",
     reports: "/employee/reports",
     settings: "/employee/settings",
   },
