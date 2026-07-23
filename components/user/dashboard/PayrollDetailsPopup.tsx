@@ -5,9 +5,10 @@ import { cn } from "@/lib/utils/cn";
 import { useBatchDetails } from "@/hooks/employer/useDashboard";
 
 function formatAmount(amount: number, currency: string) {
+  void currency;
   return amount.toLocaleString("en-US", {
     style: "currency",
-    currency: currency || "USD",
+    currency: "EUR",
     maximumFractionDigits: 2,
   });
 }

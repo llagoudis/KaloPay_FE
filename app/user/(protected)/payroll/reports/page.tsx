@@ -33,8 +33,9 @@ function downloadCsv(filename: string, rows: (string | number | null | undefined
 type ReportMainTab = "payroll" | "regulatory";
 type ReportSubTab = "summary" | "breakdown" | "tax" | "employer" | "audit";
 
-function fmtMoneyC(n: number, currency = "USD") {
-  return n.toLocaleString("en-US", { style: "currency", currency, maximumFractionDigits: 2 });
+function fmtMoneyC(n: number, currency = "EUR") {
+  void currency;
+  return n.toLocaleString("en-US", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 }
 function statusBadge(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
@@ -518,7 +519,7 @@ export default function PayrollReportsPage() {
                         Number(r.socialInsurance ?? r.social_insurance ?? 0),
                         Number(r.otherDeductions ?? r.other_deductions ?? 0),
                         Number(r.netPay ?? r.net_pay ?? 0),
-                        String(r.currency ?? "USD"),
+                        String(r.currency ?? "EUR"),
                       ]),
                     ]
                   );
@@ -721,7 +722,7 @@ export default function PayrollReportsPage() {
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Income Tax</span>
-                      <span className="tabular-nums">{payeForm?.amount != null ? fmtMoneyC(payeForm.amount, payeForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{payeForm?.amount != null ? fmtMoneyC(payeForm.amount, payeForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employees</span>
@@ -763,11 +764,11 @@ export default function PayrollReportsPage() {
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Contributions</span>
-                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount, siForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount, siForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employer Share</span>
-                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount / 2, siForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount / 2, siForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>{siForm?.submittedDate ? "Submitted On" : "Due Date"}</span>

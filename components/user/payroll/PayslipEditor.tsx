@@ -342,12 +342,12 @@ export default function PayslipEditor({
   ];
 
   const summaryCells: { label: string; value: string; accent?: string }[] = [
-    { label: "Currency", value: e.currency || "EUR" },
-    { label: "Earnings", value: fmt(summary.earnings) },
-    { label: "Deductions", value: fmt(summary.deductions), accent: "text-red-600" },
-    { label: "Contributions", value: fmt(summary.contributions) },
-    { label: "Employer Cost", value: fmt(summary.cost) },
-    { label: "Net Pay", value: fmt(summary.net), accent: "text-[#0F50DB]" },
+    { label: "Currency", value: "EUR" },
+    { label: "Earnings", value: "€" + fmt(summary.earnings) },
+    { label: "Deductions", value: "€" + fmt(summary.deductions), accent: "text-red-600" },
+    { label: "Contributions", value: "€" + fmt(summary.contributions) },
+    { label: "Employer Cost", value: "€" + fmt(summary.cost) },
+    { label: "Net Pay", value: "€" + fmt(summary.net), accent: "text-[#0F50DB]" },
   ];
 
   return (

@@ -18,13 +18,13 @@ interface Invoice {
 }
 
 const INVOICES: Invoice[] = [
-  { id: "INV-2026-06", date: "Jun 01, 2026", desc: "Payroll platform · June 2026", amount: "$334.00", status: "Paid" },
-  { id: "INV-2026-05", date: "May 01, 2026", desc: "Payroll platform · May 2026", amount: "$330.00", status: "Paid" },
-  { id: "INV-2026-04", date: "Apr 01, 2026", desc: "Payroll platform · April 2026", amount: "$326.00", status: "Paid" },
-  { id: "INV-2026-03", date: "Mar 01, 2026", desc: "Payroll platform · March 2026", amount: "$322.00", status: "Paid" },
+  { id: "INV-2026-06", date: "Jun 01, 2026", desc: "Payroll platform · June 2026", amount: "€334.00", status: "Paid" },
+  { id: "INV-2026-05", date: "May 01, 2026", desc: "Payroll platform · May 2026", amount: "€330.00", status: "Paid" },
+  { id: "INV-2026-04", date: "Apr 01, 2026", desc: "Payroll platform · April 2026", amount: "€326.00", status: "Paid" },
+  { id: "INV-2026-03", date: "Mar 01, 2026", desc: "Payroll platform · March 2026", amount: "€322.00", status: "Paid" },
 ];
 
-const AMOUNT_DUE = "$334.00";
+const AMOUNT_DUE = "€334.00";
 const DEFAULT_METHOD = "Bank of Cyprus · IBAN ****9001";
 const STORAGE_KEY = "kp-billing";
 
@@ -89,8 +89,8 @@ function printInvoice(v: Invoice) {
   }
   const total = v.amount;
   const rows: string[][] = [
-    ["Base platform fee", "1", "$250.00", "$250.00"],
-    ["Per-employee fee (21 × $4)", "21", "$4.00", "$84.00"],
+    ["Base platform fee", "1", "€250.00", "€250.00"],
+    ["Per-employee fee (21 × €4)", "21", "€4.00", "€84.00"],
   ];
   const rowHtml = rows
     .map(
@@ -142,7 +142,7 @@ function printInvoice(v: Invoice) {
       "</tbody></table>" +
       "<div class='tot'><div><div class='row'><span class='muted'>Subtotal</span><span>" +
       total +
-      "</span></div><div class='row'><span class='muted'>VAT (0%)</span><span>$0.00</span></div><div class='row grand'><span>Total</span><span>" +
+      "</span></div><div class='row'><span class='muted'>VAT (0%)</span><span>€0.00</span></div><div class='row grand'><span>Total</span><span>" +
       total +
       "</span></div></div></div>" +
       "<p class='muted' style='margin-top:40px'>Payment received via Bank of Cyprus · IBAN ****9001. Thank you for your business.</p>" +
@@ -369,7 +369,7 @@ export default function BillingScreen({ autoOpenPay = false }: { autoOpenPay?: b
               </span>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-[30px] font-bold text-[#0E1620]">
-                  {paid ? "$0.00" : AMOUNT_DUE}
+                  {paid ? "€0.00" : AMOUNT_DUE}
                 </span>
                 <span className="text-[13.5px] text-gray-500">Payroll platform · July 2026</span>
               </div>
@@ -395,7 +395,7 @@ export default function BillingScreen({ autoOpenPay = false }: { autoOpenPay?: b
                   <span className={eyebrowClass}>Current plan</span>
                   <h2 className="mt-2 text-[22px] font-bold text-[#0E1620]">Growth</h2>
                   <p className="mt-1.5 text-sm text-gray-500">
-                    $250 base + $4 / active employee · billed monthly
+                    €250 base + €4 / active employee · billed monthly
                   </p>
                 </div>
                 <Badge label="Active" variant="success" className="shrink-0" />

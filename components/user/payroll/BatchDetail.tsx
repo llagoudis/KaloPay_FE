@@ -6,7 +6,8 @@ import type { Batch, Payment } from "@/lib/api/employer/dashboard";
 import PayslipEditor, { derivePayslipEmployee, type PayslipEmployee } from "./PayslipEditor";
 
 function money(n: number, currency = "EUR"): string {
-  return n.toLocaleString("en-US", { style: "currency", currency: currency || "EUR", maximumFractionDigits: 2 });
+  void currency;
+  return n.toLocaleString("en-US", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 }
 
 /** Map a real Payment row into the editor-friendly employee shape. */

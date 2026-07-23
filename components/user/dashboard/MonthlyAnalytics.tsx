@@ -5,7 +5,7 @@ import LoremEpsumChart from "./LoremEpsumChart";
 import { useMonthlyStats } from "@/hooks/employer/useDashboard";
 
 function formatMoney(n: number) {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  return n.toLocaleString("en-US", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 
 function formatDelta(n: number, suffix: string) {

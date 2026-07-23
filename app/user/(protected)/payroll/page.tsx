@@ -20,7 +20,8 @@ type ExecutionTab = "due" | "executed";
 function fmtMoney(n: number | string, currency = "EUR") {
   const num = typeof n === "string" ? parseFloat(n) : n;
   if (isNaN(num)) return "—";
-  return num.toLocaleString("en-US", { style: "currency", currency: currency || "EUR", maximumFractionDigits: 2 });
+  void currency;
+  return num.toLocaleString("en-US", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 }
 
 function fmtDate(s: string) {
