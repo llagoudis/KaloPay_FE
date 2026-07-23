@@ -14,9 +14,10 @@ const thCell =
 const tdCell = `border-b ${line} px-4 py-4 align-middle first:pl-0 last:pr-0`;
 
 function formatAmount(amount: number, currency: string) {
+  void currency;
   return amount.toLocaleString("en-US", {
     style: "currency",
-    currency: currency || "USD",
+    currency: "EUR",
     maximumFractionDigits: 2,
   });
 }

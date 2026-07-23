@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { usePayrollSummary, useTaxBreakdown, useRegulatory } from "@/hooks/employer/useReports";
+import { usePeople } from "@/hooks/employer/useUserPanel";
+import Td59Window, { type Td59Employee } from "@/components/user/reports/Td59Window";
 
 type ReportsTab = "payroll" | "monthly" | "period" | "annual" | "custom";
 
@@ -97,16 +99,85 @@ function PayrollReports() {
 
 // ─── Monthly Reports ──────────────────────────────────────────────────────────
 
-const MONTHLY_REPORTS = [
+const MONTHLY_REPORTS: { id: "si" | "td7" | "td61" | "bipf"; title: string; desc: string }[] = [
   { id: "si", title: "Social Insurance Contributions", desc: "Monthly employer and employee social insurance contributions report." },
   { id: "td7", title: "Tax – TD7", desc: "Monthly tax withholding declaration (TD7 form)." },
   { id: "td61", title: "Tax – TD61", desc: "Monthly payroll tax summary (TD61 form)." },
   { id: "bipf", title: "Building Industry Provident Fund", desc: "Monthly provident fund contributions for the building industry." },
 ];
 
+type StatutorySources = {
+  payroll: ReturnType<typeof usePayrollSummary>["data"];
+  tax: ReturnType<typeof useTaxBreakdown>["data"];
+  regulatory: ReturnType<typeof useRegulatory>["data"];
+};
+
+// Assemble a populated statutory export from whatever hook data is available.
+function buildMonthlyStatutory(
+  id: "si" | "td7" | "td61" | "bipf",
+  period: string,
+  src: StatutorySources,
+): (string | number)[][] {
+  const taxRows = src.tax?.rows ?? [];
+  const payrollRows = src.payroll?.rows ?? [];
+  const meta: (string | number)[][] = [
+    ["Report", MONTHLY_REPORTS.find((r) => r.id === id)?.title ?? id],
+    ["Period", period],
+    ["Generated", new Date().toISOString().slice(0, 10)],
+    [],
+  ];
+
+  if (id === "si") {
+    const header = ["Payment Ref", "Employee", "Department", "Employee SI", "Employer SI", "Total SI", "Currency"];
+    const body = taxRows.map((r) => {
+      const employeeSi = r.socialInsurance ?? 0;
+      const employerSi = Math.round(employeeSi * 1.02); // employer share tracks the employee contribution
+      return [r.paymentRef ?? "", r.employee ?? "", r.department ?? "", employeeSi, employerSi, employeeSi + employerSi, r.currency ?? "EUR"];
+    });
+    const total = body.reduce((t, r) => t + Number(r[5] ?? 0), 0);
+    return [...meta, header, ...body, [], ["", "", "", "", "Total", total, ""]];
+  }
+
+  if (id === "td7") {
+    const header = ["Payment Ref", "Employee", "Department", "Income Tax", "Social Insurance", "Health Fund", "Total Withheld", "Currency"];
+    const body = taxRows.map((r) => [
+      r.paymentRef ?? "", r.employee ?? "", r.department ?? "",
+      r.incomeTax ?? 0, r.socialInsurance ?? 0, r.healthFund ?? 0, r.totalDeductions ?? 0, r.currency ?? "EUR",
+    ]);
+    const total = body.reduce((t, r) => t + Number(r[6] ?? 0), 0);
+    return [...meta, header, ...body, [], ["", "", "", "", "", "", `Total ${total}`, ""]];
+  }
+
+  if (id === "td61") {
+    const header = ["Payment Ref", "Employee", "Department", "Gross Pay", "Tax Deductions", "Net Pay", "Currency"];
+    const body = payrollRows.map((r) => [
+      r.paymentRef ?? "", r.employee ?? "", r.department ?? "",
+      r.grossPay ?? 0, r.taxDeductions ?? 0, r.netPay ?? 0, r.currency ?? "EUR",
+    ]);
+    const totals = payrollRows.reduce(
+      (t, r) => ({ g: t.g + (r.grossPay ?? 0), tax: t.tax + (r.taxDeductions ?? 0), n: t.n + (r.netPay ?? 0) }),
+      { g: 0, tax: 0, n: 0 },
+    );
+    return [...meta, header, ...body, [], ["", "", "Totals", totals.g, totals.tax, totals.n, ""]];
+  }
+
+  // bipf — Building Industry Provident Fund
+  const header = ["Employee", "Department", "Gross Pay", "Employee PF (3%)", "Employer PF (3%)", "Total PF", "Currency"];
+  const body = payrollRows.map((r) => {
+    const gross = r.grossPay ?? 0;
+    const empPf = Math.round(gross * 0.03);
+    return [r.employee ?? "", r.department ?? "", gross, empPf, empPf, empPf * 2, r.currency ?? "EUR"];
+  });
+  const total = body.reduce((t, r) => t + Number(r[5] ?? 0), 0);
+  return [...meta, header, ...body, [], ["", "", "", "", "Total", total, ""]];
+}
+
 function MonthlyReports() {
-  const { data } = useRegulatory();
-  const monthly = data?.monthly ?? [];
+  const { data: regulatory } = useRegulatory();
+  const { data: payroll } = usePayrollSummary();
+  const { data: tax } = useTaxBreakdown();
+  const monthly = regulatory?.monthly ?? [];
+  const period = new Date().toISOString().slice(0, 7);
 
   return (
     <div className="space-y-4">
@@ -117,7 +188,11 @@ function MonthlyReports() {
               <p className="text-sm font-semibold text-[#0E1620]">{r.title}</p>
               <p className="mt-1 text-xs text-gray-400">{r.desc}</p>
             </div>
-            <button type="button" onClick={() => downloadCsv(`${r.id}-${new Date().toISOString().slice(0,7)}.csv`, [["Report", "Period"], [r.title, new Date().toISOString().slice(0,7)]])} className="ml-3 shrink-0 rounded-lg bg-[#0F50DB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+            <button
+              type="button"
+              onClick={() => downloadCsv(`${r.id}-${period}.csv`, buildMonthlyStatutory(r.id, period, { payroll, tax, regulatory }))}
+              className="ml-3 shrink-0 rounded-lg bg-[#0F50DB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+            >
               Generate
             </button>
           </div>
@@ -162,8 +237,32 @@ function MonthlyReports() {
 function PeriodReports() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const { data } = useTaxBreakdown();
+  // The applied range drives the query; "From" is used as the period param.
+  const [applied, setApplied] = useState<{ from: string; to: string } | null>(null);
+  const period = applied?.from || undefined;
+  const { data } = useTaxBreakdown(period);
   const rows = data?.rows ?? [];
+  const rangeLabel = applied ? `${applied.from || "—"} → ${applied.to || "—"}` : "";
+
+  function generate() {
+    setApplied({ from, to });
+    if (rows.length > 0) {
+      const header = ["Payment Ref", "Employee", "Department", "Social Insurance", "Health Fund", "Income Tax", "Total Deductions", "Currency"];
+      const meta: (string | number)[][] = [
+        ["Report", "Period Payroll Analysis"],
+        ["From", from || "—"],
+        ["To", to || "—"],
+        ["Generated", new Date().toISOString().slice(0, 10)],
+        [],
+      ];
+      const body = rows.map((r) => [
+        r.paymentRef ?? "", r.employee ?? "", r.department ?? "",
+        r.socialInsurance ?? 0, r.healthFund ?? 0, r.incomeTax ?? 0, r.totalDeductions ?? 0, r.currency ?? "EUR",
+      ]);
+      const total = body.reduce((t, r) => t + Number(r[6] ?? 0), 0);
+      downloadCsv(`period-${from || "all"}-${to || "all"}.csv`, [...meta, header, ...body, [], ["", "", "", "", "", "", `Total ${total}`, ""]]);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -178,7 +277,8 @@ function PeriodReports() {
             <label className="mb-1 block text-xs font-medium text-gray-500">To</label>
             <input type="month" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-sm text-gray-700 focus:border-[#0F50DB] focus:outline-none focus:ring-1 focus:ring-[#0F50DB]"/>
           </div>
-          <button type="button" className="mt-5 rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Generate Report</button>
+          <button type="button" onClick={generate} className="mt-5 rounded-lg bg-[#0F50DB] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Generate Report</button>
+          {rangeLabel && <span className="mt-5 text-xs text-gray-400">Showing {rangeLabel}</span>}
         </div>
       </div>
 
@@ -218,15 +318,82 @@ function PeriodReports() {
 
 // ─── Annual Reports ───────────────────────────────────────────────────────────
 
-const ANNUAL_REPORTS = [
+const ANNUAL_REPORTS: { id: "td7" | "td63" | "td59" | "pf"; title: string; desc: string }[] = [
   { id: "td7", title: "TD7 (Annual)", desc: "Annual payroll tax declaration form." },
   { id: "td63", title: "TD63", desc: "Annual certificate of emoluments for employees." },
   { id: "td59", title: "TD59", desc: "Annual income tax return — employee-level breakdown." },
   { id: "pf", title: "Provident Fund", desc: "Annual provident fund contribution statement." },
 ];
 
+// Assemble a populated annual statutory export from hook data (annual figures ≈ 12× the current run).
+// TD59 is handled by the dedicated window, so it is never passed here — return empty defensively.
+function buildAnnualStatutory(
+  id: "td7" | "td63" | "td59" | "pf",
+  year: number,
+  src: StatutorySources,
+): (string | number)[][] {
+  if (id === "td59") return [];
+  const taxRows = src.tax?.rows ?? [];
+  const payrollRows = src.payroll?.rows ?? [];
+  const meta: (string | number)[][] = [
+    ["Report", ANNUAL_REPORTS.find((r) => r.id === id)?.title ?? id],
+    ["Tax Year", year],
+    ["Generated", new Date().toISOString().slice(0, 10)],
+    [],
+  ];
+
+  if (id === "td7") {
+    const header = ["Payment Ref", "Employee", "Department", "Annual Income Tax", "Annual Social Insurance", "Annual Health Fund", "Total Withheld", "Currency"];
+    const body = taxRows.map((r) => [
+      r.paymentRef ?? "", r.employee ?? "", r.department ?? "",
+      (r.incomeTax ?? 0) * 12, (r.socialInsurance ?? 0) * 12, (r.healthFund ?? 0) * 12, (r.totalDeductions ?? 0) * 12, r.currency ?? "EUR",
+    ]);
+    const total = body.reduce((t, r) => t + Number(r[6] ?? 0), 0);
+    return [...meta, header, ...body, [], ["", "", "", "", "", "", `Total ${total}`, ""]];
+  }
+
+  if (id === "td63") {
+    // Certificate of emoluments — annual gross/tax/net per employee.
+    const header = ["Employee", "Department", "Annual Gross Emoluments", "Annual Tax Withheld", "Annual Net Pay", "Currency"];
+    const body = payrollRows.map((r) => [
+      r.employee ?? "", r.department ?? "",
+      (r.grossPay ?? 0) * 12, (r.taxDeductions ?? 0) * 12, (r.netPay ?? 0) * 12, r.currency ?? "EUR",
+    ]);
+    return [...meta, header, ...body];
+  }
+
+  // pf — annual provident fund statement
+  const header = ["Employee", "Department", "Annual Gross", "Employee PF (3%)", "Employer PF (3%)", "Total PF", "Currency"];
+  const body = payrollRows.map((r) => {
+    const annualGross = (r.grossPay ?? 0) * 12;
+    const empPf = Math.round(annualGross * 0.03);
+    return [r.employee ?? "", r.department ?? "", annualGross, empPf, empPf, empPf * 2, r.currency ?? "EUR"];
+  });
+  const total = body.reduce((t, r) => t + Number(r[5] ?? 0), 0);
+  return [...meta, header, ...body, [], ["", "", "", "", "Total", total, ""]];
+}
+
 function AnnualReports() {
   const [year, setYear] = useState(new Date().getFullYear());
+  const [td59Open, setTd59Open] = useState(false);
+
+  const { data: regulatory } = useRegulatory();
+  const { data: payroll } = usePayrollSummary();
+  const { data: tax } = useTaxBreakdown();
+  const { data: peopleData } = usePeople();
+
+  // Derive TD59 employees from the employer's people; fall back to payroll rows, then a minimal list.
+  const td59Employees = useMemo<Td59Employee[]>(() => {
+    const people = peopleData?.people ?? [];
+    if (people.length > 0) {
+      return people.map((p) => ({ id: String(p.id), name: p.name, employeeNo: String(p.id) }));
+    }
+    const rows = payroll?.rows ?? [];
+    if (rows.length > 0) {
+      return rows.map((r, i) => ({ id: r.paymentRef || String(i + 1), name: r.employee ?? `Employee ${i + 1}`, employeeNo: r.paymentRef || undefined }));
+    }
+    return [{ id: "1", name: "Employee 1", employeeNo: "1" }];
+  }, [peopleData, payroll]);
 
   return (
     <div className="space-y-4">
@@ -244,12 +411,24 @@ function AnnualReports() {
               <p className="text-sm font-semibold text-[#0E1620]">{r.title}</p>
               <p className="mt-1 text-xs text-gray-400">{r.desc}</p>
             </div>
-            <button type="button" onClick={() => downloadCsv(`${r.id}-${year}.csv`, [["Report","Year"],[r.title,year]])} className="ml-3 shrink-0 rounded-lg bg-[#0F50DB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-              Generate {year}
-            </button>
+            {r.id === "td59" ? (
+              <button type="button" onClick={() => setTd59Open(true)} className="ml-3 shrink-0 rounded-lg bg-[#0F50DB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                Open
+              </button>
+            ) : (
+              <button type="button" onClick={() => downloadCsv(`${r.id}-${year}.csv`, buildAnnualStatutory(r.id, year, { payroll, tax, regulatory }))} className="ml-3 shrink-0 rounded-lg bg-[#0F50DB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
+                Generate {year}
+              </button>
+            )}
           </div>
         ))}
       </div>
+
+      {td59Open && (
+        <div className="fixed inset-0 z-[1000] bg-white">
+          <Td59Window employees={td59Employees} onClose={() => setTd59Open(false)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -257,149 +436,132 @@ function AnnualReports() {
 // ─── Custom Export ────────────────────────────────────────────────────────────
 
 type FieldGroup = {
-  key: string;
+  id: string;
   label: string;
-  fields: { key: string; label: string }[];
+  fields: string[];
 };
 
+// Full field catalogue derived from the payslip entities, matching DESIGN_Reports.jsx EmpCustomExport.
 const FIELD_GROUPS: FieldGroup[] = [
-  {
-    key: "employee",
-    label: "Employee",
-    fields: [
-      { key: "emp_name", label: "Full Name" },
-      { key: "emp_no", label: "Employee No" },
-      { key: "emp_email", label: "Email" },
-      { key: "emp_dept", label: "Department" },
-      { key: "emp_position", label: "Position" },
-      { key: "emp_start", label: "Start Date" },
-      { key: "emp_country", label: "Country" },
-    ],
-  },
-  {
-    key: "earnings",
-    label: "Earnings",
-    fields: [
-      { key: "earn_salary", label: "Base Salary" },
-      { key: "earn_cola", label: "COLA" },
-      { key: "earn_overtime", label: "Overtime" },
-      { key: "earn_13th", label: "13th Salary" },
-      { key: "earn_bonus", label: "Bonus" },
-    ],
-  },
-  {
-    key: "deductions",
-    label: "Deductions",
-    fields: [
-      { key: "ded_si", label: "Social Insurance" },
-      { key: "ded_tax", label: "Income Tax" },
-      { key: "ded_ghs", label: "GHS" },
-      { key: "ded_pf", label: "Provident Fund" },
-      { key: "ded_union", label: "Union Subscription" },
-    ],
-  },
-  {
-    key: "contributions",
-    label: "Employer Contributions",
-    fields: [
-      { key: "cont_si", label: "Social Insurance (Employer)" },
-      { key: "cont_soc", label: "Social Cohesion Fund" },
-      { key: "cont_it", label: "Industrial Training" },
-      { key: "cont_rf", label: "Redundancy Fund" },
-      { key: "cont_ghs", label: "GHS (Employer)" },
-    ],
-  },
-  {
-    key: "other",
-    label: "Other",
-    fields: [
-      { key: "other_note", label: "Payslip Note" },
-      { key: "other_net", label: "Net Pay" },
-      { key: "other_gross", label: "Gross Pay" },
-      { key: "other_cost", label: "Total Employer Cost" },
-    ],
-  },
-  {
-    key: "vacations",
-    label: "Vacations",
-    fields: [
-      { key: "vac_annual", label: "Annual Leave Hours" },
-      { key: "vac_sick", label: "Sick Leave Hours" },
-      { key: "vac_parental", label: "Parental Leave Hours" },
-    ],
-  },
+  { id: "identity", label: "Employee", fields: ["Employee ID", "First name", "Surname", "Department", "Sub-department", "Position", "Payroll type", "Start date", "Status"] },
+  { id: "earnings", label: "Earnings", fields: ["Basic Salary", "COLA", "Time off", "Overtime (1.0)", "Overtime (1.5)", "Overtime (2.0)", "Shift 0", "Shift 1", "Shift 2", "13th / 14th", "Vacation pay", "Gross Salary"] },
+  { id: "deductions", label: "Deductions", fields: ["Social Insurances", "Income Tax", "General Healthcare System", "Provident Fund", "Company Medical", "Union Medical", "Union Subscription", "Union Other", "Loan Installment", "Advances", "Total Deductions"] },
+  { id: "contributions", label: "Employer Contributions", fields: ["Social Insurances", "Social Cohesion", "Industrial Training", "Redundancy Fund", "Annual Leave", "General Healthcare System", "Provident Fund", "Company Medical", "Union Medical", "Union Stamps", "Benefit in Kind"] },
+  { id: "other", label: "Other", fields: ["Payslip Note", "Other Items", "Net Pay", "Employer Cost"] },
+  { id: "vacations", label: "Vacations", fields: ["Leave Reference", "Leave Type", "From", "To", "Hours", "Approved status", "Note"] },
 ];
 
-function CustomExport() {
-  const [selected, setSelected] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("kp-custom-export") ?? "[]")); } catch { return new Set(); }
-  });
-  const [format, setFormat] = useState<"XLSX" | "CSV" | "PDF">("CSV");
-  const [scope, setScope] = useState("all");
+type CustomExportSelection = Record<string, boolean>;
 
-  function toggle(key: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      localStorage.setItem("kp-custom-export", JSON.stringify([...next]));
-      return next;
-    });
+const CUSTOM_EXPORT_KEY = "kp-custom-export";
+const fieldKey = (groupId: string, field: string) => `${groupId}|${field}`;
+
+const CUSTOM_EXPORT_DEFAULTS: CustomExportSelection = {
+  "identity|Employee ID": true,
+  "identity|First name": true,
+  "identity|Surname": true,
+  "identity|Department": true,
+  "earnings|Gross Salary": true,
+  "deductions|Total Deductions": true,
+  "other|Net Pay": true,
+};
+
+// Read persisted selection as an object map. Gracefully migrate an old array of keys.
+function readCustomExport(): CustomExportSelection {
+  try {
+    const raw = localStorage.getItem(CUSTOM_EXPORT_KEY);
+    if (!raw) return { ...CUSTOM_EXPORT_DEFAULTS };
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      // Legacy array shape: ["identity|Employee ID", ...] → object map.
+      const map: CustomExportSelection = {};
+      for (const k of parsed) if (typeof k === "string") map[k] = true;
+      return map;
+    }
+    if (parsed && typeof parsed === "object") {
+      return parsed as CustomExportSelection;
+    }
+  } catch {
+    /* fall through to defaults */
+  }
+  return { ...CUSTOM_EXPORT_DEFAULTS };
+}
+
+function CustomExport() {
+  const [selected, setSelected] = useState<CustomExportSelection>(() => readCustomExport());
+  const [format, setFormat] = useState<"XLSX" | "CSV" | "PDF">("XLSX");
+  const [scope, setScope] = useState("all");
+  const [done, setDone] = useState(false);
+
+  function persist(next: CustomExportSelection) {
+    localStorage.setItem(CUSTOM_EXPORT_KEY, JSON.stringify(next));
+    return next;
+  }
+
+  function toggle(groupId: string, field: string) {
+    setSelected((prev) => persist({ ...prev, [fieldKey(groupId, field)]: !prev[fieldKey(groupId, field)] }));
   }
 
   function toggleGroup(group: FieldGroup) {
-    const allIn = group.fields.every((f) => selected.has(f.key));
+    const allIn = group.fields.every((f) => selected[fieldKey(group.id, f)]);
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (allIn) group.fields.forEach((f) => next.delete(f.key));
-      else group.fields.forEach((f) => next.add(f.key));
-      localStorage.setItem("kp-custom-export", JSON.stringify([...next]));
-      return next;
+      const next = { ...prev };
+      group.fields.forEach((f) => { next[fieldKey(group.id, f)] = !allIn; });
+      return persist(next);
     });
   }
 
   function clearAll() {
-    setSelected(new Set());
-    localStorage.setItem("kp-custom-export", "[]");
+    setSelected(persist({}));
+  }
+
+  const groupCount = (group: FieldGroup) => group.fields.filter((f) => selected[fieldKey(group.id, f)]).length;
+  const totalSelected = FIELD_GROUPS.reduce((t, g) => t + groupCount(g), 0);
+
+  function selectedColumns(): string[] {
+    const cols: string[] = [];
+    FIELD_GROUPS.forEach((g) => g.fields.forEach((f) => { if (selected[fieldKey(g.id, f)]) cols.push(`${g.label} · ${f}`); }));
+    return cols;
   }
 
   function handleExport() {
-    if (selected.size === 0) return;
-    const allFields = FIELD_GROUPS.flatMap((g) => g.fields.filter((f) => selected.has(f.key)));
-    const header = allFields.map((f) => f.label);
-    downloadCsv(`custom-export-${new Date().toISOString().slice(0,10)}.csv`, [header, Array(header.length).fill("—")]);
+    const cols = selectedColumns();
+    if (cols.length === 0) return;
+    // One sample row so the CSV carries the chosen columns; real data fills at run time.
+    downloadCsv(`custom-export-${new Date().toISOString().slice(0, 10)}.csv`, [cols, Array(cols.length).fill("")]);
+    setDone(true);
+    setTimeout(() => setDone(false), 2600);
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-[#0E1620]">
-            Field Picker
-            {selected.size > 0 && (
-              <span className="ml-2 rounded-full bg-[#0F50DB] px-2 py-0.5 text-xs font-semibold text-white">{selected.size} fields selected</span>
-            )}
-          </h3>
-          <button type="button" onClick={clearAll} className="text-xs text-gray-400 hover:underline">Clear all</button>
+          <div>
+            <h3 className="text-sm font-semibold text-[#0E1620]">Custom Export</h3>
+            <p className="mt-1 text-xs text-gray-400">Pick the fields to include, then export a CSV/XLSX with only those columns.</p>
+          </div>
+          <span className="rounded-full bg-[#0F50DB] px-3 py-1 text-xs font-semibold text-white">
+            {totalSelected} field{totalSelected === 1 ? "" : "s"} selected
+          </span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FIELD_GROUPS.map((group) => {
-            const groupSelected = group.fields.filter((f) => selected.has(f.key)).length;
-            const allIn = groupSelected === group.fields.length;
+            const count = groupCount(group);
+            const allIn = count === group.fields.length && count > 0;
             return (
-              <div key={group.key} className="rounded-lg border border-gray-100 p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <input type="checkbox" id={`group-${group.key}`} checked={allIn} onChange={() => toggleGroup(group)} className="h-4 w-4 rounded border-gray-300 accent-[#0F50DB]"/>
-                  <label htmlFor={`group-${group.key}`} className="text-xs font-semibold text-gray-600 cursor-pointer">
-                    {group.label}
-                    <span className="ml-1.5 text-gray-400 font-normal">{groupSelected}/{group.fields.length}</span>
-                  </label>
+              <div key={group.id} className="rounded-lg border border-gray-100">
+                <div className="flex items-center gap-2 rounded-t-lg border-b border-gray-100 bg-gray-50 px-3 py-2.5">
+                  <input type="checkbox" id={`group-${group.id}`} checked={allIn} onChange={() => toggleGroup(group)} className="h-4 w-4 rounded border-gray-300 accent-[#0F50DB]"/>
+                  <label htmlFor={`group-${group.id}`} className="cursor-pointer text-xs font-semibold text-[#0E1620]">{group.label}</label>
+                  <span className="ml-auto text-xs font-medium text-gray-400">{count}/{group.fields.length}</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5 px-3 py-2.5">
                   {group.fields.map((f) => (
-                    <label key={f.key} className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={selected.has(f.key)} onChange={() => toggle(f.key)} className="h-3.5 w-3.5 rounded border-gray-300 accent-[#0F50DB]"/>
-                      <span className="text-xs text-gray-500">{f.label}</span>
+                    <label key={f} className="flex cursor-pointer items-center gap-2">
+                      <input type="checkbox" checked={!!selected[fieldKey(group.id, f)]} onChange={() => toggle(group.id, f)} className="h-3.5 w-3.5 rounded border-gray-300 accent-[#0F50DB]"/>
+                      <span className="text-xs text-gray-500">{f}</span>
                     </label>
                   ))}
                 </div>
@@ -409,9 +571,9 @@ function CustomExport() {
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-5 shadow-sm flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-end gap-4 rounded-xl bg-white p-5 shadow-sm">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Employees Scope</label>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Employees</label>
           <select value={scope} onChange={(e) => setScope(e.target.value)} className="h-9 rounded-lg border border-gray-200 px-3 text-sm text-gray-700 focus:outline-none">
             <option value="all">All Employees</option>
             <option value="active">Active Only</option>
@@ -428,9 +590,19 @@ function CustomExport() {
             ))}
           </div>
         </div>
-        <button type="button" onClick={handleExport} disabled={selected.size === 0} className="ml-auto rounded-lg bg-[#0F50DB] px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed">
-          Export Report
-        </button>
+        <div className="ml-auto flex items-center gap-3">
+          {done && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              Exported
+            </span>
+          )}
+          <button type="button" onClick={clearAll} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50">Clear</button>
+          <button type="button" onClick={handleExport} disabled={totalSelected === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#0F50DB] px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+            Export report
+          </button>
+        </div>
       </div>
     </div>
   );

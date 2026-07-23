@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
@@ -26,11 +26,39 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
   const pathname = usePathname();
   const router = useRouter();
   const isLight = theme === "light";
-  const notificationCount = 8;
+  const notificationCount = 3;
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const { user, clearAuth } = useEmployerAuthStore();
+
+  const [bellOpen, setBellOpen] = useState(false);
+  const companies = useMemo(
+    () => [
+      {
+        id: "current",
+        name: user?.companyName ?? user?.name ?? "My Company",
+        email: user?.email ?? "—",
+        initials: (user?.companyName ?? user?.name ?? "?").charAt(0).toUpperCase(),
+      },
+      { id: "helios", name: "Helios Trading", email: "admin@helios.eu", initials: "H" },
+      { id: "aurora", name: "Aurora Labs", email: "ops@auroralabs.io", initials: "A" },
+    ],
+    [user]
+  );
+  const [activeCompanyId, setActiveCompanyId] = useState("current");
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("kp-employer-company");
+    if (saved) setActiveCompanyId(saved);
+  }, []);
+  const activeCompany = companies.find((c) => c.id === activeCompanyId) ?? companies[0];
+  function switchCompany(id: string) {
+    setActiveCompanyId(id);
+    if (typeof window !== "undefined") localStorage.setItem("kp-employer-company", id);
+    setProfileOpen(false);
+    router.refresh();
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -55,9 +83,9 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
     }
   }
 
-  const displayName = user?.companyName ?? user?.name ?? "—";
-  const displayEmail = user?.email ?? "—";
-  const avatarInitial = (user?.companyName ?? user?.name ?? "?").charAt(0).toUpperCase();
+  const displayName = activeCompany.name;
+  const displayEmail = activeCompany.email;
+  const avatarInitial = activeCompany.initials;
 
   const navPillDarkBg = "linear-gradient(180deg, #1a2332 0%, #0f172a 100%)";
 
@@ -67,9 +95,6 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
       pathname.startsWith(`${DASHBOARD_ROUTES.people}/`);
     const isPayrollSection =
       pathname === DASHBOARD_ROUTES.payroll ||
-      pathname === DASHBOARD_ROUTES.payments ||
-      pathname === DASHBOARD_ROUTES.bulkPayouts ||
-      pathname === DASHBOARD_ROUTES.transfers ||
       pathname === DASHBOARD_ROUTES.payrollReports;
     return item.label === "Payroll"
       ? isPayrollSection
@@ -214,14 +239,19 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
           {/* Notification (hidden on mobile to save space) */}
           <div
             className={cn(
-              "hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px]",
+              "relative hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px]",
               isLight ? "bg-white" : "bg-[#0f172a]"
             )}
           >
             <button
               type="button"
+              onClick={() => {
+                setBellOpen((o) => !o);
+                setProfileOpen(false);
+              }}
               className="relative flex h-full w-full items-center justify-center transition hover:[&_.notification-bell-icon]:opacity-60"
               aria-label={`${notificationCount} notifications`}
+              aria-expanded={bellOpen}
             >
               <svg
                 className="notification-bell-icon pointer-events-none shrink-0 text-[#878787] opacity-50 w-[18px] h-[18px] md:w-[22px] md:h-[22px]"
@@ -240,6 +270,20 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
                 {notificationCount}
               </span>
             </button>
+            {bellOpen && (
+              <NotificationPanel
+                isLight={isLight}
+                onClose={() => setBellOpen(false)}
+                onGoToBilling={() => {
+                  setBellOpen(false);
+                  router.push(DASHBOARD_ROUTES.billing);
+                }}
+                onPayBill={() => {
+                  setBellOpen(false);
+                  router.push(`${DASHBOARD_ROUTES.billing}?pay=1`);
+                }}
+              />
+            )}
           </div>
 
           {/* Avatar + chevron */}
@@ -252,7 +296,7 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
               aria-expanded={profileOpen}
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-[#0F50DB] text-[14px] font-semibold leading-none text-white opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px] md:text-[18px] [font-family:var(--font-poppins),Poppins,sans-serif]">
-                K
+                {avatarInitial}
               </div>
               <svg
                 className="hidden sm:block w-[16px] h-[16px] md:w-[20px] md:h-[20px] shrink-0 text-[#9EA6B3] transition-transform"
@@ -283,6 +327,31 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
                   <p className="text-sm text-dash-secondary">{displayEmail}</p>
                 </div>
                 <div className="my-2 border-t border-[var(--color-dash-icon-bg)]" />
+                <div className="px-4 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-dash-secondary">
+                  Switch company
+                </div>
+                {companies.map((c) => {
+                  const on = c.id === activeCompany.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => switchCompany(c.id)}
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-dash-primary hover:bg-black/5"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0F50DB] text-[12px] font-semibold text-white">
+                        {c.initials}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                      {on && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F50DB" strokeWidth="2.5" className="shrink-0">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+                <div className="my-2 border-t border-[var(--color-dash-icon-bg)]" />
                 <Link
                   href={DASHBOARD_ROUTES.settings}
                   onClick={() => setProfileOpen(false)}
@@ -293,6 +362,17 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
                   Profile settings
+                </Link>
+                <Link
+                  href={DASHBOARD_ROUTES.billing}
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-dash-primary hover:bg-black/5"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-dash-secondary">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                  Billing
                 </Link>
                 <button
                   type="button"
@@ -374,5 +454,125 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
         </div>
       )}
     </header>
+  );
+}
+
+/* Notification dropdown — the outstanding bill payment is the lead alert and
+   deep-links into Billing → Pay now. */
+function NotificationPanel({
+  isLight,
+  onClose,
+  onGoToBilling,
+  onPayBill,
+}: {
+  isLight: boolean;
+  onClose: () => void;
+  onGoToBilling: () => void;
+  onPayBill: () => void;
+}) {
+  const notes = [
+    {
+      id: "bill",
+      tone: "danger" as const,
+      title: "Bill payment due",
+      body: "Your July invoice of €334.00 is due Jul 01, 2026. Pay now to avoid a late fee.",
+      time: "Due in 7 days",
+      amount: "€334.00",
+      cta: "Pay bill",
+    },
+    {
+      id: "payroll",
+      tone: "warning" as const,
+      title: "June payroll runs in 3 days",
+      body: "21 employees · €48,200 will be disbursed on Jun 27.",
+      time: "2h ago",
+      amount: undefined,
+      cta: undefined,
+    },
+    {
+      id: "person",
+      tone: "info" as const,
+      title: "Maria Andreou completed onboarding",
+      body: "Bank details and tax forms are now on file.",
+      time: "Yesterday",
+      amount: undefined,
+      cta: undefined,
+    },
+  ];
+  const toneClass: Record<string, string> = {
+    danger: "bg-red-50 text-red-600",
+    warning: "bg-amber-50 text-amber-600",
+    info: "bg-blue-50 text-[#0F50DB]",
+  };
+
+  return (
+    <>
+      <div onClick={onClose} className="fixed inset-0 z-[39]" aria-hidden />
+      <div
+        role="menu"
+        className={cn(
+          "absolute right-0 top-full z-40 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-xl",
+          isLight ? "border border-slate-200 bg-white" : "border border-[var(--color-dash-icon-bg)] bg-dash-card"
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <span className="text-[15px] font-semibold text-dash-primary">Notifications</span>
+          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-red-600">
+            1 action needed
+          </span>
+        </div>
+        <div className="max-h-[380px] overflow-y-auto">
+          {notes.map((n, i) => {
+            const lead = n.tone === "danger";
+            return (
+              <div
+                key={n.id}
+                className={cn(
+                  "relative flex gap-3 px-4 py-3.5",
+                  i < notes.length - 1 && "border-b border-slate-100",
+                  lead && "bg-red-50/60"
+                )}
+              >
+                {lead && <span className="absolute bottom-0 left-0 top-0 w-[3px] bg-red-500" />}
+                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", toneClass[n.tone])}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 7h20v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+                    <path d="M2 7l2-3h16l2 3" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[14px] font-semibold text-dash-primary">{n.title}</span>
+                    {n.amount && <span className="shrink-0 text-[14px] font-bold text-red-600">{n.amount}</span>}
+                  </div>
+                  <p className="mt-1 text-[12.5px] leading-snug text-dash-secondary">{n.body}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className={cn("text-[11.5px] font-medium", lead ? "text-red-600" : "text-dash-secondary")}>
+                      {n.time}
+                    </span>
+                    {n.cta && (
+                      <button
+                        type="button"
+                        onClick={onPayBill}
+                        className="rounded-lg bg-[#0F50DB] px-4 py-1.5 text-[13px] font-semibold text-white"
+                      >
+                        {n.cta}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onGoToBilling}
+          className="block w-full border-t border-slate-100 py-3 text-center text-[13.5px] font-semibold text-[#0F50DB] hover:bg-slate-50"
+        >
+          View billing
+        </button>
+      </div>
+    </>
   );
 }

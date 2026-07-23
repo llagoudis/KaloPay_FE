@@ -35,11 +35,8 @@ export const ROUTES = {
     peopleAdd: "/user/people/add",
     personDetail: (id: string) => `/user/people/${id}`,
     payroll: "/user/payroll",
-    payrollCreate: "/user/payroll/create",
-    payments: "/user/payments",
-    bulkPayouts: "/user/bulk-payouts",
-    transfers: "/user/transfers",
     reports: "/user/reports",
+    billing: "/user/billing",
     settings: "/user/settings",
   },
   employee: {

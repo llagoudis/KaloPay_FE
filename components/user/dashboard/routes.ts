@@ -8,11 +8,8 @@ export const DASHBOARD_ROUTES = {
   peopleAdd: "/user/people/add",
   personDetail: (id: string) => `/user/people/${id}`,
   payroll: "/user/payroll",
-  payrollCreate: "/user/payroll/create",
   payrollReports: "/user/payroll/reports",
-  payments: "/user/payments",
-  bulkPayouts: "/user/bulk-payouts",
-  transfers: "/user/transfers",
   reports: "/user/reports",
+  billing: "/user/billing",
   settings: "/user/settings",
 } as const;

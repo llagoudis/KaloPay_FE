@@ -33,8 +33,9 @@ function downloadCsv(filename: string, rows: (string | number | null | undefined
 type ReportMainTab = "payroll" | "regulatory";
 type ReportSubTab = "summary" | "breakdown" | "tax" | "employer" | "audit";
 
-function fmtMoneyC(n: number, currency = "USD") {
-  return n.toLocaleString("en-US", { style: "currency", currency, maximumFractionDigits: 2 });
+function fmtMoneyC(n: number, currency = "EUR") {
+  void currency;
+  return n.toLocaleString("en-US", { style: "currency", currency: "EUR", maximumFractionDigits: 2 });
 }
 function statusBadge(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
@@ -123,24 +124,6 @@ function PayrollReportsSecondaryNav() {
             <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 9h4" /><path d="M7 13h2" />
           </svg>
           Payments
-        </Link>
-        <Link
-          href={DASHBOARD_ROUTES.bulkPayouts}
-          className="inline-flex items-center gap-2 rounded-full border-0 px-6 py-2 text-xs font-medium outline-none focus:outline-none focus:ring-0 md:text-sm bg-transparent text-[#878787] shadow-none hover:bg-slate-100"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M7 7h14l-4-4" /><path d="M17 17H3l4 4" /><path d="M7 17l10-10" />
-          </svg>
-          Bulk Payouts
-        </Link>
-        <Link
-          href={DASHBOARD_ROUTES.transfers}
-          className="inline-flex items-center gap-2 rounded-full border-0 px-6 py-2 text-xs font-medium outline-none focus:outline-none focus:ring-0 md:text-sm bg-transparent text-[#878787] shadow-none hover:bg-slate-100"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18" /><path d="M8 14h3v3H8z" />
-          </svg>
-          Transfers
         </Link>
         <span className="inline-flex items-center gap-2 rounded-full border-0 px-6 py-2 text-xs font-medium md:text-sm bg-[#0F4FDB] text-white shadow-sm">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -518,7 +501,7 @@ export default function PayrollReportsPage() {
                         Number(r.socialInsurance ?? r.social_insurance ?? 0),
                         Number(r.otherDeductions ?? r.other_deductions ?? 0),
                         Number(r.netPay ?? r.net_pay ?? 0),
-                        String(r.currency ?? "USD"),
+                        String(r.currency ?? "EUR"),
                       ]),
                     ]
                   );
@@ -721,7 +704,7 @@ export default function PayrollReportsPage() {
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Income Tax</span>
-                      <span className="tabular-nums">{payeForm?.amount != null ? fmtMoneyC(payeForm.amount, payeForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{payeForm?.amount != null ? fmtMoneyC(payeForm.amount, payeForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employees</span>
@@ -763,11 +746,11 @@ export default function PayrollReportsPage() {
                   <div className="mt-8 space-y-4">
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Total Contributions</span>
-                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount, siForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount, siForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>Employer Share</span>
-                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount / 2, siForm.currency ?? "USD") : "—"}</span>
+                      <span className="tabular-nums">{siForm?.amount != null ? fmtMoneyC(siForm.amount / 2, siForm.currency ?? "EUR") : "—"}</span>
                     </div>
                     <div className="reg-stat-row flex items-center justify-between" style={regulatoryStatStyle}>
                       <span>{siForm?.submittedDate ? "Submitted On" : "Due Date"}</span>
