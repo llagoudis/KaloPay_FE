@@ -231,7 +231,7 @@ function PeopleList() {
                           <div ref={menuRef} role="menu" className="people-row-menu absolute right-4 top-12 z-50 w-44 rounded-lg border border-[#e5e7eb] bg-white py-1 text-left text-sm shadow-lg">
                             <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6]" onClick={() => { setMenuOpenForId(null); router.push(`${DASHBOARD_ROUTES.people}/${person.id}`); }}>View</button>
                             <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6]" onClick={() => { setMenuOpenForId(null); router.push(`${DASHBOARD_ROUTES.people}/${person.id}?edit=1`); }}>Edit</button>
-                            <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6]" onClick={() => { setMenuOpenForId(null); router.push(`${DASHBOARD_ROUTES.payments}?employee=${person.id}`); }}>Pay</button>
+                            <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6]" onClick={() => { setMenuOpenForId(null); router.push(DASHBOARD_ROUTES.payroll); }}>Pay</button>
                             <button type="button" role="menuitem" className="block w-full px-3 py-2 text-left text-[#374151] hover:bg-[#f3f4f6]" onClick={() => { setMenuOpenForId(null); exportSingle(person); }}>Export CSV</button>
                           </div>
                         )}

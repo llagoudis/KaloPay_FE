@@ -95,9 +95,6 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
       pathname.startsWith(`${DASHBOARD_ROUTES.people}/`);
     const isPayrollSection =
       pathname === DASHBOARD_ROUTES.payroll ||
-      pathname === DASHBOARD_ROUTES.payments ||
-      pathname === DASHBOARD_ROUTES.bulkPayouts ||
-      pathname === DASHBOARD_ROUTES.transfers ||
       pathname === DASHBOARD_ROUTES.payrollReports;
     return item.label === "Payroll"
       ? isPayrollSection
