@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import { useCreatePerson } from "@/hooks/employer/useUserPanel";
+import CompEarningsEditor from "@/components/user/people/CompEarningsEditor";
 
 const STEPS = [
   { label: "Personal Details", status: (i: number, step: number) => (step === i ? "In-Progress" : i < step ? "Completed" : "Pending") },
@@ -910,6 +911,9 @@ export default function AddEmployeePage() {
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="dash-card-section-title">Compensation & Payment</h2>
+              <div className="rounded-xl border border-gray-100 bg-white p-4">
+                <CompEarningsEditor embedded storeKeyOverride="kp-comp-draft" />
+              </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {/* Left column – Figma 90-4479 */}
                 <div className="space-y-6">

@@ -6,6 +6,8 @@ import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import AddPeoplePopup from "@/components/user/people/AddPeoplePopup";
 import MassImportPopup from "@/components/user/people/MassImportPopup";
+import AbsencesTab, { type AbsencePerson } from "@/components/user/people/AbsencesTab";
+import KpiTab, { type KpiPerson } from "@/components/user/people/KpiTab";
 import { usePeople } from "@/hooks/employer/useUserPanel";
 
 type PersonRecord = {
@@ -249,222 +251,26 @@ function PeopleList() {
   );
 }
 
-// ─── Absences ────────────────────────────────────────────────────────────────
-
-type AbsenceDecisions = Record<string, "approved" | "rejected">;
-
-const MOCK_ABSENCES = [
-  { employee: "Alice Smith", reference: "ABS-001", type: "Annual", status: "Pending", from: "2026-07-10", to: "2026-07-14", hours: 40, subject: "Family vacation", note: "" },
-  { employee: "Bob Jones", reference: "ABS-002", type: "Sick", status: "Pending", from: "2026-07-08", to: "2026-07-09", hours: 16, subject: "Illness", note: "Doctor note attached" },
-  { employee: "Carol White", reference: "ABS-003", type: "Maternity", status: "Approved", from: "2026-06-01", to: "2026-08-31", hours: 480, subject: "Maternity leave", note: "" },
-];
-
-const LEAVE_TOTALS: { type: string; count: number; color: string }[] = [
-  { type: "Annual", count: 3, color: "#0F50DB" },
-  { type: "Sick", count: 1, color: "#F59E0B" },
-  { type: "Maternity", count: 1, color: "#EC4899" },
-  { type: "Parental", count: 0, color: "#8B5CF6" },
-  { type: "Army", count: 0, color: "#6B7280" },
-  { type: "Study", count: 0, color: "#10B981" },
-];
-
-function AbsencesTab() {
-  const [decisions, setDecisions] = useState<AbsenceDecisions>(() => {
-    try { return JSON.parse(localStorage.getItem("kp-abs-decisions") ?? "{}"); } catch { return {}; }
-  });
-  const [year, setYear] = useState(2026);
-  const [page, setPage] = useState(1);
-  const rowsPerPage = 10;
-
-  function decide(key: string, action: "approved" | "rejected") {
-    const next = { ...decisions, [key]: action };
-    setDecisions(next);
-    localStorage.setItem("kp-abs-decisions", JSON.stringify(next));
-  }
-
-  function undo(key: string) {
-    const next = { ...decisions };
-    delete next[key];
-    setDecisions(next);
-    localStorage.setItem("kp-abs-decisions", JSON.stringify(next));
-  }
-
-  const total = MOCK_ABSENCES.length;
-  const totalPages = Math.ceil(total / rowsPerPage);
-  const paginated = MOCK_ABSENCES.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-
-  return (
-    <div className="space-y-4 mx-auto max-w-[1245px]">
-      {/* Year selector + leave type totals */}
-      <div className="rounded-xl bg-white p-5 shadow-sm flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500">Year</label>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="h-8 rounded-lg border border-gray-200 px-2 text-sm text-gray-700 focus:outline-none">
-            {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <div className="flex flex-wrap gap-3 sm:ml-auto">
-          {LEAVE_TOTALS.map((lt) => (
-            <div key={lt.type} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" style={{ background: `${lt.color}15`, color: lt.color }}>
-              <span>{lt.type}</span>
-              <span className="rounded-full bg-white/60 px-1.5">{lt.count}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Absences table */}
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
-            <thead className="border-b border-gray-100">
-              <tr className="text-left text-xs font-medium text-gray-400">
-                {["Employee", "Reference", "Type", "Status", "From", "To", "Hours", "Subject", "Note", "Action"].map((h) => (
-                  <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {paginated.map((row) => {
-                const key = `${row.employee}|${row.reference}`;
-                const decision = decisions[key];
-                const isPending = !decision && row.status === "Pending";
-                return (
-                  <tr key={key} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-[#0E1620] whitespace-nowrap">{row.employee}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{row.reference}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.type}</td>
-                    <td className="px-4 py-3">
-                      <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                        decision === "approved" || row.status === "Approved" ? "bg-emerald-100 text-emerald-700" :
-                        decision === "rejected" ? "bg-red-100 text-red-700" :
-                        "bg-amber-100 text-amber-700"
-                      )}>
-                        {decision ? (decision === "approved" ? "Approved" : "Rejected") : row.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{row.from}</td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{row.to}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.hours}</td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[140px] truncate">{row.subject}</td>
-                    <td className="px-4 py-3 text-gray-400 max-w-[100px] truncate">{row.note || "—"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {decision ? (
-                        <button type="button" onClick={() => undo(key)} className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-200">Undo</button>
-                      ) : isPending ? (
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => decide(key, "approved")} className="rounded-lg px-3 py-1 text-xs font-semibold text-white" style={{ background: "#16A34A" }}>Approve</button>
-                          <button type="button" onClick={() => decide(key, "rejected")} className="rounded-lg px-3 py-1 text-xs font-semibold text-white" style={{ background: "#DC2626" }}>Reject</button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-xs text-gray-500">
-          <span>Page {page} of {totalPages}</span>
-          <div className="flex gap-2">
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded px-2 py-1 hover:bg-gray-100 disabled:opacity-40">Prev</button>
-            <button type="button" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} className="rounded px-2 py-1 hover:bg-gray-100 disabled:opacity-40">Next</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── KPI ─────────────────────────────────────────────────────────────────────
-
-const MOCK_KPIS = [
-  { id: 1, empNo: "E001", name: "Alice Smith", manager: "manager@company.com", startDate: "2023-01-15", kpiCount: 4, active: true, kpis: [{ title: "Revenue Target", status: "On track" }, { title: "Customer Sat.", status: "At risk" }, { title: "Team Growth", status: "On track" }, { title: "Product Launch", status: "On track" }] },
-  { id: 2, empNo: "E002", name: "Bob Jones", manager: "manager@company.com", startDate: "2022-06-01", kpiCount: 3, active: true, kpis: [{ title: "Sales Quota", status: "On track" }, { title: "Retention", status: "On track" }, { title: "NPS", status: "Behind" }] },
-  { id: 3, empNo: "E003", name: "Carol White", manager: "director@company.com", startDate: "2021-03-10", kpiCount: 2, active: false, kpis: [{ title: "Project Delivery", status: "On track" }, { title: "Budget", status: "On track" }] },
-];
-
-function KpiTab() {
-  const [activeOnly, setActiveOnly] = useState(true);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  const filtered = MOCK_KPIS.filter((e) => (activeOnly ? e.active : !e.active));
-  const selected = MOCK_KPIS.find((e) => e.id === selectedId);
-
-  if (selected) {
-    return (
-      <div className="mx-auto max-w-[1245px] space-y-4">
-        <button type="button" onClick={() => setSelectedId(null)} className="flex items-center gap-1 text-sm text-[#0F50DB] hover:underline">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Back to KPI List
-        </button>
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <h3 className="mb-1 text-base font-semibold text-[#0E1620]">{selected.name} — KPIs</h3>
-          <p className="mb-4 text-sm text-gray-400">Employee No: {selected.empNo} · Start Date: {selected.startDate}</p>
-          <div className="space-y-3">
-            {selected.kpis.map((kpi, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-                <span className="text-sm font-medium text-[#0E1620]">{kpi.title}</span>
-                <span className={cn("rounded-full px-3 py-0.5 text-xs font-semibold",
-                  kpi.status === "On track" ? "bg-emerald-100 text-emerald-700" :
-                  kpi.status === "At risk" ? "bg-amber-100 text-amber-700" :
-                  "bg-red-100 text-red-700"
-                )}>{kpi.status}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-[1245px] space-y-4">
-      <div className="rounded-xl bg-white p-5 shadow-sm flex items-center gap-3">
-        <button type="button" onClick={() => setActiveOnly(true)} className={cn("rounded-full px-4 py-1.5 text-sm font-semibold", activeOnly ? "bg-[#0F50DB] text-white" : "text-gray-500 hover:bg-gray-100")}>Active</button>
-        <button type="button" onClick={() => setActiveOnly(false)} className={cn("rounded-full px-4 py-1.5 text-sm font-semibold", !activeOnly ? "bg-[#0F50DB] text-white" : "text-gray-500 hover:bg-gray-100")}>Non-Active</button>
-      </div>
-
-      <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-100">
-            <tr className="text-left text-xs font-medium text-gray-400">
-              <th className="px-6 py-3">Employee No</th>
-              <th className="px-6 py-3">Name</th>
-              <th className="px-6 py-3">Direct Manager</th>
-              <th className="px-6 py-3">Start Date</th>
-              <th className="px-6 py-3">KPI Count</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400">No employees found.</td></tr>
-            ) : filtered.map((e) => (
-              <tr key={e.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedId(e.id)}>
-                <td className="px-6 py-4 font-mono text-xs text-gray-500">{e.empNo}</td>
-                <td className="px-6 py-4 font-medium text-[#0E1620]">{e.name}</td>
-                <td className="px-6 py-4"><a href={`mailto:${e.manager}`} className="text-[#0F50DB] hover:underline" onClick={(ev) => ev.stopPropagation()}>{e.manager}</a></td>
-                <td className="px-6 py-4 text-gray-500">{e.startDate}</td>
-                <td className="px-6 py-4">
-                  <span className="inline-flex items-center justify-center rounded-full bg-blue-100 text-blue-700 w-7 h-7 text-xs font-bold">{e.kpiCount}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function UserPeopleScreen() {
   const [subTab, setSubTab] = useState<PeopleSubTab>("list");
+  // Shared roster for the Absences / KPI tabs (real data, mock fallback in the tabs).
+  const { data: peopleData } = usePeople();
+  const rosterPeople = (peopleData?.people ?? []) as PersonRecord[];
+  const absencePeople: AbsencePerson[] = rosterPeople.map((p) => ({
+    id: p.id,
+    name: p.name,
+    department: p.department ?? null,
+  }));
+  const kpiPeople: KpiPerson[] = rosterPeople.map((p) => ({
+    id: p.id,
+    name: p.name,
+    email: p.email ?? null,
+    jobTitle: p.jobTitle ?? null,
+    status: p.status ?? null,
+    startDate: p.startDate ?? null,
+  }));
 
   return (
     <div className="min-h-screen w-full bg-dash-page people-page" data-dashboard-theme data-page="people">
@@ -491,8 +297,8 @@ export default function UserPeopleScreen() {
           </div>
 
           {subTab === "list" && <PeopleList />}
-          {subTab === "absences" && <AbsencesTab />}
-          {subTab === "kpi" && <KpiTab />}
+          {subTab === "absences" && <AbsencesTab people={absencePeople} />}
+          {subTab === "kpi" && <KpiTab people={kpiPeople} />}
         </main>
       </div>
     </div>
