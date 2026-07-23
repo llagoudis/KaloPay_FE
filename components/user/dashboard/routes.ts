@@ -14,5 +14,6 @@ export const DASHBOARD_ROUTES = {
   bulkPayouts: "/user/bulk-payouts",
   transfers: "/user/transfers",
   reports: "/user/reports",
+  billing: "/user/billing",
   settings: "/user/settings",
 } as const;

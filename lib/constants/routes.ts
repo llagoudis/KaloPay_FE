@@ -40,6 +40,7 @@ export const ROUTES = {
     bulkPayouts: "/user/bulk-payouts",
     transfers: "/user/transfers",
     reports: "/user/reports",
+    billing: "/user/billing",
     settings: "/user/settings",
   },
   employee: {
