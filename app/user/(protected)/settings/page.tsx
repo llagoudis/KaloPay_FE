@@ -7,10 +7,14 @@ import {
   useUpdateProfile,
   useChangePassword,
 } from "@/hooks/employer/useUserPanel";
+import { useEmployerAuthStore } from "@/store/employerAuthStore";
+import { getNotifPrefs, putNotifPrefs } from "@/lib/api/employer/appFeatures";
+
+const EMPLOYER_NOTIF_PATH = "/employer/settings/notifications";
 
 const inputClass =
-  "w-full rounded-lg border border-[var(--color-dash-icon-bg)] bg-[#0D1117] px-3 py-2 text-sm text-white placeholder:text-dash-secondary focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)]";
-const labelClass = "mb-1.5 block text-sm font-medium text-dash-secondary";
+  "settings-input w-full rounded-lg border border-[var(--color-dash-icon-bg)] bg-[var(--color-dash-icon-bg)] px-3 py-2 text-sm text-dash-primary placeholder:text-dash-secondary focus:border-[var(--color-dash-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-dash-accent)]";
+const labelClass = "settings-label mb-1.5 block text-sm font-medium text-dash-secondary";
 
 export default function EmployerSettingsPage() {
   const { data, isLoading } = useEmployerProfile();
@@ -18,16 +22,40 @@ export default function EmployerSettingsPage() {
   const passwordMutation = useChangePassword();
 
   const [profile, setProfile] = useState({ name: "", companyName: "", companyEmail: "", companyPhone: "" });
-  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  const [profileMsg, setProfileMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const [security, setSecurity] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [passwordMsg, setPasswordMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
-  const [notifications, setNotifications] = useState({
-    payrollReminders: true,
-    paymentAlerts: true,
-    weeklyReport: false,
-  });
+  const NOTIFICATIONS_STORAGE_KEY = "kp_employer_notifications";
+  const defaultNotifications = { payrollReminders: true, paymentAlerts: true, weeklyReport: false };
+  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notificationsMsg, setNotificationsMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const notifToken = useEmployerAuthStore((s) => s.token);
+
+  // Load persisted notifications: local cache first, then the server.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") setNotifications((n) => ({ ...n, ...parsed }));
+      }
+    } catch {
+      /* ignore corrupt storage */
+    }
+    if (!notifToken) return;
+    let alive = true;
+    getNotifPrefs(EMPLOYER_NOTIF_PATH, notifToken)
+      .then((res) => {
+        const d = res?.data as Partial<typeof defaultNotifications> | null;
+        if (alive && d && typeof d === "object") setNotifications((n) => ({ ...n, ...d }));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [notifToken]);
 
   useEffect(() => {
     if (data?.profile) {
@@ -48,6 +76,19 @@ export default function EmployerSettingsPage() {
   }
   function toggleNotification(key: keyof typeof notifications) {
     setNotifications((n) => ({ ...n, [key]: !n[key] }));
+    setNotificationsMsg(null);
+  }
+
+  async function handleSaveNotifications() {
+    setNotificationsMsg(null);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(notifications));
+      if (notifToken) await putNotifPrefs(EMPLOYER_NOTIF_PATH, notifToken, notifications);
+      setNotificationsMsg({ type: "ok", text: "Saved" });
+    } catch (e) {
+      setNotificationsMsg({ type: "err", text: (e as Error).message ?? "Save failed" });
+    }
   }
 
   async function handleSaveProfile() {
@@ -59,9 +100,9 @@ export default function EmployerSettingsPage() {
         companyEmail: profile.companyEmail,
         companyPhone: profile.companyPhone,
       });
-      setProfileMsg("Saved");
+      setProfileMsg({ type: "ok", text: "Saved" });
     } catch (e) {
-      setProfileMsg((e as Error).message ?? "Save failed");
+      setProfileMsg({ type: "err", text: (e as Error).message ?? "Save failed" });
     }
   }
 
@@ -88,17 +129,17 @@ export default function EmployerSettingsPage() {
   }
 
   return (
-    <div className="min-h-full w-full bg-dash-page" data-dashboard-theme>
+    <div className="min-h-full w-full bg-dash-page" data-dashboard-theme data-page="settings">
       <div className="dash-shell pb-8 pt-8">
         <div className="mx-auto w-full max-w-2xl">
-          <div className="mb-8">
+          <div className="settings-header-card mb-6 rounded-xl bg-dash-card px-6 py-5">
             <h1 className="text-2xl font-semibold text-dash-primary">Settings</h1>
             <p className="mt-1 text-sm text-dash-secondary">Manage your account and preferences.</p>
           </div>
 
           <div className="space-y-6">
             <section className="rounded-xl bg-dash-card p-6">
-              <h2 className="dash-card-section-title dash-card-section-title--inverse mb-4">Company &amp; Profile</h2>
+              <h2 className="dash-card-section-title mb-4">Company &amp; Profile</h2>
               {isLoading ? (
                 <p className="text-sm text-dash-secondary">Loading…</p>
               ) : (
@@ -128,14 +169,18 @@ export default function EmployerSettingsPage() {
                     >
                       {updateMutation.isPending ? "Saving…" : "Save changes"}
                     </button>
-                    {profileMsg && <span className="text-sm text-dash-secondary">{profileMsg}</span>}
+                    {profileMsg && (
+                      <span className={cn("text-sm", profileMsg.type === "ok" ? "text-green-500" : "text-red-500")}>
+                        {profileMsg.text}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
             </section>
 
             <section className="rounded-xl bg-dash-card p-6">
-              <h2 className="dash-card-section-title dash-card-section-title--inverse mb-4">Change Password</h2>
+              <h2 className="dash-card-section-title mb-4">Change Password</h2>
               <div className="space-y-4">
                 <div>
                   <label className={labelClass}>Current password</label>
@@ -168,7 +213,7 @@ export default function EmployerSettingsPage() {
             </section>
 
             <section className="rounded-xl bg-dash-card p-6">
-              <h2 className="dash-card-section-title dash-card-section-title--inverse mb-4">Notifications</h2>
+              <h2 className="dash-card-section-title mb-4">Notifications</h2>
               <div className="space-y-4">
                 {[
                   { key: "payrollReminders" as const, label: "Payroll reminders" },
@@ -176,7 +221,7 @@ export default function EmployerSettingsPage() {
                   { key: "weeklyReport" as const, label: "Weekly summary report" },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between">
-                    <span className="text-sm text-dash-primary">{label}</span>
+                    <span className="notifications-label text-sm text-dash-primary">{label}</span>
                     <button
                       type="button"
                       role="switch"
@@ -196,6 +241,20 @@ export default function EmployerSettingsPage() {
                     </button>
                   </div>
                 ))}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveNotifications}
+                    className="rounded-lg bg-[var(--color-dash-accent)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                  {notificationsMsg && (
+                    <span className={cn("text-sm", notificationsMsg.type === "ok" ? "text-green-500" : "text-red-500")}>
+                      {notificationsMsg.text}
+                    </span>
+                  )}
+                </div>
               </div>
             </section>
           </div>

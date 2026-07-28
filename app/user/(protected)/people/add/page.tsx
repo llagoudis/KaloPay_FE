@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { DASHBOARD_ROUTES } from "@/components/user/dashboard/routes";
 import { cn } from "@/lib/utils/cn";
 import { useCreatePerson } from "@/hooks/employer/useUserPanel";
+import CompEarningsEditor from "@/components/user/people/CompEarningsEditor";
+import { useEmployerAuthStore } from "@/store/employerAuthStore";
+import { putCompensation } from "@/lib/api/employer/appFeatures";
 
 const STEPS = [
   { label: "Personal Details", status: (i: number, step: number) => (step === i ? "In-Progress" : i < step ? "Completed" : "Pending") },
@@ -61,7 +64,6 @@ const defaultEmploymentForm = {
   startDate: "",
   terminationDate: "",
   employmentType: "",
-  partTimePercentage: "",
   status: "",
 };
 
@@ -224,6 +226,7 @@ export default function AddEmployeePage() {
   }
 
   const createMutation = useCreatePerson();
+  const authToken = useEmployerAuthStore((s) => s.token);
 
   async function handleSubmit() {
     setLoading(true);
@@ -237,6 +240,12 @@ export default function AddEmployeePage() {
       }
       const countryCode = addressForm.country || employmentForm.workLocationCountry;
       const country = COUNTRIES.find((c) => c.value === countryCode)?.label ?? countryCode ?? null;
+
+      // Carry over the embedded Compensation & Payment (CompEarnings) draft so it isn't dropped.
+      let compDraft: { employmentMemo?: string; payslipNote?: string } | null = null;
+      if (typeof window !== "undefined") {
+        try { compDraft = JSON.parse(localStorage.getItem("kp-comp-draft") || "null"); } catch { compDraft = null; }
+      }
 
       const result = await createMutation.mutateAsync({
         // Personal
@@ -277,7 +286,6 @@ export default function AddEmployeePage() {
         departmentRole: employmentForm.departmentRole || null,
         lineManagerEmail: employmentForm.lineManagerEmail || null,
         workLocationCountry: employmentForm.workLocationCountry || null,
-        partTimePercentage: employmentForm.partTimePercentage || null,
         jobTitle: employmentForm.jobTitle || undefined,
         department: employmentForm.department || undefined,
         employmentType: employmentForm.employmentType || undefined,
@@ -305,7 +313,23 @@ export default function AddEmployeePage() {
         defaultPaymentMethod: bankWalletForm.defaultPaymentMethod || null,
         currencyPreference: bankWalletForm.currencyPreference || null,
         digitalWalletAddress: bankWalletForm.digitalWalletAddress || null,
+        // Notes — the CompEarnings "General Employment Memo" is an internal note, persist it.
+        internalNotes: compDraft?.employmentMemo?.trim() || null,
       });
+
+      // Preserve the full rich draft under the new employee's key and clear the shared
+      // draft so the next "Add" doesn't inherit this employee's earnings/components.
+      // Also persist it server-side against the new employee id (real, cross-device).
+      if (typeof window !== "undefined" && compDraft) {
+        try {
+          const empKey = employmentForm.employeeId.trim() || String(result.id);
+          localStorage.setItem(`kp-comp-${empKey}`, JSON.stringify(compDraft));
+          localStorage.removeItem("kp-comp-draft");
+        } catch { /* ignore storage errors */ }
+      }
+      if (authToken && compDraft && result?.id) {
+        try { await putCompensation(authToken, result.id, compDraft); } catch { /* non-fatal */ }
+      }
 
       router.push(DASHBOARD_ROUTES.personDetail(String(result.id)));
     } catch (e) {
@@ -905,18 +929,6 @@ export default function AddEmployeePage() {
                     labelClassName={labelClass}
                     mutedIfEmptyClass={mutedIfEmpty}
                   />
-                  <div>
-                    <label className={labelClass}>Part time percentage</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={employmentForm.partTimePercentage}
-                      onChange={(e) => updateEmployment("partTimePercentage", e.target.value)}
-                      placeholder="Enter part time percentage"
-                      className={inputClass}
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -924,6 +936,9 @@ export default function AddEmployeePage() {
           {step === 3 && (
             <div className="space-y-6">
               <h2 className="dash-card-section-title">Compensation & Payment</h2>
+              <div className="rounded-xl border border-gray-100 bg-white p-4">
+                <CompEarningsEditor embedded storeKeyOverride="kp-comp-draft" />
+              </div>
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {/* Left column – Figma 90-4479 */}
                 <div className="space-y-6">

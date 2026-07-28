@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils/cn";
 import Logo from "@/components/shared/Logo";
 import { DASHBOARD_ROUTES } from "./routes";
 import type { DashboardTheme } from "@/app/user/(protected)/UserLayoutClient";
 import { useEmployerAuthStore } from "@/store/employerAuthStore";
 import { employerLogout } from "@/lib/api/employer/auth";
+import { listCompanies, switchCompanyApi } from "@/lib/api/employer/appFeatures";
+import NotificationBell from "@/components/shared/NotificationBell";
 
 const navItems = [
   { label: "Home", href: DASHBOARD_ROUTES.dashboard },
@@ -26,11 +29,86 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
   const pathname = usePathname();
   const router = useRouter();
   const isLight = theme === "light";
-  const notificationCount = 8;
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const { user, clearAuth } = useEmployerAuthStore();
+  const profileBtnRef = useRef<HTMLButtonElement>(null);
+  const { user, token, clearAuth, setAuth } = useEmployerAuthStore();
+  const queryClient = useQueryClient();
+  const [switching, setSwitching] = useState(false);
+
+  useEffect(() => {
+    // Clear any stale saved selection from the old mock multi-company switcher.
+    if (typeof window !== "undefined") localStorage.removeItem("kp-employer-company");
+  }, []);
+
+  // Real companies this user can act on (many-to-many membership on the server).
+  const { data: companyData } = useQuery({
+    queryKey: ["employer", "companies"],
+    queryFn: () => listCompanies(token!),
+    enabled: !!token,
+    staleTime: 60_000,
+  });
+
+  // Map the server list to the switcher's row shape; fall back to the single JWT
+  // company before the list loads so the header never renders empty.
+  const companies = useMemo(() => {
+    const rows = companyData?.companies ?? [];
+    if (rows.length) {
+      return rows.map((c) => ({
+        id: String(c.id),
+        name: c.name,
+        email: user?.email ?? "—",
+        initials: (c.name ?? "?").charAt(0).toUpperCase(),
+      }));
+    }
+    return [
+      {
+        id: user?.companyId != null ? String(user.companyId) : "current",
+        name: user?.companyName ?? user?.name ?? "My Company",
+        email: user?.email ?? "—",
+        initials: (user?.companyName ?? user?.name ?? "?").charAt(0).toUpperCase(),
+      },
+    ];
+  }, [companyData, user]);
+
+  // Prefer user.companyId (updated instantly by setAuth on switch) over the
+  // companies query's activeCompanyId (stale until it refetches) so the ✓ moves
+  // the moment you click — no waiting on the network round-trip.
+  const activeId =
+    user?.companyId != null
+      ? String(user.companyId)
+      : companyData?.activeCompanyId != null
+      ? String(companyData.activeCompanyId)
+      : "current";
+  const activeCompany = companies.find((c) => c.id === activeId) ?? companies[0];
+
+  async function switchCompany(id: string) {
+    if (!token || !user || id === activeCompany.id || switching) { setProfileOpen(false); return; }
+    const target = companies.find((c) => c.id === id);
+    const prevUser = user;
+    const prevToken = token;
+    // Instant feedback: close the menu and move the ✓ / company name NOW, before
+    // the network call — so a single click visibly switches with no lag.
+    setProfileOpen(false);
+    setSwitching(true);
+    setAuth({ ...user, companyId: Number(id), companyName: target?.name ?? user.companyName }, prevToken);
+    try {
+      const res = await switchCompanyApi(prevToken, Number(id));
+      // Confirm with the freshly-signed token scoped to the new company…
+      setAuth(
+        { ...prevUser, companyId: Number(res.company.id), companyName: res.companyName },
+        res.token
+      );
+      // …then refresh every panel's data in the background (don't block the UI).
+      queryClient.invalidateQueries();
+    } catch {
+      // Switch rejected (e.g. not a member) / network error — revert cleanly.
+      setAuth(prevUser, prevToken);
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -55,9 +133,9 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
     }
   }
 
-  const displayName = user?.companyName ?? user?.name ?? "—";
-  const displayEmail = user?.email ?? "—";
-  const avatarInitial = (user?.companyName ?? user?.name ?? "?").charAt(0).toUpperCase();
+  const displayName = activeCompany.name;
+  const displayEmail = activeCompany.email;
+  const avatarInitial = activeCompany.initials;
 
   const navPillDarkBg = "linear-gradient(180deg, #1a2332 0%, #0f172a 100%)";
 
@@ -67,9 +145,6 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
       pathname.startsWith(`${DASHBOARD_ROUTES.people}/`);
     const isPayrollSection =
       pathname === DASHBOARD_ROUTES.payroll ||
-      pathname === DASHBOARD_ROUTES.payments ||
-      pathname === DASHBOARD_ROUTES.bulkPayouts ||
-      pathname === DASHBOARD_ROUTES.transfers ||
       pathname === DASHBOARD_ROUTES.payrollReports;
     return item.label === "Payroll"
       ? isPayrollSection
@@ -119,6 +194,14 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
     );
     return null;
   }
+
+  // Position the profile menu with FIXED coords read from the avatar button, so
+  // it escapes the layout's overflow-hidden + sticky-header clipping (as an
+  // absolutely-positioned child it was rendering hidden / off, with a stray scrollbar).
+  const profileBtnRect = profileOpen && typeof window !== "undefined" ? profileBtnRef.current?.getBoundingClientRect() : null;
+  const profileMenuStyle = profileBtnRect
+    ? { position: "fixed" as const, top: profileBtnRect.bottom + 8, right: Math.max(8, window.innerWidth - profileBtnRect.right), zIndex: 1000 }
+    : { position: "fixed" as const, top: 72, right: 16, zIndex: 1000 };
 
   return (
     <header className="relative z-50 w-full bg-dash-page pt-3 md:pt-6 lg:pt-7 shadow-none" style={{ boxShadow: "none" }}>
@@ -214,37 +297,17 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
           {/* Notification (hidden on mobile to save space) */}
           <div
             className={cn(
-              "hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px]",
+              "relative hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px]",
               isLight ? "bg-white" : "bg-[#0f172a]"
             )}
           >
-            <button
-              type="button"
-              className="relative flex h-full w-full items-center justify-center transition hover:[&_.notification-bell-icon]:opacity-60"
-              aria-label={`${notificationCount} notifications`}
-            >
-              <svg
-                className="notification-bell-icon pointer-events-none shrink-0 text-[#878787] opacity-50 w-[18px] h-[18px] md:w-[22px] md:h-[22px]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.35"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span className="absolute bottom-0.5 right-0.5 z-10 flex min-h-[18px] min-w-[18px] items-center justify-center rounded-lg border-0 bg-[#0F50DB] px-1 text-[10px] font-normal leading-none tracking-normal text-white md:min-h-[22px] md:min-w-[22px] md:px-1.5 md:text-[14px] [font-family:var(--font-poppins),Poppins,sans-serif]">
-                {notificationCount}
-              </span>
-            </button>
+            <NotificationBell role="employer" token={token} isLight={isLight} />
           </div>
 
           {/* Avatar + chevron */}
           <div className="relative flex items-center" ref={profileRef}>
             <button
+              ref={profileBtnRef}
               type="button"
               onClick={() => setProfileOpen((o) => !o)}
               className="flex items-center gap-1.5 rounded-full outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 md:gap-[10px]"
@@ -252,7 +315,7 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
               aria-expanded={profileOpen}
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] bg-[#0F50DB] text-[14px] font-semibold leading-none text-white opacity-100 md:h-[56px] md:w-[56px] md:rounded-[18.67px] md:text-[18px] [font-family:var(--font-poppins),Poppins,sans-serif]">
-                K
+                {avatarInitial}
               </div>
               <svg
                 className="hidden sm:block w-[16px] h-[16px] md:w-[20px] md:h-[20px] shrink-0 text-[#9EA6B3] transition-transform"
@@ -271,17 +334,43 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
 
             {profileOpen && (
               <div
+                style={profileMenuStyle}
                 className={cn(
-                  "absolute right-0 top-full z-50 mt-2 min-w-[200px] max-w-[calc(100vw-2rem)] rounded-xl py-2",
+                  "min-w-[200px] max-w-[calc(100vw-2rem)] rounded-xl py-2 shadow-xl",
                   isLight
                     ? "bg-white shadow-slate-200/50 border border-slate-200"
-                    : "bg-dash-card border border-[var(--color-dash-icon-bg)]"
+                    : "bg-[#1e293b] border border-[var(--color-dash-icon-bg)]"
                 )}
               >
                 <div className="px-4 py-2">
                   <p className="font-semibold text-dash-primary">{displayName}</p>
                   <p className="text-sm text-dash-secondary">{displayEmail}</p>
                 </div>
+                <div className="my-2 border-t border-[var(--color-dash-icon-bg)]" />
+                <div className="px-4 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wider text-dash-secondary">
+                  Switch company
+                </div>
+                {companies.map((c) => {
+                  const on = c.id === activeCompany.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => switchCompany(c.id)}
+                      className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-dash-primary hover:bg-black/5"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0F50DB] text-[12px] font-semibold text-white">
+                        {c.initials}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                      {on && (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F50DB" strokeWidth="2.5" className="shrink-0">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
                 <div className="my-2 border-t border-[var(--color-dash-icon-bg)]" />
                 <Link
                   href={DASHBOARD_ROUTES.settings}
@@ -293,6 +382,17 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
                   Profile settings
+                </Link>
+                <Link
+                  href={DASHBOARD_ROUTES.billing}
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-dash-primary hover:bg-black/5"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-dash-secondary">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                  Billing
                 </Link>
                 <button
                   type="button"
@@ -374,5 +474,125 @@ export default function DashboardHeader({ theme, onThemeChange }: DashboardHeade
         </div>
       )}
     </header>
+  );
+}
+
+/* Notification dropdown — the outstanding bill payment is the lead alert and
+   deep-links into Billing → Pay now. */
+function NotificationPanel({
+  isLight,
+  onClose,
+  onGoToBilling,
+  onPayBill,
+}: {
+  isLight: boolean;
+  onClose: () => void;
+  onGoToBilling: () => void;
+  onPayBill: () => void;
+}) {
+  const notes = [
+    {
+      id: "bill",
+      tone: "danger" as const,
+      title: "Bill payment due",
+      body: "Your July invoice of €334.00 is due Jul 01, 2026. Pay now to avoid a late fee.",
+      time: "Due in 7 days",
+      amount: "€334.00",
+      cta: "Pay bill",
+    },
+    {
+      id: "payroll",
+      tone: "warning" as const,
+      title: "June payroll runs in 3 days",
+      body: "21 employees · €48,200 will be disbursed on Jun 27.",
+      time: "2h ago",
+      amount: undefined,
+      cta: undefined,
+    },
+    {
+      id: "person",
+      tone: "info" as const,
+      title: "Maria Andreou completed onboarding",
+      body: "Bank details and tax forms are now on file.",
+      time: "Yesterday",
+      amount: undefined,
+      cta: undefined,
+    },
+  ];
+  const toneClass: Record<string, string> = {
+    danger: "bg-red-50 text-red-600",
+    warning: "bg-amber-50 text-amber-600",
+    info: "bg-blue-50 text-[#0F50DB]",
+  };
+
+  return (
+    <>
+      <div onClick={onClose} className="fixed inset-0 z-[39]" aria-hidden />
+      <div
+        role="menu"
+        className={cn(
+          "absolute right-0 top-full z-40 mt-2 w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-xl",
+          isLight ? "border border-slate-200 bg-white" : "border border-[var(--color-dash-icon-bg)] bg-dash-card"
+        )}
+      >
+        <div className={cn("flex items-center justify-between border-b px-4 py-3", isLight ? "border-slate-100" : "border-white/10")}>
+          <span className="text-[15px] font-semibold text-dash-primary">Notifications</span>
+          <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide", isLight ? "bg-red-50 text-red-600" : "bg-red-500/15 text-red-300")}>
+            1 action needed
+          </span>
+        </div>
+        <div className="max-h-[380px] overflow-y-auto">
+          {notes.map((n, i) => {
+            const lead = n.tone === "danger";
+            return (
+              <div
+                key={n.id}
+                className={cn(
+                  "relative flex gap-3 px-4 py-3.5",
+                  i < notes.length - 1 && (isLight ? "border-b border-slate-100" : "border-b border-white/10"),
+                  lead && (isLight ? "bg-red-50/60" : "bg-red-500/10")
+                )}
+              >
+                {lead && <span className="absolute bottom-0 left-0 top-0 w-[3px] bg-red-500" />}
+                <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", toneClass[n.tone])}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 7h20v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z" />
+                    <path d="M2 7l2-3h16l2 3" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[14px] font-semibold text-dash-primary">{n.title}</span>
+                    {n.amount && <span className="shrink-0 text-[14px] font-bold text-red-600">{n.amount}</span>}
+                  </div>
+                  <p className="mt-1 text-[12.5px] leading-snug text-dash-secondary">{n.body}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className={cn("text-[11.5px] font-medium", lead ? "text-red-600" : "text-dash-secondary")}>
+                      {n.time}
+                    </span>
+                    {n.cta && (
+                      <button
+                        type="button"
+                        onClick={onPayBill}
+                        className="rounded-lg bg-[#0F50DB] px-4 py-1.5 text-[13px] font-semibold text-white"
+                      >
+                        {n.cta}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={onGoToBilling}
+          className={cn("block w-full border-t py-3 text-center text-[13.5px] font-semibold text-[#0F50DB]", isLight ? "border-slate-100 hover:bg-slate-50" : "border-white/10 hover:bg-white/5")}
+        >
+          View billing
+        </button>
+      </div>
+    </>
   );
 }
